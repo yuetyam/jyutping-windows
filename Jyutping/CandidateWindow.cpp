@@ -59,8 +59,6 @@ CCandidateWindow::CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void* 
 
     _pVScrollBarWnd = nullptr;
 
-    _wndWidth = 0;
-
     _dontAdjustOnEmptyItemPage = FALSE;
 
     _isStoreAppMode = isStoreAppMode;
@@ -86,10 +84,8 @@ CCandidateWindow::~CCandidateWindow()
 // CandidateWinow is the top window
 //----------------------------------------------------------------------------
 
-BOOL CCandidateWindow::_Create(ATOM atom, _In_ UINT wndWidth, _In_opt_ HWND parentWndHandle)
+BOOL CCandidateWindow::_Create(ATOM atom, _In_opt_ HWND parentWndHandle)
 {
-    _wndWidth = wndWidth;
-
     if (!_CreateMainWindow(atom, parentWndHandle))
     {
         return TRUE;
@@ -222,6 +218,9 @@ void CCandidateWindow::_ResizeWindow()
 
     // Dynamic width calculation
     float maxItemWidth = 0.0f;
+    float scaledCommentSpacing = CANDIDATE_COMMENT_SPACING * scale;
+    float scaledTextMargin = CANDIDATE_TEXT_MARGIN * scale;
+
     for (UINT i = startChar; i < endChar; i++)
     {
         CCandidateListItem* pItem = _candidateList.GetAt(i);
@@ -232,8 +231,8 @@ void CCandidateWindow::_ResizeWindow()
                 pItem->_ItemString.Get(),
                 (UINT32)pItem->_ItemString.GetLength(),
                 _pDWriteTextFormat.Get(),
-                1000.0f, // Max width
-                1000.0f, // Max height
+                FLT_MAX, // No constraint for accurate measurement
+                (FLOAT)_cyRow,
                 &pTextLayout
             );
             if (SUCCEEDED(hr))
@@ -241,7 +240,8 @@ void CCandidateWindow::_ResizeWindow()
                 DWRITE_TEXT_METRICS metrics;
                 pTextLayout->GetMetrics(&metrics);
 
-                FLOAT itemWidth = metrics.width;
+                // Use layoutWidth for more accurate spacing, accounting for trailing whitespace
+                FLOAT itemWidth = ceil(metrics.layoutWidth);
 
                 // Measure Comment
                 if (pItem->_ItemComment.GetLength() > 0)
@@ -251,15 +251,16 @@ void CCandidateWindow::_ResizeWindow()
                         pItem->_ItemComment.Get(),
                         (UINT32)pItem->_ItemComment.GetLength(),
                         _pDWriteNumberFormat.Get(),
-                        1000.0f,
-                        1000.0f,
+                        FLT_MAX,
+                        (FLOAT)_cyRow,
                         &pCommentLayout
                      );
                      if (SUCCEEDED(hrComment))
                      {
                          DWRITE_TEXT_METRICS commentMetrics;
                          pCommentLayout->GetMetrics(&commentMetrics);
-                         itemWidth += commentMetrics.width + 20.0f; // Add padding for comment
+                         // Use layoutWidth and add proper spacing
+                         itemWidth += ceil(commentMetrics.layoutWidth) + scaledCommentSpacing;
                      }
                 }
 
@@ -274,10 +275,11 @@ void CCandidateWindow::_ResizeWindow()
     int scrollbarWidth = GetSystemMetricsForDpi(SM_CXVSCROLL, dpi) * 2;
     int textOffset = StringPosition * cxLine;
 
-    _cxTitle = (int)ceil(maxItemWidth + textOffset + scrollbarWidth);
+    // Add text margins to the calculated width
+    _cxTitle = (int)ceil(maxItemWidth + textOffset + scrollbarWidth + (scaledTextMargin * 2));
 
-    // Minimal width: just scrollbar + text offset, let content determine actual width
-    int minWidth = textOffset + scrollbarWidth;
+    // Minimal width: just scrollbar + text offset + margins
+    int minWidth = textOffset + scrollbarWidth + (int)(scaledTextMargin * 2);
     if (_cxTitle < minWidth)
     {
         _cxTitle = minWidth;
@@ -437,7 +439,6 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
                 }
 
                 _cyRow = (int)((float)CANDIDATE_ROW_HEIGHT * scale);
-                _cxTitle = _CandidateTextMetric.tmMaxCharWidth * _wndWidth;
 
                 // Create Direct2D Render Target
                 D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties(
@@ -845,6 +846,10 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
     int candidateTextVerticalOffset = (cyLine == _cyRow ? (cyLine - _CandidateTextMetric.tmHeight) / 2 : 0);
     int numberLabelVerticalOffset = (cyLine == _cyRow ? (cyLine - _NumberLabelTextMetric.tmHeight) / 2 : 0);
 
+    UINT dpi = GetDpiForWindow(_wndHandle);
+    float scale = (float)dpi / USER_DEFAULT_SCREEN_DPI;
+    float scaledCommentSpacing = CANDIDATE_COMMENT_SPACING * scale;
+
     RECT rc;
 
     if (_pD2DTarget)
@@ -952,24 +957,26 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                 // Draw Comment
                 if (pItemList->_ItemComment.GetLength() > 0)
                 {
+                     // Get accurate text metrics for candidate string
                      DWRITE_TEXT_METRICS metrics;
                      pTextLayout->GetMetrics(&metrics);
-                     FLOAT candidateWidth = metrics.width;
+                     FLOAT candidateWidth = ceil(metrics.layoutWidth);
 
                      ComPtr<IDWriteTextLayout> pCommentLayout;
                      Global::pDWriteFactory->CreateTextLayout(
                         pItemList->_ItemComment.Get(),
                         (UINT32)pItemList->_ItemComment.GetLength(),
                         _pDWriteNumberFormat.Get(),
-                        static_cast<FLOAT>(prc->right),
+                        static_cast<FLOAT>(prc->right - StringPosition * cxLine - candidateWidth - scaledCommentSpacing),
                         static_cast<FLOAT>(cyLine),
                         &pCommentLayout
                      );
 
                      if (pCommentLayout)
                      {
+                         // Position comment with proper spacing after candidate text
                          D2D1_POINT_2F commentPos = D2D1::Point2F(
-                            static_cast<FLOAT>(StringPosition * cxLine + candidateWidth + 20.0f),
+                            static_cast<FLOAT>(StringPosition * cxLine) + candidateWidth + scaledCommentSpacing,
                             static_cast<FLOAT>(rc.top)
                          );
 

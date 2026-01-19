@@ -27,6 +27,8 @@
 //---------------------------------------------------------------------
 #define CANDIDATE_ROW_HEIGHT			(32)
 #define CANDWND_BORDER_WIDTH			(1)
+#define CANDIDATE_COMMENT_SPACING		(12.0f)  // Spacing between candidate text and comment
+#define CANDIDATE_TEXT_MARGIN			(8.0f)   // Left/right margin for text
 
 //---------------------------------------------------------------------
 // defined modifier
@@ -34,8 +36,6 @@
 #define _TF_MOD_ON_KEYUP_SHIFT_ONLY    (0x00010000 | TF_MOD_ON_KEYUP)
 #define _TF_MOD_ON_KEYUP_CONTROL_ONLY  (0x00020000 | TF_MOD_ON_KEYUP)
 #define _TF_MOD_ON_KEYUP_ALT_ONLY      (0x00040000 | TF_MOD_ON_KEYUP)
-
-#define CAND_WIDTH     (12)      // * tmMaxCharWidth
 
 //---------------------------------------------------------------------
 // string length of CLSID

@@ -70,7 +70,6 @@ public:
 
     inline CCandidateRange *GetCandidateListIndexRange() { return &_candidateListIndexRange; }
     inline UINT GetCandidateListPhraseModifier() { return _candidateListPhraseModifier; }
-    inline UINT GetCandidateWindowWidth() { return _candidateWndWidth; }
 
 private:
     void InitKeyStrokeTable();
@@ -177,7 +176,6 @@ private:
     BOOL _isComLessMode : 1;
     CCandidateRange _candidateListIndexRange;
     UINT _candidateListPhraseModifier;
-    UINT _candidateWndWidth;
 
     CFileMapping* _pDictionaryFile;
 

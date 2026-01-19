@@ -141,7 +141,7 @@ HRESULT CJyutping::_HandleCandidateWorker(TfEditCookie ec, _In_ ITfContext *pCon
         {
             if (pTempCandListUIPresenter)
             {
-                hrStartCandidateList = pTempCandListUIPresenter->_StartCandidateList(_tfClientId, pDocumentMgr, pContext, ec, pRange, _pCompositionProcessorEngine->GetCandidateWindowWidth());
+                hrStartCandidateList = pTempCandListUIPresenter->_StartCandidateList(_tfClientId, pDocumentMgr, pContext, ec, pRange);
             }
 
             pRange->Release();
@@ -762,7 +762,7 @@ STDAPI CCandidateListUIPresenter::FinalizeExactCompositionString()
 //
 //----------------------------------------------------------------------------
 
-HRESULT CCandidateListUIPresenter::_StartCandidateList(TfClientId tfClientId, _In_ ITfDocumentMgr *pDocumentMgr, _In_ ITfContext *pContextDocument, TfEditCookie ec, _In_ ITfRange *pRangeComposition, UINT wndWidth)
+HRESULT CCandidateListUIPresenter::_StartCandidateList(TfClientId tfClientId, _In_ ITfDocumentMgr *pDocumentMgr, _In_ ITfContext *pContextDocument, TfEditCookie ec, _In_ ITfRange *pRangeComposition)
 {
     pDocumentMgr;tfClientId;
 
@@ -774,7 +774,7 @@ HRESULT CCandidateListUIPresenter::_StartCandidateList(TfClientId tfClientId, _I
 
     BeginUIElement();
 
-    HRESULT hr = MakeCandidateWindow(pContextDocument, wndWidth);
+    HRESULT hr = MakeCandidateWindow(pContextDocument);
     if (FAILED(hr))
     {
         _EndCandidateList();
@@ -1242,7 +1242,7 @@ HRESULT CCandidateListUIPresenter::EndUIElement()
     return hr;
 }
 
-HRESULT CCandidateListUIPresenter::MakeCandidateWindow(_In_ ITfContext *pContextDocument, _In_ UINT wndWidth)
+HRESULT CCandidateListUIPresenter::MakeCandidateWindow(_In_ ITfContext *pContextDocument)
 {
     if (nullptr != _pCandidateWnd)
     {
@@ -1262,7 +1262,7 @@ HRESULT CCandidateListUIPresenter::MakeCandidateWindow(_In_ ITfContext *pContext
         pView->GetWnd(&parentWndHandle);
     }
 
-    if (!_pCandidateWnd->_Create(_atom, wndWidth, parentWndHandle))
+    if (!_pCandidateWnd->_Create(_atom, parentWndHandle))
     {
         return E_OUTOFMEMORY;
     }

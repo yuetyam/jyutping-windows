@@ -111,8 +111,6 @@ CCompositionProcessorEngine::CCompositionProcessorEngine()
 
     _candidateListPhraseModifier = 0;
 
-    _candidateWndWidth = CAND_WIDTH;
-
     InitKeyStrokeTable();
 }
 
@@ -863,7 +861,6 @@ void CCompositionProcessorEngine::SetupConfiguration()
     _isDisableWildcardAtFirst = TRUE;
     _hasMakePhraseFromText = TRUE;
     _isKeystrokeSort = TRUE;
-    _candidateWndWidth = CAND_WIDTH;
 
     SetInitialCandidateListRange();
 

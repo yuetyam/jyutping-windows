@@ -248,7 +248,7 @@ HRESULT CJyutping::_CreateAndStartCandidate(_In_ CCompositionProcessorEngine *pC
             ITfRange* pRange = nullptr;
             if (SUCCEEDED(_pComposition->GetRange(&pRange)))
             {
-                hr = _pCandidateListUIPresenter->_StartCandidateList(_tfClientId, pDocumentMgr, pContext, ec, pRange, pCompositionProcessorEngine->GetCandidateWindowWidth());
+                hr = _pCandidateListUIPresenter->_StartCandidateList(_tfClientId, pDocumentMgr, pContext, ec, pRange);
                 pRange->Release();
             }
             pDocumentMgr->Release();
@@ -383,7 +383,7 @@ HRESULT CJyutping::_HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *p
             ITfRange* pRange = nullptr;
             if (SUCCEEDED(_pComposition->GetRange(&pRange)))
             {
-                hr = _pCandidateListUIPresenter->_StartCandidateList(_tfClientId, pDocumentMgr, pContext, ec, pRange, pCompositionProcessorEngine->GetCandidateWindowWidth());
+                hr = _pCandidateListUIPresenter->_StartCandidateList(_tfClientId, pDocumentMgr, pContext, ec, pRange);
                 pRange->Release();
             }
             pDocumentMgr->Release();
