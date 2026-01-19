@@ -1,0 +1,39 @@
+name: Build
+
+on:
+  push:
+    branches: [ master, develop ]
+    paths:
+      - 'Jyutping/**'
+      - 'Jyutping.sln'
+      - '.github/workflows/build.yml'
+  pull_request:
+    branches: [ master, develop ]
+    paths:
+      - 'Jyutping/**'
+      - 'Jyutping.sln'
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ windows-latest ]
+        configuration: [ Debug, Release ]
+        platform: [ x64 ]
+      fail-fast: false
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Restore NuGet packages
+      run: nuget restore Jyutping.sln
+
+    - name: Build solution
+      run: msbuild Jyutping.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} /v:normal
