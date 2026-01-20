@@ -25,6 +25,8 @@ msbuild Jyutping.sln /p:Configuration=Release /p:Platform=ARM64
 
 Output: `Debug/Jyutping.dll` or `Release/Jyutping.dll`
 
+Currently, it cannot be built on macOS or Linux
+
 ## Architecture
 
 ### Core Components
@@ -77,6 +79,6 @@ Use `Global::Log()` from `Logger.h` to add debug output.
 ## Code Style
 
 - UTF-8 encoding
-- `LE` for line break
+- `LF` for line break
 - 4-space indentation for C++ files
 - See `.editorconfig` for details
