@@ -25,10 +25,12 @@
 //---------------------------------------------------------------------
 // defined Candidated Window
 //---------------------------------------------------------------------
-#define CANDIDATE_ROW_HEIGHT			(32)
+#define CANDIDATE_ROW_HEIGHT			(30)
 #define CANDWND_BORDER_WIDTH			(1)
 #define CANDIDATE_COMMENT_SPACING		(12.0f)  // Spacing between candidate text and comment
-#define CANDIDATE_TEXT_MARGIN			(8.0f)   // Left/right margin for text
+#define CANDIDATE_TEXT_MARGIN			(4.0f)   // Left/right margin for text
+#define CANDIDATE_NUMBER_MARGIN         (8.0f)   // Left margin for number label
+#define CANDIDATE_TEXT_LEADING          (12.0f)  // Left margin for candidate text
 
 //---------------------------------------------------------------------
 // defined modifier

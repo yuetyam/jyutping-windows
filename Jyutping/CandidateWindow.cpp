@@ -33,8 +33,6 @@ struct WINDOWCOMPOSITIONATTRIBDATA {
 
 typedef BOOL(WINAPI* pfnSetWindowCompositionAttribute)(HWND, WINDOWCOMPOSITIONATTRIBDATA*);
 
-const int PageCountPosition = 1;
-const int StringPosition = 4;
 
 //+---------------------------------------------------------------------------
 //
@@ -271,14 +269,15 @@ void CCandidateWindow::_ResizeWindow()
         }
     }
 
-    int scrollbarWidth = GetSystemMetricsForDpi(SM_CXVSCROLL, dpi) * 2;
-    int textOffset = StringPosition * cxLine;
+    int scrollbarWidth = GetSystemMetricsForDpi(SM_CXVSCROLL, dpi);
+    float scaledNumberMargin = CANDIDATE_NUMBER_MARGIN * scale;
+    float scaledTextLeading = CANDIDATE_TEXT_LEADING * scale;
 
     // Add text margins to the calculated width
-    _cxTitle = (int)ceil(maxItemWidth + textOffset + scrollbarWidth + (scaledTextMargin * 2));
+    _cxTitle = (int)ceil(maxItemWidth + scaledTextLeading + scrollbarWidth + scaledTextMargin);
 
-    // Minimal width: just scrollbar + text offset + margins
-    int minWidth = textOffset + scrollbarWidth + (int)(scaledTextMargin * 2);
+    // Minimal width: just scrollbar + text leading + margin
+    int minWidth = (int)ceil(scaledTextLeading + scrollbarWidth + scaledTextMargin);
     if (_cxTitle < minWidth)
     {
         _cxTitle = minWidth;
@@ -700,7 +699,7 @@ void CCandidateWindow::_OnLButtonDown(POINT pt)
 
         UINT dpi = GetDpiForWindow(_wndHandle);
         rc.left = rcWindow.left;
-        rc.right = rcWindow.right - GetSystemMetricsForDpi(SM_CXVSCROLL, dpi) * 2;
+        rc.right = rcWindow.right - GetSystemMetricsForDpi(SM_CXVSCROLL, dpi);
         rc.top = rcWindow.top + (pageCount * cyLine);
         rc.bottom = rcWindow.top + ((pageCount + 1) * cyLine);
 
@@ -772,7 +771,7 @@ void CCandidateWindow::_OnMouseMove(POINT pt)
 
     UINT dpi = GetDpiForWindow(_wndHandle);
     rc.left = rcWindow.left;
-    rc.right = rcWindow.right - GetSystemMetricsForDpi(SM_CXVSCROLL, dpi) * 2;
+    rc.right = rcWindow.right - GetSystemMetricsForDpi(SM_CXVSCROLL, dpi);
 
     rc.top = rcWindow.top;
     rc.bottom = rcWindow.bottom;
@@ -860,6 +859,9 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         _pD2DTarget->Clear(D2D1::ColorF(D2D1::ColorF::White, 0.0f)); // Transparent clear for Acrylic
     }
 
+    float scaledNumberMargin = CANDIDATE_NUMBER_MARGIN * scale;
+    float scaledTextLeading = CANDIDATE_TEXT_LEADING * scale;
+
     const size_t lenOfPageCount = 16;
     for (;
         (iIndex < _candidateList.Count()) && (pageCount < candidateListPageCnt);
@@ -915,7 +917,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                 pageCountString,
                 (UINT32)wcslen(pageCountString),
                 _pDWriteNumberFormat.Get(),
-                static_cast<FLOAT>(StringPosition * cxLine - PageCountPosition * cxLine),
+                scaledTextLeading - scaledNumberMargin,
                 static_cast<FLOAT>(cyLine),
                 &pNumLayout
             );
@@ -923,7 +925,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
             if (SUCCEEDED(hr))
             {
                 D2D1_POINT_2F upperLeft = D2D1::Point2F(
-                    static_cast<FLOAT>(PageCountPosition * cxLine),
+                    scaledNumberMargin,
                     static_cast<FLOAT>(rc.top)
                 );
                 _pD2DTarget->DrawTextLayout(upperLeft, pNumLayout.Get(), pTextBrush.Get());
@@ -940,7 +942,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                 pItemList->_ItemString.Get(),
                 (UINT32)pItemList->_ItemString.GetLength(),
                 _pDWriteTextFormat.Get(),
-                static_cast<FLOAT>(prc->right - StringPosition * cxLine),
+                static_cast<FLOAT>(prc->right - scaledTextLeading),
                 static_cast<FLOAT>(cyLine),
                 &pTextLayout
             );
@@ -948,7 +950,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
             if (SUCCEEDED(hr))
             {
                 D2D1_POINT_2F upperLeft = D2D1::Point2F(
-                    static_cast<FLOAT>(StringPosition * cxLine),
+                    scaledTextLeading,
                     static_cast<FLOAT>(rc.top)
                 );
 
@@ -967,7 +969,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                         pItemList->_ItemComment.Get(),
                         (UINT32)pItemList->_ItemComment.GetLength(),
                         _pDWriteNumberFormat.Get(),
-                        static_cast<FLOAT>(prc->right - StringPosition * cxLine - candidateWidth - scaledCommentSpacing),
+                        static_cast<FLOAT>(prc->right - scaledTextLeading - candidateWidth - scaledCommentSpacing),
                         static_cast<FLOAT>(cyLine),
                         &pCommentLayout
                      );
@@ -976,7 +978,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                      {
                          // Position comment with proper spacing after candidate text
                          D2D1_POINT_2F commentPos = D2D1::Point2F(
-                            static_cast<FLOAT>(StringPosition * cxLine) + candidateWidth + scaledCommentSpacing,
+                            scaledTextLeading + candidateWidth + scaledCommentSpacing,
                             static_cast<FLOAT>(rc.top)
                          );
 
@@ -996,8 +998,8 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         rc.top = prc->top + pageCount * cyLine;
         rc.bottom = rc.top + cyLine;
 
-        rc.left = prc->left + PageCountPosition * cxLine;
-        rc.right = prc->left + StringPosition * cxLine;
+        rc.left = (int)scaledNumberMargin;
+        rc.right = (int)scaledTextLeading;
 
         FillRect(dcHandle, &rc, (HBRUSH)(COLOR_3DHIGHLIGHT + 1));
     }
