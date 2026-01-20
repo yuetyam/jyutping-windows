@@ -6,6 +6,8 @@
 
 #pragma comment(lib, "dwmapi.lib")
 
+constexpr auto limitedMaxSpace = 2000.0f;
+
 // SetWindowCompositionAttribute definitions
 enum ACCENT_STATE {
     ACCENT_DISABLED = 0,
@@ -231,17 +233,15 @@ void CCandidateWindow::_ResizeWindow()
                 pItem->_ItemString.Get(),
                 (UINT32)pItem->_ItemString.GetLength(),
                 _pDWriteTextFormat.Get(),
-                FLT_MAX, // No constraint for accurate measurement
-                (FLOAT)_cyRow,
+                limitedMaxSpace,
+                limitedMaxSpace,
                 &pTextLayout
             );
             if (SUCCEEDED(hr))
             {
                 DWRITE_TEXT_METRICS metrics;
                 pTextLayout->GetMetrics(&metrics);
-
-                // Use layoutWidth for more accurate spacing, accounting for trailing whitespace
-                FLOAT itemWidth = ceil(metrics.layoutWidth);
+                FLOAT itemWidth = metrics.width;
 
                 // Measure Comment
                 if (pItem->_ItemComment.GetLength() > 0)
@@ -251,16 +251,15 @@ void CCandidateWindow::_ResizeWindow()
                         pItem->_ItemComment.Get(),
                         (UINT32)pItem->_ItemComment.GetLength(),
                         _pDWriteNumberFormat.Get(),
-                        FLT_MAX,
-                        (FLOAT)_cyRow,
+                        limitedMaxSpace,
+                        limitedMaxSpace,
                         &pCommentLayout
                      );
                      if (SUCCEEDED(hrComment))
                      {
                          DWRITE_TEXT_METRICS commentMetrics;
                          pCommentLayout->GetMetrics(&commentMetrics);
-                         // Use layoutWidth and add proper spacing
-                         itemWidth += ceil(commentMetrics.layoutWidth) + scaledCommentSpacing;
+                         itemWidth += commentMetrics.width + scaledCommentSpacing;
                      }
                 }
 
@@ -418,7 +417,7 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
 
                 // Measure metrics using DirectWrite
                 ComPtr<IDWriteTextLayout> pTextLayout;
-                hr = Global::pDWriteFactory->CreateTextLayout(L"A", 1, _pDWriteTextFormat.Get(), 1000.0f, 1000.0f, &pTextLayout);
+                hr = Global::pDWriteFactory->CreateTextLayout(L"A", 1, _pDWriteTextFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pTextLayout);
                 if (SUCCEEDED(hr))
                 {
                     DWRITE_TEXT_METRICS dwriteMetrics;
@@ -429,7 +428,7 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
                 }
 
                 ComPtr<IDWriteTextLayout> pNumLayout;
-                hr = Global::pDWriteFactory->CreateTextLayout(L"0", 1, _pDWriteNumberFormat.Get(), 1000.0f, 1000.0f, &pNumLayout);
+                hr = Global::pDWriteFactory->CreateTextLayout(L"0", 1, _pDWriteNumberFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pNumLayout);
                 if (SUCCEEDED(hr))
                 {
                     DWRITE_TEXT_METRICS dwriteMetrics;
@@ -439,6 +438,7 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
                 }
 
                 _cyRow = (int)((float)CANDIDATE_ROW_HEIGHT * scale);
+                _cxTitle = _CandidateTextMetric.tmMaxCharWidth;
 
                 // Create Direct2D Render Target
                 D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties(
@@ -960,7 +960,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                      // Get accurate text metrics for candidate string
                      DWRITE_TEXT_METRICS metrics;
                      pTextLayout->GetMetrics(&metrics);
-                     FLOAT candidateWidth = ceil(metrics.layoutWidth);
+                     FLOAT candidateWidth = metrics.width;
 
                      ComPtr<IDWriteTextLayout> pCommentLayout;
                      Global::pDWriteFactory->CreateTextLayout(
