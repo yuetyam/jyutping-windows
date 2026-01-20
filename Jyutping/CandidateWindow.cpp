@@ -219,7 +219,6 @@ void CCandidateWindow::_ResizeWindow()
     // Dynamic width calculation
     float maxItemWidth = 0.0f;
     float scaledCommentSpacing = CANDIDATE_COMMENT_SPACING * scale;
-    float scaledTextMargin = CANDIDATE_TEXT_MARGIN * scale;
 
     for (UINT i = startChar; i < endChar; i++)
     {
@@ -272,12 +271,8 @@ void CCandidateWindow::_ResizeWindow()
     int scrollbarWidth = GetSystemMetricsForDpi(SM_CXVSCROLL, dpi);
     float scaledNumberMargin = CANDIDATE_NUMBER_MARGIN * scale;
     float scaledTextLeading = CANDIDATE_TEXT_LEADING * scale;
-
-    // Add text margins to the calculated width
-    _cxTitle = (int)ceil(maxItemWidth + scaledTextLeading + scrollbarWidth + scaledTextMargin);
-
-    // Minimal width: just scrollbar + text leading + margin
-    int minWidth = (int)ceil(scaledTextLeading + scrollbarWidth + scaledTextMargin);
+    _cxTitle = (int)ceil(maxItemWidth + scaledTextLeading + scrollbarWidth);
+    int minWidth = (int)ceil(scaledTextLeading + scrollbarWidth);
     if (_cxTitle < minWidth)
     {
         _cxTitle = minWidth;
