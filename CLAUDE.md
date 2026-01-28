@@ -82,3 +82,20 @@ Use `Global::Log()` from `Logger.h` to add debug output.
 - `LF` for line break
 - 4-space indentation for C++ files
 - See `.editorconfig` for details
+
+### Variable Naming and Comments
+
+Prioritize human-friendly, self-documenting code:
+
+**Variable Naming**
+- Use descriptive names that clearly indicate purpose and type
+- Avoid cryptic abbreviations (e.g., prefer `_backgroundColor` over `_crBkColor`)
+- Member variables should use consistent naming conventions:
+  - Prefix with underscore for private members: `_renderTarget`, `_itemList`
+  - Use camelCase for multi-word names: `_pageStartIndices`, `_rowHeight`
+  - Avoid Hungarian notation that duplicates type information (e.g., `_pD2DTarget` → `_direct2DRenderTarget`)
+  - For booleans, use descriptive names: `_skipEmptyPageAdjustment` instead of `_dontAdjust`
+
+**Comments**
+- Add inline comments for non-obvious member variables explaining their purpose
+- Group related variables with comment headers
