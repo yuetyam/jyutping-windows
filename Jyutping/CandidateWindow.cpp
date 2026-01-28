@@ -216,7 +216,8 @@ void CCandidateWindow::_ResizeWindow()
     }
 
     // HStack spacing constants (scaled by DPI)
-    float scaledRowPadding = CANDIDATE_ROW_PADDING * scale;
+    float scaledLeftPadding = CANDIDATE_ROW_PADDING_LEFT * scale;
+    float scaledRightPadding = CANDIDATE_ROW_PADDING_RIGHT * scale;
     float scaledNumberSpacing = CANDIDATE_NUMBER_SPACING * scale;
     float scaledCommentSpacing = CANDIDATE_COMMENT_SPACING * scale;
 
@@ -249,8 +250,8 @@ void CCandidateWindow::_ResizeWindow()
         CCandidateListItem* pItem = _candidateList.GetAt(i);
         if (pItem && Global::pDWriteFactory && _pDWriteTextFormat)
         {
-            // Row layout: Padding | Number | Spacing | CandidateWord | Spacing | Comment | Padding
-            float rowWidth = scaledRowPadding + numberWidth + scaledNumberSpacing;
+            // Row layout: LeftPadding | Number | Spacing | CandidateWord | Spacing | Comment | RightPadding
+            float rowWidth = scaledLeftPadding + numberWidth + scaledNumberSpacing;
 
             // Measure candidate word
             ComPtr<IDWriteTextLayout> pTextLayout;
@@ -291,7 +292,7 @@ void CCandidateWindow::_ResizeWindow()
                 }
             }
 
-            rowWidth += scaledRowPadding;
+            rowWidth += scaledRightPadding;
 
             if (rowWidth > maxRowContentWidth)
             {
@@ -303,8 +304,8 @@ void CCandidateWindow::_ResizeWindow()
     int scrollbarWidth = GetSystemMetricsForDpi(SM_CXVSCROLL, dpi);
     _windowWidth = (int)ceil(maxRowContentWidth + scrollbarWidth);
 
-    // Minimum width: padding + number + spacing + some content + padding + scrollbar
-    int minWidth = (int)ceil(scaledRowPadding * 2 + numberWidth + scaledNumberSpacing + scrollbarWidth);
+    // Minimum width: left padding + number + spacing + right padding + scrollbar
+    int minWidth = (int)ceil(scaledLeftPadding + numberWidth + scaledNumberSpacing + scaledRightPadding + scrollbarWidth);
     if (_windowWidth < minWidth)
     {
         _windowWidth = minWidth;
@@ -872,7 +873,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
     float scale = (float)dpi / USER_DEFAULT_SCREEN_DPI;
 
     // HStack spacing constants (scaled by DPI)
-    float scaledRowPadding = CANDIDATE_ROW_PADDING * scale;
+    float scaledLeftPadding = CANDIDATE_ROW_PADDING_LEFT * scale;
     float scaledNumberSpacing = CANDIDATE_NUMBER_SPACING * scale;
     float scaledCommentSpacing = CANDIDATE_COMMENT_SPACING * scale;
 
@@ -933,7 +934,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         }
 
         // HStack layout: accumulate x position as we draw each element
-        FLOAT xPosition = scaledRowPadding;
+        FLOAT xPosition = scaledLeftPadding;
 
         // Draw Number label
         FLOAT numberWidth = 0.0f;
