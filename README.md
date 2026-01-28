@@ -4,7 +4,7 @@ Jyutping
 > [!IMPORTANT]
 > work in progress
 
-### Build Requirements
+Build Requirements
 - Windows 11 (x64 or ARM64)
 - Visual Studio 2026
 

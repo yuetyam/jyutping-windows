@@ -82,32 +82,41 @@ private:
     void _DeleteVScrollBarWnd();
 
 private:
-    UINT _currentSelection;
-    CJyutpingArray<CCandidateListItem> _candidateList;
-    CJyutpingArray<UINT> _PageIndex;
+    // Selection and display state
+    UINT _currentSelection;                             // Currently selected candidate index
+    CJyutpingArray<CCandidateListItem> _candidateList; // List of all candidate items
+    CJyutpingArray<UINT> _pageStartIndices;            // Starting indices for each page
 
-    COLORREF _crTextColor;
-    COLORREF _crBkColor;
-    HBRUSH _brshBkColor;
+    // Colors and brushes
+    COLORREF _textColor;         // Text foreground color
+    COLORREF _backgroundColor;   // Window background color
+    HBRUSH _backgroundBrush;     // Background brush for painting
 
-    TEXTMETRIC _CandidateTextMetric;
-    TEXTMETRIC _NumberLabelTextMetric;
+    // Text metrics for layout calculations
+    TEXTMETRIC _candidateTextMetric;   // Metrics for candidate text
+    TEXTMETRIC _numberLabelTextMetric; // Metrics for number labels
 
-    ComPtr<IDWriteTextFormat1> _pDWriteTextFormat;
-    ComPtr<IDWriteTextFormat> _pDWriteNumberFormat;
-    ComPtr<ID2D1DCRenderTarget> _pD2DTarget;
+    // DirectWrite and Direct2D resources
+    ComPtr<IDWriteTextFormat1> _pDWriteTextFormat;      // Text format for candidate strings
+    ComPtr<IDWriteTextFormat> _pDWriteNumberFormat;     // Text format for number labels
+    ComPtr<ID2D1DCRenderTarget> _pDirect2DRenderTarget; // Direct2D render target
 
-    int _cyRow;
-    int _cxTitle;
+    // Window dimensions
+    int _rowHeight;   // Height of each candidate row in pixels
+    int _windowWidth; // Total width of the candidate window
 
-    CCandidateRange* _pIndexRange;
+    // Configuration
+    CCandidateRange* _pIndexRange; // Range of indices shown per page (e.g., 1-9)
 
-    CANDWNDCALLBACK _pfnCallback;
-    void* _pObj;
+    // Callback mechanism
+    CANDWNDCALLBACK _pfnCallback;   // Function pointer for selection callbacks
+    void* _pCallbackObject;         // Object context passed to callback
 
-    CShadowWindow* _pShadowWnd;
-    CScrollBarWindow* _pVScrollBarWnd;
+    // Child windows
+    CShadowWindow* _pShadowWnd;         // Drop shadow window
+    CScrollBarWindow* _pVScrollBarWnd;  // Vertical scrollbar window
 
-    BOOL _dontAdjustOnEmptyItemPage;
-    BOOL _isStoreAppMode;
+    // Behavioral flags
+    BOOL _skipEmptyPageAdjustment; // Skip page index adjustment when page has empty slots
+    BOOL _isStoreAppMode;          // Whether running in Store App mode
 };

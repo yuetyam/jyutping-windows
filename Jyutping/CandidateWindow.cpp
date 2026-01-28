@@ -50,16 +50,16 @@ CCandidateWindow::CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void* 
     _pIndexRange = pIndexRange;
 
     _pfnCallback = pfnCallback;
-    _pObj = pv;
+    _pCallbackObject = pv;
 
     _pShadowWnd = nullptr;
 
-    _cyRow = CANDIDATE_ROW_HEIGHT;
-    _cxTitle = 0;
+    _rowHeight = CANDIDATE_ROW_HEIGHT;
+    _windowWidth = 0;
 
     _pVScrollBarWnd = nullptr;
 
-    _dontAdjustOnEmptyItemPage = FALSE;
+    _skipEmptyPageAdjustment = FALSE;
 
     _isStoreAppMode = isStoreAppMode;
 }
@@ -203,12 +203,12 @@ void CCandidateWindow::_ResizeWindow()
 {
     UINT dpi = GetDpiForWindow(_wndHandle);
     float scale = (float)dpi / USER_DEFAULT_SCREEN_DPI;
-    int cxLine = _CandidateTextMetric.tmAveCharWidth;
+    int cxLine = _candidateTextMetric.tmAveCharWidth;
 
     UINT currentPage = 0;
     _GetCurrentPage(&currentPage);
-    UINT startChar = (currentPage < _PageIndex.Count()) ? *_PageIndex.GetAt(currentPage) : 0;
-    UINT endChar = (currentPage + 1 < _PageIndex.Count()) ? *_PageIndex.GetAt(currentPage + 1) : _candidateList.Count();
+    UINT startChar = (currentPage < _pageStartIndices.Count()) ? *_pageStartIndices.GetAt(currentPage) : 0;
+    UINT endChar = (currentPage + 1 < _pageStartIndices.Count()) ? *_pageStartIndices.GetAt(currentPage + 1) : _candidateList.Count();
     UINT itemsInPage = endChar - startChar;
 
     if (itemsInPage == 0)
@@ -271,17 +271,17 @@ void CCandidateWindow::_ResizeWindow()
     int scrollbarWidth = GetSystemMetricsForDpi(SM_CXVSCROLL, dpi);
     float scaledNumberMargin = CANDIDATE_NUMBER_MARGIN * scale;
     float scaledTextLeading = CANDIDATE_TEXT_LEADING * scale;
-    _cxTitle = (int)ceil(maxItemWidth + scaledTextLeading + scrollbarWidth);
+    _windowWidth = (int)ceil(maxItemWidth + scaledTextLeading + scrollbarWidth);
     int minWidth = (int)ceil(scaledTextLeading + scrollbarWidth);
-    if (_cxTitle < minWidth)
+    if (_windowWidth < minWidth)
     {
-        _cxTitle = minWidth;
+        _windowWidth = minWidth;
     }
 
-    int totalHeight = itemsInPage * _cyRow;
+    int totalHeight = itemsInPage * _rowHeight;
 
     // Use SetWindowPos with SWP_NOMOVE to preserve the current position
-    SetWindowPos(_wndHandle, nullptr, 0, 0, _cxTitle, totalHeight, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER);
+    SetWindowPos(_wndHandle, nullptr, 0, 0, _windowWidth, totalHeight, SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER);
 
     RECT rcCandRect = { 0, 0, 0, 0 };
     _GetClientRect(&rcCandRect);
@@ -331,13 +331,13 @@ void CCandidateWindow::_Show(BOOL isShowWnd)
 
 VOID CCandidateWindow::_SetTextColor(_In_ COLORREF crColor, _In_ COLORREF crBkColor)
 {
-    _crTextColor = crColor;
-    _crBkColor = crBkColor;
+    _textColor = crColor;
+    _backgroundColor = crBkColor;
 }
 
 VOID CCandidateWindow::_SetFillColor(_In_ HBRUSH hBrush)
 {
-    _brshBkColor = hBrush;
+    _backgroundBrush = hBrush;
 }
 
 //+---------------------------------------------------------------------------
@@ -416,9 +416,9 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
                 {
                     DWRITE_TEXT_METRICS dwriteMetrics;
                     pTextLayout->GetMetrics(&dwriteMetrics);
-                    _CandidateTextMetric.tmHeight = (LONG)ceil(dwriteMetrics.height);
-                    _CandidateTextMetric.tmAveCharWidth = (LONG)ceil(dwriteMetrics.width);
-                    _CandidateTextMetric.tmMaxCharWidth = _CandidateTextMetric.tmAveCharWidth;
+                    _candidateTextMetric.tmHeight = (LONG)ceil(dwriteMetrics.height);
+                    _candidateTextMetric.tmAveCharWidth = (LONG)ceil(dwriteMetrics.width);
+                    _candidateTextMetric.tmMaxCharWidth = _candidateTextMetric.tmAveCharWidth;
                 }
 
                 ComPtr<IDWriteTextLayout> pNumLayout;
@@ -427,12 +427,12 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
                 {
                     DWRITE_TEXT_METRICS dwriteMetrics;
                     pNumLayout->GetMetrics(&dwriteMetrics);
-                    _NumberLabelTextMetric.tmHeight = (LONG)ceil(dwriteMetrics.height);
-                    _NumberLabelTextMetric.tmAveCharWidth = (LONG)ceil(dwriteMetrics.width);
+                    _numberLabelTextMetric.tmHeight = (LONG)ceil(dwriteMetrics.height);
+                    _numberLabelTextMetric.tmAveCharWidth = (LONG)ceil(dwriteMetrics.width);
                 }
 
-                _cyRow = (int)((float)CANDIDATE_ROW_HEIGHT * scale);
-                _cxTitle = _CandidateTextMetric.tmMaxCharWidth;
+                _rowHeight = (int)((float)CANDIDATE_ROW_HEIGHT * scale);
+                _windowWidth = _candidateTextMetric.tmMaxCharWidth;
 
                 // Create Direct2D Render Target
                 D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties(
@@ -444,7 +444,7 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
                 ID2D1Factory* pD2DFactory = nullptr;
                 if (SUCCEEDED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pD2DFactory)))
                 {
-                    pD2DFactory->CreateDCRenderTarget(&props, &_pD2DTarget);
+                    pD2DFactory->CreateDCRenderTarget(&props, &_pDirect2DRenderTarget);
                     pD2DFactory->Release();
                 }
             }
@@ -643,7 +643,7 @@ void CCandidateWindow::_OnPaint(_In_ HDC dcHandle, _In_ PAINTSTRUCT* pPaintStruc
 {
     SetBkMode(dcHandle, TRANSPARENT);
 
-    if (!_pD2DTarget)
+    if (!_pDirect2DRenderTarget)
     {
         HBRUSH hBrush = CreateSolidBrush(Global::GetCandidateWindowBackgroundColor());
         FillRect(dcHandle, &pPaintStruct->rcPaint, hBrush);
@@ -674,7 +674,7 @@ void CCandidateWindow::_OnLButtonDown(POINT pt)
     RECT rcWindow = { 0, 0, 0, 0 };;
     _GetClientRect(&rcWindow);
 
-    int cyLine = _cyRow;
+    int cyLine = _rowHeight;
 
     UINT candidateListPageCnt = _pIndexRange->Count();
     UINT index = 0;
@@ -686,7 +686,7 @@ void CCandidateWindow::_OnLButtonDown(POINT pt)
     }
 
     // Hit test on list items
-    index = *_PageIndex.GetAt(currentPage);
+    index = *_pageStartIndices.GetAt(currentPage);
 
     for (UINT pageCount = 0; (index < _candidateList.Count()) && (pageCount < candidateListPageCnt); index++, pageCount++)
     {
@@ -702,7 +702,7 @@ void CCandidateWindow::_OnLButtonDown(POINT pt)
         {
             SetCursor(LoadCursor(NULL, IDC_HAND));
             _currentSelection = index;
-            _pfnCallback(_pObj, CAND_ITEM_SELECT);
+            _pfnCallback(_pCallbackObject, CAND_ITEM_SELECT);
             return;
         }
     }
@@ -835,10 +835,10 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
     int pageCount = 0;
     int candidateListPageCnt = _pIndexRange->Count();
 
-    int cxLine = _CandidateTextMetric.tmAveCharWidth;
-    int cyLine = max(_cyRow, _CandidateTextMetric.tmHeight);
-    int candidateTextVerticalOffset = (cyLine == _cyRow ? (cyLine - _CandidateTextMetric.tmHeight) / 2 : 0);
-    int numberLabelVerticalOffset = (cyLine == _cyRow ? (cyLine - _NumberLabelTextMetric.tmHeight) / 2 : 0);
+    int cxLine = _candidateTextMetric.tmAveCharWidth;
+    int cyLine = max(_rowHeight, _candidateTextMetric.tmHeight);
+    int candidateTextVerticalOffset = (cyLine == _rowHeight ? (cyLine - _candidateTextMetric.tmHeight) / 2 : 0);
+    int numberLabelVerticalOffset = (cyLine == _rowHeight ? (cyLine - _numberLabelTextMetric.tmHeight) / 2 : 0);
 
     UINT dpi = GetDpiForWindow(_wndHandle);
     float scale = (float)dpi / USER_DEFAULT_SCREEN_DPI;
@@ -846,12 +846,12 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
 
     RECT rc;
 
-    if (_pD2DTarget)
+    if (_pDirect2DRenderTarget)
     {
-        _pD2DTarget->BindDC(dcHandle, prc);
-        _pD2DTarget->BeginDraw();
-        _pD2DTarget->SetTransform(D2D1::IdentityMatrix());
-        _pD2DTarget->Clear(D2D1::ColorF(D2D1::ColorF::White, 0.0f)); // Transparent clear for Acrylic
+        _pDirect2DRenderTarget->BindDC(dcHandle, prc);
+        _pDirect2DRenderTarget->BeginDraw();
+        _pDirect2DRenderTarget->SetTransform(D2D1::IdentityMatrix());
+        _pDirect2DRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::White, 0.0f)); // Transparent clear for Acrylic
     }
 
     float scaledNumberMargin = CANDIDATE_NUMBER_MARGIN * scale;
@@ -880,7 +880,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
             crText = Global::GetHighlightedTextColor();
             crBk = Global::GetHighlightedBackColor();
 
-            if (_pD2DTarget)
+            if (_pDirect2DRenderTarget)
             {
                 D2D1_RECT_F rcRow = D2D1::RectF(
                     static_cast<FLOAT>(prc->left),
@@ -889,23 +889,23 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                     static_cast<FLOAT>(rc.bottom)
                 );
                 ComPtr<ID2D1SolidColorBrush> pBkBrush;
-                _pD2DTarget->CreateSolidColorBrush(D2D1::ColorF(GetRValue(crBk) / 255.0f, GetGValue(crBk) / 255.0f, GetBValue(crBk) / 255.0f), &pBkBrush);
+                _pDirect2DRenderTarget->CreateSolidColorBrush(D2D1::ColorF(GetRValue(crBk) / 255.0f, GetGValue(crBk) / 255.0f, GetBValue(crBk) / 255.0f), &pBkBrush);
                 if (pBkBrush)
                 {
-                    _pD2DTarget->FillRectangle(&rcRow, pBkBrush.Get());
+                    _pDirect2DRenderTarget->FillRectangle(&rcRow, pBkBrush.Get());
                 }
             }
         }
 
         ComPtr<ID2D1SolidColorBrush> pTextBrush;
-        if (_pD2DTarget)
+        if (_pDirect2DRenderTarget)
         {
-            _pD2DTarget->CreateSolidColorBrush(D2D1::ColorF(GetRValue(crText) / 255.0f, GetGValue(crText) / 255.0f, GetBValue(crText) / 255.0f), &pTextBrush);
+            _pDirect2DRenderTarget->CreateSolidColorBrush(D2D1::ColorF(GetRValue(crText) / 255.0f, GetGValue(crText) / 255.0f, GetBValue(crText) / 255.0f), &pTextBrush);
         }
 
         // Draw Number using DirectWrite
         StringCchPrintf(pageCountString, ARRAYSIZE(pageCountString), L"%d", (LONG)*_pIndexRange->GetAt(pageCount));
-        if (_pD2DTarget && _pDWriteNumberFormat && pTextBrush)
+        if (_pDirect2DRenderTarget && _pDWriteNumberFormat && pTextBrush)
         {
             ComPtr<IDWriteTextLayout> pNumLayout;
             HRESULT hr = Global::pDWriteFactory->CreateTextLayout(
@@ -923,14 +923,14 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                     scaledNumberMargin,
                     static_cast<FLOAT>(rc.top)
                 );
-                _pD2DTarget->DrawTextLayout(upperLeft, pNumLayout.Get(), pTextBrush.Get());
+                _pDirect2DRenderTarget->DrawTextLayout(upperLeft, pNumLayout.Get(), pTextBrush.Get());
             }
         }
 
         // Draw Candidate String using DirectWrite
         pItemList = _candidateList.GetAt(iIndex);
 
-        if (_pD2DTarget && _pDWriteTextFormat && pTextBrush)
+        if (_pDirect2DRenderTarget && _pDWriteTextFormat && pTextBrush)
         {
             ComPtr<IDWriteTextLayout> pTextLayout;
             HRESULT hr = Global::pDWriteFactory->CreateTextLayout(
@@ -949,7 +949,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                     static_cast<FLOAT>(rc.top)
                 );
 
-                _pD2DTarget->DrawTextLayout(upperLeft, pTextLayout.Get(), pTextBrush.Get());
+                _pDirect2DRenderTarget->DrawTextLayout(upperLeft, pTextLayout.Get(), pTextBrush.Get());
 
                 // Draw Comment
                 if (pItemList->_ItemComment.GetLength() > 0)
@@ -977,16 +977,16 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                             static_cast<FLOAT>(rc.top)
                          );
 
-                         _pD2DTarget->DrawTextLayout(commentPos, pCommentLayout.Get(), pTextBrush.Get());
+                         _pDirect2DRenderTarget->DrawTextLayout(commentPos, pCommentLayout.Get(), pTextBrush.Get());
                      }
                 }
             }
         }
     }
 
-    if (_pD2DTarget)
+    if (_pDirect2DRenderTarget)
     {
-        _pD2DTarget->EndDraw();
+        _pDirect2DRenderTarget->EndDraw();
     }
     for (; (pageCount < candidateListPageCnt); pageCount++)
     {
@@ -1136,7 +1136,7 @@ void CCandidateWindow::_ClearList()
     }
     _currentSelection = 0;
     _candidateList.Clear();
-    _PageIndex.Clear();
+    _pageStartIndices.Clear();
 }
 
 //+---------------------------------------------------------------------------
@@ -1240,7 +1240,7 @@ BOOL CCandidateWindow::_SetSelectionInPage(int nPos)
         return FALSE;
     }
 
-    _currentSelection = *_PageIndex.GetAt(currentPage) + nPos;
+    _currentSelection = *_pageStartIndices.GetAt(currentPage) + nPos;
 
     return TRUE;
 }
@@ -1260,7 +1260,7 @@ BOOL CCandidateWindow::_MoveSelection(_In_ int offSet, _In_ BOOL isNotify)
 
     _currentSelection += offSet;
 
-    _dontAdjustOnEmptyItemPage = TRUE;
+    _skipEmptyPageAdjustment = TRUE;
 
     if (_pVScrollBarWnd && isNotify)
     {
@@ -1339,7 +1339,7 @@ BOOL CCandidateWindow::_MovePage(_In_ int offSet, _In_ BOOL isNotify)
     }
 
     newPage = currentPage + offSet;
-    if ((newPage < 0) || (newPage >= static_cast<int>(_PageIndex.Count())))
+    if ((newPage < 0) || (newPage >= static_cast<int>(_pageStartIndices.Count())))
     {
         return FALSE;
     }
@@ -1350,13 +1350,13 @@ BOOL CCandidateWindow::_MovePage(_In_ int offSet, _In_ BOOL isNotify)
     //
     // We do this for keeping behavior inline with downlevel.
     if (_currentSelection % _pIndexRange->Count() == 0 &&
-        _currentSelection == *_PageIndex.GetAt(currentPage))
+        _currentSelection == *_pageStartIndices.GetAt(currentPage))
     {
-        _dontAdjustOnEmptyItemPage = TRUE;
+        _skipEmptyPageAdjustment = TRUE;
     }
 
-    selectionOffset = _currentSelection - *_PageIndex.GetAt(currentPage);
-    _currentSelection = *_PageIndex.GetAt(newPage) + selectionOffset;
+    selectionOffset = _currentSelection - *_pageStartIndices.GetAt(currentPage);
+    _currentSelection = *_pageStartIndices.GetAt(newPage) + selectionOffset;
     _currentSelection = _candidateList.Count() > _currentSelection ? _currentSelection : _candidateList.Count() - 1;
 
     // adjust scrollbar position
@@ -1393,9 +1393,9 @@ BOOL CCandidateWindow::_SetSelectionOffset(_In_ int offSet)
     // For SB_LINEUP and SB_LINEDOWN, we need to special case if CurrentPageHasEmptyItems.
     // CurrentPageHasEmptyItems if we are on the last page.
     if ((offSet == 1 || offSet == -1) &&
-        fCurrentPageHasEmptyItems && _PageIndex.Count() > 1)
+        fCurrentPageHasEmptyItems && _pageStartIndices.Count() > 1)
     {
-        int iPageIndex = *_PageIndex.GetAt(_PageIndex.Count() - 1);
+        int iPageIndex = *_pageStartIndices.GetAt(_pageStartIndices.Count() - 1);
         // Moving on the last page and last page has empty items.
         if (newOffset >= iPageIndex)
         {
@@ -1407,7 +1407,7 @@ BOOL CCandidateWindow::_SetSelectionOffset(_In_ int offSet)
             fAdjustPageIndex = TRUE;
         }
 
-        _dontAdjustOnEmptyItemPage = TRUE;
+        _skipEmptyPageAdjustment = TRUE;
     }
 
     _currentSelection = newOffset;
@@ -1430,9 +1430,9 @@ HRESULT CCandidateWindow::_GetPageIndex(UINT* pIndex, _In_ UINT uSize, _Inout_ U
 {
     HRESULT hr = S_OK;
 
-    if (uSize > _PageIndex.Count())
+    if (uSize > _pageStartIndices.Count())
     {
-        uSize = _PageIndex.Count();
+        uSize = _pageStartIndices.Count();
     }
     else
     {
@@ -1443,12 +1443,12 @@ HRESULT CCandidateWindow::_GetPageIndex(UINT* pIndex, _In_ UINT uSize, _Inout_ U
     {
         for (UINT i = 0; i < uSize; i++)
         {
-            *pIndex = *_PageIndex.GetAt(i);
+            *pIndex = *_pageStartIndices.GetAt(i);
             pIndex++;
         }
     }
 
-    *puPageCnt = _PageIndex.Count();
+    *puPageCnt = _pageStartIndices.Count();
 
     return hr;
 }
@@ -1463,11 +1463,11 @@ HRESULT CCandidateWindow::_SetPageIndex(UINT* pIndex, _In_ UINT uPageCnt)
 {
     uPageCnt;
 
-    _PageIndex.Clear();
+    _pageStartIndices.Clear();
 
     for (UINT i = 0; i < uPageCnt; i++)
     {
-        UINT* pLastNewPageIndex = _PageIndex.Append();
+        UINT* pLastNewPageIndex = _pageStartIndices.Append();
         if (pLastNewPageIndex != nullptr)
         {
             *pLastNewPageIndex = *pIndex;
@@ -1494,21 +1494,21 @@ HRESULT CCandidateWindow::_GetCurrentPage(_Inout_ UINT* pCurrentPage)
 
     *pCurrentPage = 0;
 
-    if (_PageIndex.Count() == 0)
+    if (_pageStartIndices.Count() == 0)
     {
         return E_UNEXPECTED;
     }
 
-    if (_PageIndex.Count() == 1)
+    if (_pageStartIndices.Count() == 1)
     {
         *pCurrentPage = 0;
         return S_OK;
     }
 
     UINT i = 0;
-    for (i = 1; i < _PageIndex.Count(); i++)
+    for (i = 1; i < _pageStartIndices.Count(); i++)
     {
-        UINT uPageIndex = *_PageIndex.GetAt(i);
+        UINT uPageIndex = *_pageStartIndices.GetAt(i);
 
         if (uPageIndex > _currentSelection)
         {
@@ -1644,9 +1644,9 @@ HRESULT CCandidateWindow::_CurrentPageHasEmptyItems(_Inout_ BOOL* hasEmptyItems)
         return S_FALSE;
     }
 
-    if ((currentPage == 0 || currentPage == _PageIndex.Count() - 1) &&
-        (_PageIndex.Count() > 0) &&
-        (*_PageIndex.GetAt(currentPage) > (UINT)(_candidateList.Count() - candidateListPageCnt)))
+    if ((currentPage == 0 || currentPage == _pageStartIndices.Count() - 1) &&
+        (_pageStartIndices.Count() > 0) &&
+        (*_pageStartIndices.GetAt(currentPage) > (UINT)(_candidateList.Count() - candidateListPageCnt)))
     {
         *hasEmptyItems = TRUE;
     }
@@ -1699,7 +1699,7 @@ HRESULT CCandidateWindow::_AdjustPageIndex(_Inout_ UINT& currentPage, _Inout_ UI
 {
     UINT candidateListPageCnt = _pIndexRange->Count();
 
-    currentPageIndex = *_PageIndex.GetAt(currentPage);
+    currentPageIndex = *_pageStartIndices.GetAt(currentPage);
 
     BOOL hasEmptyItems = FALSE;
     if (FAILED(_CurrentPageHasEmptyItems(&hasEmptyItems)))
@@ -1721,7 +1721,7 @@ HRESULT CCandidateWindow::_AdjustPageIndex(_Inout_ UINT& currentPage, _Inout_ UI
 
     // Last page
     UINT candNum = _candidateList.Count();
-    UINT pageNum = _PageIndex.Count();
+    UINT pageNum = _pageStartIndices.Count();
 
     if ((currentPageIndex > candNum - candidateListPageCnt) && (pageNum > 0) && (currentPage == (pageNum - 1)))
     {
@@ -1736,7 +1736,7 @@ HRESULT CCandidateWindow::_AdjustPageIndex(_Inout_ UINT& currentPage, _Inout_ UI
             return E_FAIL;
         }
 
-        currentPageIndex = *_PageIndex.GetAt(currentPage);
+        currentPageIndex = *_pageStartIndices.GetAt(currentPage);
     }
     // First page
     else if ((currentPageIndex < candidateListPageCnt) && (currentPage == 0))
@@ -1748,7 +1748,7 @@ HRESULT CCandidateWindow::_AdjustPageIndex(_Inout_ UINT& currentPage, _Inout_ UI
         _currentSelection = tempSelection;
     }
 
-    _dontAdjustOnEmptyItemPage = FALSE;
+    _skipEmptyPageAdjustment = FALSE;
 
     return S_OK;
 }
