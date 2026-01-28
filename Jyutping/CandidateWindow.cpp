@@ -203,7 +203,6 @@ void CCandidateWindow::_ResizeWindow()
 {
     UINT dpi = GetDpiForWindow(_wndHandle);
     float scale = (float)dpi / USER_DEFAULT_SCREEN_DPI;
-    int cxLine = _candidateTextMetric.tmAveCharWidth;
 
     UINT currentPage = 0;
     _GetCurrentPage(&currentPage);
@@ -216,15 +215,45 @@ void CCandidateWindow::_ResizeWindow()
         itemsInPage = _pIndexRange->Count();
     }
 
-    // Dynamic width calculation
-    float maxItemWidth = 0.0f;
+    // HStack spacing constants (scaled by DPI)
+    float scaledLeftPadding = CANDIDATE_ROW_PADDING_LEFT * scale;
+    float scaledRightPadding = CANDIDATE_ROW_PADDING_RIGHT * scale;
+    float scaledNumberSpacing = CANDIDATE_NUMBER_SPACING * scale;
     float scaledCommentSpacing = CANDIDATE_COMMENT_SPACING * scale;
+
+    // Measure number label width (single digit is typical)
+    float numberWidth = 0.0f;
+    if (Global::pDWriteFactory && _pDWriteNumberFormat)
+    {
+        ComPtr<IDWriteTextLayout> pNumLayout;
+        HRESULT hr = Global::pDWriteFactory->CreateTextLayout(
+            L"0",
+            1,
+            _pDWriteNumberFormat.Get(),
+            limitedMaxSpace,
+            limitedMaxSpace,
+            &pNumLayout
+        );
+        if (SUCCEEDED(hr))
+        {
+            DWRITE_TEXT_METRICS numberMetrics;
+            pNumLayout->GetMetrics(&numberMetrics);
+            numberWidth = numberMetrics.width;
+        }
+    }
+
+    // Calculate max row width using HStack layout model
+    float maxRowContentWidth = 0.0f;
 
     for (UINT i = startChar; i < endChar; i++)
     {
         CCandidateListItem* pItem = _candidateList.GetAt(i);
         if (pItem && Global::pDWriteFactory && _pDWriteTextFormat)
         {
+            // Row layout: LeftPadding | Number | Spacing | CandidateWord | Spacing | Comment | RightPadding
+            float rowWidth = scaledLeftPadding + numberWidth + scaledNumberSpacing;
+
+            // Measure candidate word
             ComPtr<IDWriteTextLayout> pTextLayout;
             HRESULT hr = Global::pDWriteFactory->CreateTextLayout(
                 pItem->_ItemString.Get(),
@@ -238,41 +267,45 @@ void CCandidateWindow::_ResizeWindow()
             {
                 DWRITE_TEXT_METRICS metrics;
                 pTextLayout->GetMetrics(&metrics);
-                FLOAT itemWidth = metrics.width;
+                rowWidth += metrics.width;
 
-                // Measure Comment
+                // Measure Comment (if present)
                 if (pItem->_ItemComment.GetLength() > 0)
                 {
-                     ComPtr<IDWriteTextLayout> pCommentLayout;
-                     HRESULT hrComment = Global::pDWriteFactory->CreateTextLayout(
+                    rowWidth += scaledCommentSpacing;
+
+                    ComPtr<IDWriteTextLayout> pCommentLayout;
+                    HRESULT hrComment = Global::pDWriteFactory->CreateTextLayout(
                         pItem->_ItemComment.Get(),
                         (UINT32)pItem->_ItemComment.GetLength(),
                         _pDWriteNumberFormat.Get(),
                         limitedMaxSpace,
                         limitedMaxSpace,
                         &pCommentLayout
-                     );
-                     if (SUCCEEDED(hrComment))
-                     {
-                         DWRITE_TEXT_METRICS commentMetrics;
-                         pCommentLayout->GetMetrics(&commentMetrics);
-                         itemWidth += commentMetrics.width + scaledCommentSpacing;
-                     }
+                    );
+                    if (SUCCEEDED(hrComment))
+                    {
+                        DWRITE_TEXT_METRICS commentMetrics;
+                        pCommentLayout->GetMetrics(&commentMetrics);
+                        rowWidth += commentMetrics.width;
+                    }
                 }
+            }
 
-                if (itemWidth > maxItemWidth)
-                {
-                    maxItemWidth = itemWidth;
-                }
+            rowWidth += scaledRightPadding;
+
+            if (rowWidth > maxRowContentWidth)
+            {
+                maxRowContentWidth = rowWidth;
             }
         }
     }
 
     int scrollbarWidth = GetSystemMetricsForDpi(SM_CXVSCROLL, dpi);
-    float scaledNumberMargin = CANDIDATE_NUMBER_MARGIN * scale;
-    float scaledTextLeading = CANDIDATE_TEXT_LEADING * scale;
-    _windowWidth = (int)ceil(maxItemWidth + scaledTextLeading + scrollbarWidth);
-    int minWidth = (int)ceil(scaledTextLeading + scrollbarWidth);
+    _windowWidth = (int)ceil(maxRowContentWidth + scrollbarWidth);
+
+    // Minimum width: left padding + number + spacing + right padding + scrollbar
+    int minWidth = (int)ceil(scaledLeftPadding + numberWidth + scaledNumberSpacing + scaledRightPadding + scrollbarWidth);
     if (_windowWidth < minWidth)
     {
         _windowWidth = minWidth;
@@ -834,14 +867,14 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
 {
     int pageCount = 0;
     int candidateListPageCnt = _pIndexRange->Count();
-
-    int cxLine = _candidateTextMetric.tmAveCharWidth;
     int cyLine = max(_rowHeight, _candidateTextMetric.tmHeight);
-    int candidateTextVerticalOffset = (cyLine == _rowHeight ? (cyLine - _candidateTextMetric.tmHeight) / 2 : 0);
-    int numberLabelVerticalOffset = (cyLine == _rowHeight ? (cyLine - _numberLabelTextMetric.tmHeight) / 2 : 0);
 
     UINT dpi = GetDpiForWindow(_wndHandle);
     float scale = (float)dpi / USER_DEFAULT_SCREEN_DPI;
+
+    // HStack spacing constants (scaled by DPI)
+    float scaledLeftPadding = CANDIDATE_ROW_PADDING_LEFT * scale;
+    float scaledNumberSpacing = CANDIDATE_NUMBER_SPACING * scale;
     float scaledCommentSpacing = CANDIDATE_COMMENT_SPACING * scale;
 
     RECT rc;
@@ -853,9 +886,6 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         _pDirect2DRenderTarget->SetTransform(D2D1::IdentityMatrix());
         _pDirect2DRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::White, 0.0f)); // Transparent clear for Acrylic
     }
-
-    float scaledNumberMargin = CANDIDATE_NUMBER_MARGIN * scale;
-    float scaledTextLeading = CANDIDATE_TEXT_LEADING * scale;
 
     const size_t lenOfPageCount = 16;
     for (;
@@ -903,7 +933,11 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
             _pDirect2DRenderTarget->CreateSolidColorBrush(D2D1::ColorF(GetRValue(crText) / 255.0f, GetGValue(crText) / 255.0f, GetBValue(crText) / 255.0f), &pTextBrush);
         }
 
-        // Draw Number using DirectWrite
+        // HStack layout: accumulate x position as we draw each element
+        FLOAT xPosition = scaledLeftPadding;
+
+        // Draw Number label
+        FLOAT numberWidth = 0.0f;
         StringCchPrintf(pageCountString, ARRAYSIZE(pageCountString), L"%d", (LONG)*_pIndexRange->GetAt(pageCount));
         if (_pDirect2DRenderTarget && _pDWriteNumberFormat && pTextBrush)
         {
@@ -912,23 +946,28 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                 pageCountString,
                 (UINT32)wcslen(pageCountString),
                 _pDWriteNumberFormat.Get(),
-                scaledTextLeading - scaledNumberMargin,
+                limitedMaxSpace,
                 static_cast<FLOAT>(cyLine),
                 &pNumLayout
             );
 
             if (SUCCEEDED(hr))
             {
-                D2D1_POINT_2F upperLeft = D2D1::Point2F(
-                    scaledNumberMargin,
-                    static_cast<FLOAT>(rc.top)
-                );
-                _pDirect2DRenderTarget->DrawTextLayout(upperLeft, pNumLayout.Get(), pTextBrush.Get());
+                DWRITE_TEXT_METRICS numberMetrics;
+                pNumLayout->GetMetrics(&numberMetrics);
+                numberWidth = numberMetrics.width;
+
+                D2D1_POINT_2F numberPosition = D2D1::Point2F(xPosition, static_cast<FLOAT>(rc.top));
+                _pDirect2DRenderTarget->DrawTextLayout(numberPosition, pNumLayout.Get(), pTextBrush.Get());
             }
         }
 
-        // Draw Candidate String using DirectWrite
+        // Advance x position: after number + spacing
+        xPosition += numberWidth + scaledNumberSpacing;
+
+        // Draw Candidate word
         pItemList = _candidateList.GetAt(iIndex);
+        FLOAT candidateWidth = 0.0f;
 
         if (_pDirect2DRenderTarget && _pDWriteTextFormat && pTextBrush)
         {
@@ -937,48 +976,44 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                 pItemList->_ItemString.Get(),
                 (UINT32)pItemList->_ItemString.GetLength(),
                 _pDWriteTextFormat.Get(),
-                static_cast<FLOAT>(prc->right - scaledTextLeading),
+                limitedMaxSpace,
                 static_cast<FLOAT>(cyLine),
                 &pTextLayout
             );
 
             if (SUCCEEDED(hr))
             {
-                D2D1_POINT_2F upperLeft = D2D1::Point2F(
-                    scaledTextLeading,
-                    static_cast<FLOAT>(rc.top)
+                DWRITE_TEXT_METRICS candidateMetrics;
+                pTextLayout->GetMetrics(&candidateMetrics);
+                candidateWidth = candidateMetrics.width;
+
+                D2D1_POINT_2F candidatePosition = D2D1::Point2F(xPosition, static_cast<FLOAT>(rc.top));
+                _pDirect2DRenderTarget->DrawTextLayout(candidatePosition, pTextLayout.Get(), pTextBrush.Get());
+            }
+        }
+
+        // Advance x position: after candidate + spacing
+        xPosition += candidateWidth + scaledCommentSpacing;
+
+        // Draw Comment (if present)
+        if (pItemList->_ItemComment.GetLength() > 0)
+        {
+            if (_pDirect2DRenderTarget && _pDWriteNumberFormat && pTextBrush)
+            {
+                ComPtr<IDWriteTextLayout> pCommentLayout;
+                HRESULT hr = Global::pDWriteFactory->CreateTextLayout(
+                    pItemList->_ItemComment.Get(),
+                    (UINT32)pItemList->_ItemComment.GetLength(),
+                    _pDWriteNumberFormat.Get(),
+                    limitedMaxSpace,
+                    static_cast<FLOAT>(cyLine),
+                    &pCommentLayout
                 );
 
-                _pDirect2DRenderTarget->DrawTextLayout(upperLeft, pTextLayout.Get(), pTextBrush.Get());
-
-                // Draw Comment
-                if (pItemList->_ItemComment.GetLength() > 0)
+                if (SUCCEEDED(hr))
                 {
-                     // Get accurate text metrics for candidate string
-                     DWRITE_TEXT_METRICS metrics;
-                     pTextLayout->GetMetrics(&metrics);
-                     FLOAT candidateWidth = metrics.width;
-
-                     ComPtr<IDWriteTextLayout> pCommentLayout;
-                     Global::pDWriteFactory->CreateTextLayout(
-                        pItemList->_ItemComment.Get(),
-                        (UINT32)pItemList->_ItemComment.GetLength(),
-                        _pDWriteNumberFormat.Get(),
-                        static_cast<FLOAT>(prc->right - scaledTextLeading - candidateWidth - scaledCommentSpacing),
-                        static_cast<FLOAT>(cyLine),
-                        &pCommentLayout
-                     );
-
-                     if (pCommentLayout)
-                     {
-                         // Position comment with proper spacing after candidate text
-                         D2D1_POINT_2F commentPos = D2D1::Point2F(
-                            scaledTextLeading + candidateWidth + scaledCommentSpacing,
-                            static_cast<FLOAT>(rc.top)
-                         );
-
-                         _pDirect2DRenderTarget->DrawTextLayout(commentPos, pCommentLayout.Get(), pTextBrush.Get());
-                     }
+                    D2D1_POINT_2F commentPosition = D2D1::Point2F(xPosition, static_cast<FLOAT>(rc.top));
+                    _pDirect2DRenderTarget->DrawTextLayout(commentPosition, pCommentLayout.Get(), pTextBrush.Get());
                 }
             }
         }
@@ -987,16 +1022,6 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
     if (_pDirect2DRenderTarget)
     {
         _pDirect2DRenderTarget->EndDraw();
-    }
-    for (; (pageCount < candidateListPageCnt); pageCount++)
-    {
-        rc.top = prc->top + pageCount * cyLine;
-        rc.bottom = rc.top + cyLine;
-
-        rc.left = (int)scaledNumberMargin;
-        rc.right = (int)scaledTextLeading;
-
-        FillRect(dcHandle, &rc, (HBRUSH)(COLOR_3DHIGHLIGHT + 1));
     }
 }
 

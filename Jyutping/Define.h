@@ -25,11 +25,14 @@
 //---------------------------------------------------------------------
 // defined Candidated Window
 //---------------------------------------------------------------------
-#define CANDIDATE_ROW_HEIGHT			(30)
-#define CANDWND_BORDER_WIDTH			(1)
-#define CANDIDATE_COMMENT_SPACING		(12.0f)  // Spacing between candidate text and comment
-#define CANDIDATE_NUMBER_MARGIN         (8.0f)   // Left margin for number label
-#define CANDIDATE_TEXT_LEADING          (30.0f)  // Left margin for candidate text
+#define CANDIDATE_ROW_HEIGHT            (30)
+#define CANDWND_BORDER_WIDTH            (1)
+
+// HStack-style row layout: LeftPadding | Number | Spacing | CandidateWord | Spacing | Comment | RightPadding
+#define CANDIDATE_ROW_PADDING_LEFT      (10.0f)  // Left padding of the row
+#define CANDIDATE_ROW_PADDING_RIGHT     (1.0f)   // Right padding of the row
+#define CANDIDATE_NUMBER_SPACING        (12.0f)  // Spacing between number and candidate word
+#define CANDIDATE_COMMENT_SPACING       (12.0f)  // Spacing between candidate word and comment
 
 //---------------------------------------------------------------------
 // defined modifier
