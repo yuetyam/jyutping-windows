@@ -1712,7 +1712,7 @@ HRESULT CCandidateWindow::_AdjustPageIndex(_Inout_ UINT& currentPage, _Inout_ UI
         return E_FAIL;
     }
 
-    if (TRUE == _dontAdjustOnEmptyItemPage)
+    if (TRUE == _skipEmptyPageAdjustment)
     {
         return E_FAIL;
     }
