@@ -158,6 +158,9 @@
     <ClInclude Include="JyutpingStructureArray.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="VirtualInputKey.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ActiveLanguageProfileNotifySink.cpp">
@@ -299,6 +302,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="JyutpingBaseStructure.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="VirtualInputKey.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

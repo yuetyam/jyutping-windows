@@ -5,6 +5,7 @@
 #include "CompositionProcessorEngine.h"
 #include "KeyHandlerEditSession.h"
 #include "Compartment.h"
+#include "VirtualInputKey.h"
 
 // 0xF003, 0xF004 are the keys that the touch keyboard sends for next/previous
 #define THIRDPARTY_NEXTPAGE  static_cast<WORD>(0xF003)
@@ -17,21 +18,22 @@ __inline UINT VKeyFromVKPacketAndWchar(UINT vk, WCHAR wch)
     UINT vkRet = vk;
     if (LOWORD(vk) == VK_PACKET)
     {
-        if (wch == L' ')
+        VirtualInputKey inputKey;
+        if (VirtualInputKey::MatchInputKeyForCharacter(wch, &inputKey))
+        {
+            vkRet = inputKey.keyCode;
+        }
+        else if (wch == VirtualInputKey::apostrophe.character)
+        {
+            vkRet = VirtualInputKey::apostrophe.keyCode;
+        }
+        else if (wch == VirtualInputKey::grave.character)
+        {
+            vkRet = VirtualInputKey::grave.keyCode;
+        }
+        else if (wch == L' ')
         {
             vkRet = VK_SPACE;
-        }
-        else if ((wch >= L'0') && (wch <= L'9'))
-        {
-            vkRet = static_cast<UINT>(wch);
-        }
-        else if ((wch >= L'a') && (wch <= L'z'))
-        {
-            vkRet = (UINT)(L'A') + ((UINT)(L'z') - static_cast<UINT>(wch));
-        }
-        else if ((wch >= L'A') && (wch <= L'Z'))
-        {
-            vkRet = static_cast<UINT>(wch);
         }
         else if (wch == THIRDPARTY_NEXTPAGE)
         {

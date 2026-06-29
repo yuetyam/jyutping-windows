@@ -7,6 +7,7 @@
 #include "FileMapping.h"
 #include "Compartment.h"
 #include "define.h"
+#include "VirtualInputKey.h"
 
 class CCompositionProcessorEngine
 {
@@ -117,7 +118,7 @@ private:
             Function = FUNCTION_NONE;
         }
     };
-    _KEYSTROKE _keystrokeTable[26];
+    _KEYSTROKE _keystrokeTable[VirtualInputKey::alphabetSetCount];
 
     CTableDictionaryEngine* _pTableDictionaryEngine;
     CStringRange _keystrokeBuffer;
@@ -181,4 +182,3 @@ private:
 
     static const int OUT_OF_FILE_INDEX = -1;
 };
-

@@ -656,7 +656,7 @@ void CCompositionProcessorEngine::SetupKeystroke()
 
 void CCompositionProcessorEngine::SetKeystrokeTable(_Inout_ CJyutpingArray<_KEYSTROKE> *pKeystroke)
 {
-    for (int i = 0; i < 26; i++)
+    for (size_t i = 0; i < VirtualInputKey::alphabetSetCount; i++)
     {
         _KEYSTROKE* pKS = nullptr;
 
@@ -1455,9 +1455,11 @@ HRESULT CJyutping::GetComModuleName(REFGUID rclsid, _Out_writes_(cchPath)WCHAR* 
 
 void CCompositionProcessorEngine::InitKeyStrokeTable()
 {
-    for (int i = 0; i < 26; i++)
+    const VirtualInputKey* alphabetSet = VirtualInputKey::AlphabetSet();
+
+    for (size_t i = 0; i < VirtualInputKey::alphabetSetCount; i++)
     {
-        _keystrokeTable[i].VirtualKey = 'A' + i;
+        _keystrokeTable[i].VirtualKey = alphabetSet[i].keyCode;
         _keystrokeTable[i].Modifiers = 0;
         _keystrokeTable[i].Function = FUNCTION_INPUT;
     }
