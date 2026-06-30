@@ -51,7 +51,6 @@ VOID CJyutping::_DeleteCandidateList(BOOL isForce, _In_opt_ ITfContext *pContext
         _pCandidateListUIPresenter->_EndCandidateList();
 
         _candidateMode = CANDIDATE_NONE;
-        _isCandidateWithWildcard = FALSE;
     }
 }
 
@@ -158,12 +157,11 @@ HRESULT CJyutping::_HandleCompositionInputWorker(_In_ CCompositionProcessorEngin
 {
     HRESULT hr = S_OK;
     CJyutpingArray<CStringRange> readingStrings;
-    BOOL isWildcardIncluded = TRUE;
 
     //
     // Get reading string from composition processor engine
     //
-    pCompositionProcessorEngine->GetReadingStrings(&readingStrings, &isWildcardIncluded);
+    pCompositionProcessorEngine->GetReadingStrings(&readingStrings);
 
     for (UINT index = 0; index < readingStrings.Count(); index++)
     {
@@ -179,7 +177,7 @@ HRESULT CJyutping::_HandleCompositionInputWorker(_In_ CCompositionProcessorEngin
     //
     CJyutpingArray<CCandidateListItem> candidateList;
 
-    pCompositionProcessorEngine->GetCandidateList(&candidateList, TRUE, FALSE);
+    pCompositionProcessorEngine->GetCandidateList(&candidateList);
 
     if ((candidateList.Count()))
     {
@@ -187,20 +185,12 @@ HRESULT CJyutping::_HandleCompositionInputWorker(_In_ CCompositionProcessorEngin
         if (SUCCEEDED(hr))
         {
             _pCandidateListUIPresenter->_ClearList();
-            _pCandidateListUIPresenter->_SetText(&candidateList, TRUE);
+            _pCandidateListUIPresenter->_SetText(&candidateList);
         }
     }
     else if (_pCandidateListUIPresenter)
     {
         _pCandidateListUIPresenter->_ClearList();
-    }
-    else if (readingStrings.Count() && isWildcardIncluded)
-    {
-        hr = _CreateAndStartCandidate(pCompositionProcessorEngine, ec, pContext);
-        if (SUCCEEDED(hr))
-        {
-            _pCandidateListUIPresenter->_ClearList();
-        }
     }
     return hr;
 }
@@ -223,7 +213,6 @@ HRESULT CJyutping::_CreateAndStartCandidate(_In_ CCompositionProcessorEngine *pC
         _pCandidateListUIPresenter = nullptr;
 
         _candidateMode = CANDIDATE_NONE;
-        _isCandidateWithWildcard = FALSE;
     }
 
     if (_pCandidateListUIPresenter == nullptr)
@@ -238,7 +227,6 @@ HRESULT CJyutping::_CreateAndStartCandidate(_In_ CCompositionProcessorEngine *pC
         }
 
         _candidateMode = CANDIDATE_INCREMENTAL;
-        _isCandidateWithWildcard = FALSE;
 
         // we don't cache the document manager object. So get it from pContext.
         ITfDocumentMgr* pDocumentMgr = nullptr;
@@ -324,11 +312,50 @@ HRESULT CJyutping::_HandleCompositionFinalize(TfEditCookie ec, _In_ ITfContext *
 
 //+---------------------------------------------------------------------------
 //
+// _HandleCompositionFinalizeRaw
+//
+//----------------------------------------------------------------------------
+
+HRESULT CJyutping::_HandleCompositionFinalizeRaw(TfEditCookie ec, _In_ ITfContext *pContext)
+{
+    if (_pCompositionProcessorEngine == nullptr)
+    {
+        return S_FALSE;
+    }
+
+    std::wstring rawInput = _pCompositionProcessorEngine->GetRawInputText();
+    if (rawInput.empty())
+    {
+        return _HandleCancel(ec, pContext);
+    }
+
+    CStringRange rawInputString;
+    rawInputString.Set(rawInput.c_str(), rawInput.length());
+
+    HRESULT hr = S_OK;
+    if (_IsComposing())
+    {
+        hr = _AddComposingAndChar(ec, pContext, &rawInputString);
+    }
+    else
+    {
+        hr = _AddCharAndFinalize(ec, pContext, &rawInputString);
+    }
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    return _HandleComplete(ec, pContext);
+}
+
+//+---------------------------------------------------------------------------
+//
 // _HandleCompositionConvert
 //
 //----------------------------------------------------------------------------
 
-HRESULT CJyutping::_HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *pContext, BOOL isWildcardSearch)
+HRESULT CJyutping::_HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *pContext)
 {
     HRESULT hr = S_OK;
 
@@ -339,7 +366,7 @@ HRESULT CJyutping::_HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *p
     //
     CCompositionProcessorEngine* pCompositionProcessorEngine = nullptr;
     pCompositionProcessorEngine = _pCompositionProcessorEngine;
-    pCompositionProcessorEngine->GetCandidateList(&candidateList, FALSE, isWildcardSearch);
+    pCompositionProcessorEngine->GetCandidateList(&candidateList);
 
     // If there is no candlidate listin the current reading string, we don't do anything. Just wait for
     // next char to be ready for the conversion with it.
@@ -353,7 +380,6 @@ HRESULT CJyutping::_HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *p
             _pCandidateListUIPresenter = nullptr;
 
             _candidateMode = CANDIDATE_NONE;
-            _isCandidateWithWildcard = FALSE;
         }
 
         //
@@ -373,8 +399,6 @@ HRESULT CJyutping::_HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *p
             _candidateMode = CANDIDATE_ORIGINAL;
         }
 
-        _isCandidateWithWildcard = isWildcardSearch;
-
         // we don't cache the document manager object. So get it from pContext.
         ITfDocumentMgr* pDocumentMgr = nullptr;
         if (SUCCEEDED(pContext->GetDocumentMgr(&pDocumentMgr)))
@@ -390,7 +414,7 @@ HRESULT CJyutping::_HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *p
         }
         if (SUCCEEDED(hr))
         {
-            _pCandidateListUIPresenter->_SetText(&candidateList, FALSE);
+            _pCandidateListUIPresenter->_SetText(&candidateList);
         }
     }
 

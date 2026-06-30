@@ -1,13 +1,15 @@
 #pragma once
 
 #include "sal.h"
-#include "TableDictionaryEngine.h"
 #include "KeyHandlerEditSession.h"
 #include "JyutpingBaseStructure.h"
-#include "FileMapping.h"
 #include "Compartment.h"
 #include "define.h"
+#include "InputEngine.h"
 #include "VirtualInputKey.h"
+
+#include <string>
+#include <vector>
 
 class CCompositionProcessorEngine
 {
@@ -29,7 +31,7 @@ public:
         return MAKELCID(_langid, SORT_DEFAULT);
     }
 
-    BOOL IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCHAR *pwch, BOOL fComposing, CANDIDATE_MODE candidateMode, BOOL hasCandidateWithWildcard, _Out_opt_ _KEYSTROKE_STATE *pKeyState);
+    BOOL IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCHAR *pwch, BOOL fComposing, CANDIDATE_MODE candidateMode, _Out_opt_ _KEYSTROKE_STATE *pKeyState);
 
     BOOL AddVirtualKey(WCHAR wch);
     void RemoveVirtualKey(DWORD_PTR dwIndex);
@@ -37,10 +39,12 @@ public:
 
     DWORD_PTR GetVirtualKeyLength() { return _keystrokeBuffer.GetLength(); }
     WCHAR GetVirtualKey(DWORD_PTR dwIndex);
+    std::wstring GetRawInputText() const;
+    std::wstring GetCandidateTailInputText(DWORD_PTR inputCount) const;
+    BOOL SetRawInputText(const std::wstring& inputText);
 
-    void GetReadingStrings(_Inout_ CJyutpingArray<CStringRange> *pReadingStrings, _Out_ BOOL *pIsWildcardIncluded);
-    void GetCandidateList(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList, BOOL isIncrementalWordSearch, BOOL isWildcardSearch);
-    void GetCandidateStringInConverted(CStringRange &searchString, _In_ CJyutpingArray<CCandidateListItem> *pCandidateList);
+    void GetReadingStrings(_Inout_ CJyutpingArray<CStringRange> *pReadingStrings);
+    void GetCandidateList(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
 
     // Preserved key handler
     void OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsEaten, _In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
@@ -50,16 +54,6 @@ public:
     WCHAR GetPunctuation(WCHAR wch);
 
     BOOL IsDoubleSingleByte(WCHAR wch);
-    BOOL IsWildcard() { return _isWildcard; }
-    BOOL IsDisableWildcardAtFirst() { return _isDisableWildcardAtFirst; }
-    BOOL IsWildcardChar(WCHAR wch) { return ((IsWildcardOneChar(wch) || IsWildcardAllChar(wch)) ? TRUE : FALSE); }
-    BOOL IsWildcardOneChar(WCHAR wch) { return (wch==L'?' ? TRUE : FALSE); }
-    BOOL IsWildcardAllChar(WCHAR wch) { return (wch==L'*' ? TRUE : FALSE); }
-    BOOL IsMakePhraseFromText() { return _hasMakePhraseFromText; }
-    BOOL IsKeystrokeSort() { return _isKeystrokeSort; }
-
-    // Dictionary engine
-    BOOL IsDictionaryAvailable() { return (_pTableDictionaryEngine ? TRUE : FALSE); }
 
     // Language bar control
     void SetLanguageBarStatus(DWORD status, BOOL isSet);
@@ -100,9 +94,10 @@ private:
     void PrivateCompartmentsUpdated(_In_ ITfThreadMgr *pThreadMgr);
     void KeyboardOpenCompartmentUpdated(_In_ ITfThreadMgr *pThreadMgr);
 
-
-    BOOL SetupDictionaryFile();
-    CFile* GetDictionaryFile();
+    BOOL SetupInputEngine();
+    std::wstring CurrentInputText() const;
+    const std::vector<Ime::Lexicon>& GetInputSuggestions();
+    void AppendInputEngineCandidates(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
 
 private:
     struct _KEYSTROKE
@@ -120,10 +115,7 @@ private:
     };
     _KEYSTROKE _keystrokeTable[VirtualInputKey::alphabetSetCount];
 
-    CTableDictionaryEngine* _pTableDictionaryEngine;
     CStringRange _keystrokeBuffer;
-
-    BOOL _hasWildcardIncludedInKeystrokeBuffer;
 
     LANGID _langid;
     GUID _guidProfile;
@@ -131,7 +123,6 @@ private:
 
     CJyutpingArray<_KEYSTROKE> _KeystrokeComposition;
     CJyutpingArray<_KEYSTROKE> _KeystrokeCandidate;
-    CJyutpingArray<_KEYSTROKE> _KeystrokeCandidateWildcard;
     CJyutpingArray<_KEYSTROKE> _KeystrokeCandidateSymbol;
     CJyutpingArray<_KEYSTROKE> _KeystrokeSymbol;
 
@@ -170,15 +161,17 @@ private:
     CCompartmentEventSink* _pCompartmentPunctuationEventSink;
 
     // Configuration data
-    BOOL _isWildcard : 1;
-    BOOL _isDisableWildcardAtFirst : 1;
-    BOOL _hasMakePhraseFromText : 1;
-    BOOL _isKeystrokeSort : 1;
     BOOL _isComLessMode : 1;
     CCandidateRange _candidateListIndexRange;
     UINT _candidateListPhraseModifier;
 
-    CFileMapping* _pDictionaryFile;
+    Ime::InputEngine _inputEngine;
+    BOOL _isInputEngineReady;
+    std::wstring _cachedInputText;
+    std::vector<Ime::Lexicon> _cachedSuggestions;
+    std::vector<std::wstring> _candidateItemTextStorage;
+    std::vector<std::wstring> _candidateItemCommentStorage;
+    std::wstring _readingStringStorage;
 
     static const int OUT_OF_FILE_INDEX = -1;
 };

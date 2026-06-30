@@ -35,7 +35,7 @@ public:
     void _OnMouseMove(POINT pt);
     void _OnVScroll(DWORD dwSB, _In_ DWORD nPos);
 
-    void _AddString(_Inout_ CCandidateListItem *pCandidateItem, _In_ BOOL isAddFindKeyCode);
+    void _AddString(_Inout_ CCandidateListItem *pCandidateItem);
     void _ClearList();
     UINT _GetCount()
     {
@@ -49,6 +49,7 @@ public:
 
     DWORD _GetCandidateString(_In_ int iIndex, _Outptr_result_maybenull_z_ const WCHAR **ppwchCandidateString);
     DWORD _GetSelectedCandidateString(_Outptr_result_maybenull_ const WCHAR **ppwchCandidateString);
+    DWORD_PTR _GetSelectedCandidateInputCount();
 
     BOOL _MoveSelection(_In_ int offSet, _In_ BOOL isNotify);
     BOOL _SetSelection(_In_ int iPage, _In_ BOOL isNotify);

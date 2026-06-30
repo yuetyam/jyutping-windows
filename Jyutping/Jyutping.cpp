@@ -70,7 +70,6 @@ CJyutping::CJyutping()
 
     _candidateMode = CANDIDATE_NONE;
     _pCandidateListUIPresenter = nullptr;
-    _isCandidateWithWildcard = FALSE;
 
     _pDocMgrLastFocused = nullptr;
 
@@ -315,7 +314,6 @@ STDAPI CJyutping::Deactivate()
         }
 
         _candidateMode = CANDIDATE_NONE;
-        _isCandidateWithWildcard = FALSE;
     }
 
     _UninitFunctionProviderSink();

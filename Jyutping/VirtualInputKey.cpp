@@ -285,14 +285,14 @@ BOOL VirtualInputKey::MatchInputKeyForCharacter(WCHAR character, _Out_ VirtualIn
         MatchInputKeyByCharacter(digitSet, digitSetCount, normalizedCharacter, pInputKey);
 }
 
-int VirtualInputKey::CombinedCode(_In_reads_(count) const VirtualInputKey* pInputKeys, size_t count)
+int64_t VirtualInputKey::CombinedCode(_In_reads_(count) const VirtualInputKey* pInputKeys, size_t count)
 {
     if (pInputKeys == nullptr || count >= 10)
     {
         return 0;
     }
 
-    int combinedCode = 0;
+    int64_t combinedCode = 0;
     for (size_t index = 0; index < count; index++)
     {
         combinedCode = combinedCode * 100 + pInputKeys[index].code;
@@ -300,14 +300,14 @@ int VirtualInputKey::CombinedCode(_In_reads_(count) const VirtualInputKey* pInpu
     return combinedCode;
 }
 
-int VirtualInputKey::AnchorsCode(_In_reads_(count) const VirtualInputKey* pInputKeys, size_t count)
+int64_t VirtualInputKey::AnchorsCode(_In_reads_(count) const VirtualInputKey* pInputKeys, size_t count)
 {
     if (pInputKeys == nullptr || count >= 10)
     {
         return 0;
     }
 
-    int combinedCode = 0;
+    int64_t combinedCode = 0;
     for (size_t index = 0; index < count; index++)
     {
         VirtualInputKey inputKey = pInputKeys[index].IsYLetterY() ? letterJ : pInputKeys[index];

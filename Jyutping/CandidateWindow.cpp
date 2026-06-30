@@ -1061,7 +1061,7 @@ void CCandidateWindow::_DrawBorder(_In_ HWND wndHandle, _In_ int cx)
 //
 //----------------------------------------------------------------------------
 
-void CCandidateWindow::_AddString(_Inout_ CCandidateListItem* pCandidateItem, _In_ BOOL isAddFindKeyCode)
+void CCandidateWindow::_AddString(_Inout_ CCandidateListItem* pCandidateItem)
 {
     DWORD_PTR dwItemString = pCandidateItem->_ItemString.GetLength();
     const WCHAR* pwchString = nullptr;
@@ -1075,22 +1075,6 @@ void CCandidateWindow::_AddString(_Inout_ CCandidateListItem* pCandidateItem, _I
         memcpy((void*)pwchString, pCandidateItem->_ItemString.Get(), dwItemString * sizeof(WCHAR));
     }
 
-    DWORD_PTR itemWildcard = pCandidateItem->_FindKeyCode.GetLength();
-    const WCHAR* pwchWildcard = nullptr;
-    if (itemWildcard && isAddFindKeyCode)
-    {
-        pwchWildcard = new (std::nothrow) WCHAR[itemWildcard];
-        if (!pwchWildcard)
-        {
-            if (pwchString)
-            {
-                delete[] pwchString;
-            }
-            return;
-        }
-        memcpy((void*)pwchWildcard, pCandidateItem->_FindKeyCode.Get(), itemWildcard * sizeof(WCHAR));
-    }
-
     DWORD_PTR dwItemComment = pCandidateItem->_ItemComment.GetLength();
     const WCHAR* pwchComment = nullptr;
     if (dwItemComment)
@@ -1099,7 +1083,6 @@ void CCandidateWindow::_AddString(_Inout_ CCandidateListItem* pCandidateItem, _I
         if (!pwchComment)
         {
              if (pwchString) delete[] pwchString;
-             if (pwchWildcard) delete[] pwchWildcard;
              return;
         }
         memcpy((void*)pwchComment, pCandidateItem->_ItemComment.Get(), dwItemComment * sizeof(WCHAR));
@@ -1114,11 +1097,6 @@ void CCandidateWindow::_AddString(_Inout_ CCandidateListItem* pCandidateItem, _I
             delete[] pwchString;
             pwchString = nullptr;
         }
-        if (pwchWildcard)
-        {
-            delete[] pwchWildcard;
-            pwchWildcard = nullptr;
-        }
         if (pwchComment)
         {
             delete[] pwchComment;
@@ -1131,14 +1109,11 @@ void CCandidateWindow::_AddString(_Inout_ CCandidateListItem* pCandidateItem, _I
     {
         pLI->_ItemString.Set(pwchString, dwItemString);
     }
-    if (pwchWildcard)
-    {
-        pLI->_FindKeyCode.Set(pwchWildcard, itemWildcard);
-    }
     if (pwchComment)
     {
         pLI->_ItemComment.Set(pwchComment, dwItemComment);
     }
+    pLI->_InputCount = pCandidateItem->_InputCount;
 
     return;
 }
@@ -1156,7 +1131,6 @@ void CCandidateWindow::_ClearList()
         CCandidateListItem* pItemList = nullptr;
         pItemList = _candidateList.GetAt(index);
         delete[] pItemList->_ItemString.Get();
-        delete[] pItemList->_FindKeyCode.Get();
         delete[] pItemList->_ItemComment.Get();
     }
     _currentSelection = 0;
@@ -1239,6 +1213,17 @@ DWORD CCandidateWindow::_GetSelectedCandidateString(_Outptr_result_maybenull_ co
     return (DWORD)pItemList->_ItemString.GetLength();
 }
 
+DWORD_PTR CCandidateWindow::_GetSelectedCandidateInputCount()
+{
+    if (_currentSelection >= _candidateList.Count())
+    {
+        return 0;
+    }
+
+    CCandidateListItem* pItemList = _candidateList.GetAt(_currentSelection);
+    return pItemList->_InputCount;
+}
+
 //+---------------------------------------------------------------------------
 //
 // _SetSelectionInPage
@@ -1265,7 +1250,13 @@ BOOL CCandidateWindow::_SetSelectionInPage(int nPos)
         return FALSE;
     }
 
-    _currentSelection = *_pageStartIndices.GetAt(currentPage) + nPos;
+    UINT selectedIndex = *_pageStartIndices.GetAt(currentPage) + pos;
+    if (selectedIndex >= _candidateList.Count())
+    {
+        return FALSE;
+    }
+
+    _currentSelection = selectedIndex;
 
     return TRUE;
 }

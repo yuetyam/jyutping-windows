@@ -4,6 +4,7 @@
 #include "sal.h"
 
 #include <cstddef>
+#include <cstdint>
 
 struct VirtualInputKey
 {
@@ -54,8 +55,8 @@ struct VirtualInputKey
     static BOOL MatchInputKeyForCode(int code, _Out_ VirtualInputKey* pInputKey);
     static BOOL MatchInputKeyForCharacter(WCHAR character, _Out_ VirtualInputKey* pInputKey);
 
-    static int CombinedCode(_In_reads_(count) const VirtualInputKey* pInputKeys, size_t count);
-    static int AnchorsCode(_In_reads_(count) const VirtualInputKey* pInputKeys, size_t count);
+    static int64_t CombinedCode(_In_reads_(count) const VirtualInputKey* pInputKeys, size_t count);
+    static int64_t AnchorsCode(_In_reads_(count) const VirtualInputKey* pInputKeys, size_t count);
 
     static const VirtualInputKey* DigitSet();
     static const VirtualInputKey* ToneSet();

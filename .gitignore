@@ -490,6 +490,6 @@ $RECYCLE.BIN/
 .copilot/
 
 
-### Others ###
-Lexicon.txt
+### Databases ###
+/Jyutping/Resources/*.sqlite3
 

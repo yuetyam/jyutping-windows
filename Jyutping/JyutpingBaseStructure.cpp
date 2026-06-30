@@ -189,38 +189,6 @@ int CStringRange::Compare(LCID locale, _In_ CStringRange* pString1, _In_ CString
         (DWORD)pString2->GetLength());
 }
 
-BOOL CStringRange::WildcardCompare(LCID locale, _In_ CStringRange* stringWithWildcard, _In_ CStringRange* targetString)
-{
-    if (stringWithWildcard->GetLength() == 0)
-    {
-        return targetString->GetLength() == 0 ? TRUE : FALSE;
-    }
-
-    CStringRange stringWithWildcard_next;
-    CStringRange targetString_next;
-    stringWithWildcard->CharNext(&stringWithWildcard_next);
-    targetString->CharNext(&targetString_next);
-
-    if (*stringWithWildcard->Get() == L'*')
-    {
-        return WildcardCompare(locale, &stringWithWildcard_next, targetString) || ((targetString->GetLength() != 0) && WildcardCompare(locale, stringWithWildcard, &targetString_next));
-    }
-    if (*stringWithWildcard->Get() == L'?')
-    {
-        return ((targetString->GetLength() != 0) && WildcardCompare(locale, &stringWithWildcard_next, &targetString_next));
-    }
-
-    BOOL isSurrogate1 = (IS_HIGH_SURROGATE(*stringWithWildcard->Get()) || IS_LOW_SURROGATE(*stringWithWildcard->Get()));
-    BOOL isSurrogate2 = (IS_HIGH_SURROGATE(*targetString->Get()) || IS_LOW_SURROGATE(*targetString->Get()));
-
-    return ((CompareString(locale,
-        NORM_IGNORECASE,
-        stringWithWildcard->Get(),
-        (isSurrogate1 ? 2 : 1),
-        targetString->Get(),
-        (isSurrogate2 ? 2 : 1)) == CSTR_EQUAL) && WildcardCompare(locale, &stringWithWildcard_next, &targetString_next));
-}
-
 CCandidateRange::CCandidateRange(void)
 {
 }

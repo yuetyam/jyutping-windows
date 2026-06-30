@@ -3,6 +3,8 @@
 #include "KeyHandlerEditSession.h"
 #include "JyutpingBaseStructure.h"
 
+#include <string>
+
 class CLangBarItemButton;
 class CCandidateListUIPresenter;
 class CCompositionProcessorEngine;
@@ -100,7 +102,8 @@ public:
     // key event handlers for composition object.
     HRESULT _HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pContext, WCHAR wch);
     HRESULT _HandleCompositionFinalize(TfEditCookie ec, _In_ ITfContext *pContext, BOOL fCandidateList);
-    HRESULT _HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *pContext, BOOL isWildcardSearch);
+    HRESULT _HandleCompositionFinalizeRaw(TfEditCookie ec, _In_ ITfContext *pContext);
+    HRESULT _HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _HandleCompositionBackspace(TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _HandleCompositionArrowKey(TfEditCookie ec, _In_ ITfContext *pContext, KEYSTROKE_FUNCTION keyFunction);
     HRESULT _HandleCompositionPunctuation(TfEditCookie ec, _In_ ITfContext *pContext, WCHAR wch);
@@ -133,6 +136,7 @@ private:
     HRESULT _HandleCompositionInputWorker(_In_ CCompositionProcessorEngine *pCompositionProcessorEngine, TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _CreateAndStartCandidate(_In_ CCompositionProcessorEngine *pCompositionProcessorEngine, TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _HandleCandidateWorker(TfEditCookie ec, _In_ ITfContext *pContext);
+    HRESULT _HandleIncrementalCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pContext, _In_ CStringRange *pCandidateString, const std::wstring& tailInput);
 
     void _StartComposition(_In_ ITfContext *pContext);
     void _EndComposition(_In_opt_ ITfContext *pContext);
@@ -223,7 +227,6 @@ private:
 
     CANDIDATE_MODE _candidateMode;
     CCandidateListUIPresenter *_pCandidateListUIPresenter;
-    BOOL _isCandidateWithWildcard : 1;
 
     ITfDocumentMgr* _pDocMgrLastFocused;
 

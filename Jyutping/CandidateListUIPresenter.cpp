@@ -27,6 +27,7 @@ HRESULT CJyutping::_HandleCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pC
     DWORD_PTR candidateLen = 0;
     const WCHAR* pCandidateString = nullptr;
     CStringRange candidateString;
+    DWORD_PTR candidateInputCount = 0;
 
     if (nullptr == _pCandidateListUIPresenter)
     {
@@ -34,11 +35,21 @@ HRESULT CJyutping::_HandleCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pC
     }
 
     candidateLen = _pCandidateListUIPresenter->_GetSelectedCandidateString(&pCandidateString);
+    candidateInputCount = _pCandidateListUIPresenter->_GetSelectedCandidateInputCount();
 
     candidateString.Set(pCandidateString, candidateLen);
 
     if (candidateLen)
     {
+        if (_candidateMode == CANDIDATE_INCREMENTAL && candidateInputCount > 0 && _pCompositionProcessorEngine != nullptr)
+        {
+            std::wstring tailInput = _pCompositionProcessorEngine->GetCandidateTailInputText(candidateInputCount);
+            if (!tailInput.empty())
+            {
+                return _HandleIncrementalCandidateFinalize(ec, pContext, &candidateString, tailInput);
+            }
+        }
+
         hr = _AddComposingAndChar(ec, pContext, &candidateString);
 
         if (FAILED(hr))
@@ -52,6 +63,39 @@ NoPresenter:
     _HandleComplete(ec, pContext);
 
     return hr;
+}
+
+HRESULT CJyutping::_HandleIncrementalCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pContext, _In_ CStringRange *pCandidateString, const std::wstring& tailInput)
+{
+    HRESULT hr = _AddComposingAndChar(ec, pContext, pCandidateString);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (_pCandidateListUIPresenter)
+    {
+        _pCandidateListUIPresenter->_EndCandidateList();
+        delete _pCandidateListUIPresenter;
+        _pCandidateListUIPresenter = nullptr;
+    }
+    _candidateMode = CANDIDATE_NONE;
+
+    _TerminateComposition(ec, pContext);
+
+    if (_pCompositionProcessorEngine == nullptr || !_pCompositionProcessorEngine->SetRawInputText(tailInput))
+    {
+        return hr;
+    }
+
+    _StartComposition(pContext);
+    if (!_IsComposing())
+    {
+        _pCompositionProcessorEngine->PurgeVirtualKey();
+        return hr;
+    }
+
+    return _HandleCompositionInputWorker(_pCompositionProcessorEngine, ec, pContext);
 }
 
 //+---------------------------------------------------------------------------
@@ -83,6 +127,10 @@ HRESULT CJyutping::_HandleCandidateWorker(TfEditCookie ec, _In_ ITfContext *pCon
         {
             SysFreeString(pbstr);
         }
+        if (_candidateMode == CANDIDATE_INCREMENTAL)
+        {
+            return _HandleCompositionFinalizeRaw(ec, pContext);
+        }
         return S_OK;
     }
 
@@ -94,19 +142,14 @@ HRESULT CJyutping::_HandleCandidateWorker(TfEditCookie ec, _In_ ITfContext *pCon
         {
             SysFreeString(pbstr);
         }
+        if (_candidateMode == CANDIDATE_INCREMENTAL)
+        {
+            return _HandleCompositionFinalizeRaw(ec, pContext);
+        }
         return S_FALSE;
     }
 
     candidateString.Set(pCandidateString, candidateLen);
-
-    BOOL fMakePhraseFromText = _pCompositionProcessorEngine->IsMakePhraseFromText();
-    if (fMakePhraseFromText)
-    {
-        _pCompositionProcessorEngine->GetCandidateStringInConverted(candidateString, &candidatePhraseList);
-        LCID locale = _pCompositionProcessorEngine->GetLocale();
-
-        _pCandidateListUIPresenter->RemoveSpecificCandidateFromList(locale, candidatePhraseList, candidateString);
-    }
 
     // We have a candidate list if candidatePhraseList.Cnt is not 0
     // If we are showing reverse conversion, use CCandidateListUIPresenter
@@ -155,7 +198,7 @@ HRESULT CJyutping::_HandleCandidateWorker(TfEditCookie ec, _In_ ITfContext *pCon
     {
         pTempCandListUIPresenter->_SetTextColor(RGB(0, 0x80, 0), GetSysColor(COLOR_WINDOW));    // Text color is green
         pTempCandListUIPresenter->_SetFillColor((HBRUSH)(COLOR_WINDOW+1));    // Background color is window
-        pTempCandListUIPresenter->_SetText(&candidatePhraseList, FALSE);
+        pTempCandListUIPresenter->_SetText(&candidatePhraseList);
 
         // Add composing character
         hrReturn = _AddComposingAndChar(ec, pContext, &candidateString);
@@ -168,7 +211,6 @@ HRESULT CJyutping::_HandleCandidateWorker(TfEditCookie ec, _In_ ITfContext *pCon
             _pCandidateListUIPresenter = nullptr;
 
             _candidateMode = CANDIDATE_NONE;
-            _isCandidateWithWildcard = FALSE;
         }
 
         if (hrReturn == S_OK)
@@ -177,7 +219,6 @@ HRESULT CJyutping::_HandleCandidateWorker(TfEditCookie ec, _In_ ITfContext *pCon
             _pCandidateListUIPresenter = pTempCandListUIPresenter;
 
             _candidateMode = tempCandMode;
-            _isCandidateWithWildcard = FALSE;
         }
     }
     else
@@ -813,9 +854,9 @@ void CCandidateListUIPresenter::_EndCandidateList()
 //
 //----------------------------------------------------------------------------
 
-void CCandidateListUIPresenter::_SetText(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList, BOOL isAddFindKeyCode)
+void CCandidateListUIPresenter::_SetText(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList)
 {
-    AddCandidateToCandidateListUI(pCandidateList, isAddFindKeyCode);
+    AddCandidateToCandidateListUI(pCandidateList);
 
     SetPageIndexWithScrollInfo(pCandidateList);
 
@@ -835,11 +876,11 @@ void CCandidateListUIPresenter::_SetText(_In_ CJyutpingArray<CCandidateListItem>
     }
 }
 
-void CCandidateListUIPresenter::AddCandidateToCandidateListUI(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList, BOOL isAddFindKeyCode)
+void CCandidateListUIPresenter::AddCandidateToCandidateListUI(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList)
 {
     for (UINT index = 0; index < pCandidateList->Count(); index++)
     {
-        _pCandidateWnd->_AddString(pCandidateList->GetAt(index), isAddFindKeyCode);
+        _pCandidateWnd->_AddString(pCandidateList->GetAt(index));
     }
 }
 
@@ -899,6 +940,11 @@ void CCandidateListUIPresenter::_SetFillColor(HBRUSH hBrush)
 DWORD_PTR CCandidateListUIPresenter::_GetSelectedCandidateString(_Outptr_result_maybenull_ const WCHAR **ppwchCandidateString)
 {
     return _pCandidateWnd->_GetSelectedCandidateString(ppwchCandidateString);
+}
+
+DWORD_PTR CCandidateListUIPresenter::_GetSelectedCandidateInputCount()
+{
+    return _pCandidateWnd->_GetSelectedCandidateInputCount();
 }
 
 //+---------------------------------------------------------------------------

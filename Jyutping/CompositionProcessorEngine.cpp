@@ -1,13 +1,13 @@
 #include "Private.h"
 #include "Jyutping.h"
 #include "CompositionProcessorEngine.h"
-#include "TableDictionaryEngine.h"
-#include "DictionarySearch.h"
 #include "TfInputProcessorProfile.h"
 #include "Globals.h"
 #include "Compartment.h"
 #include "LanguageBar.h"
 #include "RegKey.h"
+
+#include <algorithm>
 
 //+---------------------------------------------------------------------------
 //
@@ -85,9 +85,6 @@ BOOL CJyutping::_AddTextProcessorEngine()
 
 CCompositionProcessorEngine::CCompositionProcessorEngine()
 {
-    _pTableDictionaryEngine = nullptr;
-    _pDictionaryFile = nullptr;
-
     _langid = 0xffff;
     _guidProfile = GUID_NULL;
     _tfClientId = TF_CLIENTID_NULL;
@@ -102,12 +99,7 @@ CCompositionProcessorEngine::CCompositionProcessorEngine()
     _pCompartmentDoubleSingleByteEventSink = nullptr;
     _pCompartmentPunctuationEventSink = nullptr;
 
-    _hasWildcardIncludedInKeystrokeBuffer = FALSE;
-
-    _isWildcard = FALSE;
-    _isDisableWildcardAtFirst = FALSE;
-    _hasMakePhraseFromText = FALSE;
-    _isKeystrokeSort = FALSE;
+    _isInputEngineReady = FALSE;
 
     _candidateListPhraseModifier = 0;
 
@@ -122,12 +114,6 @@ CCompositionProcessorEngine::CCompositionProcessorEngine()
 
 CCompositionProcessorEngine::~CCompositionProcessorEngine()
 {
-    if (_pTableDictionaryEngine)
-    {
-        delete _pTableDictionaryEngine;
-        _pTableDictionaryEngine = nullptr;
-    }
-
     if (_pLanguageBar_IMEMode)
     {
         _pLanguageBar_IMEMode->CleanUp();
@@ -177,11 +163,6 @@ CCompositionProcessorEngine::~CCompositionProcessorEngine()
         _pCompartmentPunctuationEventSink = nullptr;
     }
 
-    if (_pDictionaryFile)
-    {
-        delete _pDictionaryFile;
-        _pDictionaryFile = nullptr;
-    }
 }
 
 //+---------------------------------------------------------------------------
@@ -218,7 +199,7 @@ BOOL CCompositionProcessorEngine::SetupLanguageProfile(LANGID langid, REFGUID gu
     SetupLanguageBar(pThreadMgr, tfClientId, isSecureMode);
     SetupKeystroke();
     SetupConfiguration();
-    SetupDictionaryFile();
+    SetupInputEngine();
 
     return TRUE;
 }
@@ -238,6 +219,10 @@ BOOL CCompositionProcessorEngine::AddVirtualKey(WCHAR wch)
     if (!wch)
     {
         return FALSE;
+    }
+    if (L'A' <= wch && wch <= L'Z')
+    {
+        wch = static_cast<WCHAR>(wch - L'A' + L'a');
     }
 
     //
@@ -315,6 +300,53 @@ WCHAR CCompositionProcessorEngine::GetVirtualKey(DWORD_PTR dwIndex)
     }
     return 0;
 }
+
+std::wstring CCompositionProcessorEngine::GetRawInputText() const
+{
+    return CurrentInputText();
+}
+
+std::wstring CCompositionProcessorEngine::GetCandidateTailInputText(DWORD_PTR inputCount) const
+{
+    std::wstring inputText = CurrentInputText();
+    size_t offset = (std::min)(static_cast<size_t>(inputCount), inputText.size());
+    std::wstring tail = inputText.substr(offset);
+    while (!tail.empty() && tail.front() == VirtualInputKey::apostrophe.character)
+    {
+        tail.erase(tail.begin());
+    }
+    return tail;
+}
+
+BOOL CCompositionProcessorEngine::SetRawInputText(const std::wstring& inputText)
+{
+    if (inputText.empty())
+    {
+        PurgeVirtualKey();
+        _cachedInputText.clear();
+        _cachedSuggestions.clear();
+        return TRUE;
+    }
+
+    PWCHAR pwch = new (std::nothrow) WCHAR[inputText.length()];
+    if (!pwch)
+    {
+        return FALSE;
+    }
+
+    memcpy(pwch, inputText.c_str(), inputText.length() * sizeof(WCHAR));
+
+    if (_keystrokeBuffer.Get())
+    {
+        delete [] _keystrokeBuffer.Get();
+    }
+
+    _keystrokeBuffer.Set(pwch, inputText.length());
+    _cachedInputText.clear();
+    _cachedSuggestions.clear();
+    return TRUE;
+}
+
 //+---------------------------------------------------------------------------
 //
 // GetReadingStrings
@@ -326,34 +358,28 @@ WCHAR CCompositionProcessorEngine::GetVirtualKey(DWORD_PTR dwIndex)
 //
 //----------------------------------------------------------------------------
 
-void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStringRange> *pReadingStrings, _Out_ BOOL *pIsWildcardIncluded)
+void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStringRange> *pReadingStrings)
 {
-    CStringRange oneKeystroke;
-
-    _hasWildcardIncludedInKeystrokeBuffer = FALSE;
-
     if (pReadingStrings->Count() == 0 && _keystrokeBuffer.GetLength())
     {
+        const std::vector<Ime::Lexicon>& suggestions = GetInputSuggestions();
+        if (!suggestions.empty())
+        {
+            _readingStringStorage = suggestions.front().mark;
+        }
+        else
+        {
+            _readingStringStorage = CurrentInputText();
+        }
+
         CStringRange* pNewString = nullptr;
 
         pNewString = pReadingStrings->Append();
         if (pNewString)
         {
-            *pNewString = _keystrokeBuffer;
-        }
-
-        for (DWORD index = 0; index < _keystrokeBuffer.GetLength(); index++)
-        {
-            oneKeystroke.Set(_keystrokeBuffer.Get() + index, 1);
-
-            if (IsWildcard() && IsWildcardChar(*oneKeystroke.Get()))
-            {
-                _hasWildcardIncludedInKeystrokeBuffer = TRUE;
-            }
+            pNewString->Set(_readingStringStorage.c_str(), _readingStringStorage.length());
         }
     }
-
-    *pIsWildcardIncluded = _hasWildcardIncludedInKeystrokeBuffer;
 }
 
 //+---------------------------------------------------------------------------
@@ -362,156 +388,14 @@ void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStri
 //
 //----------------------------------------------------------------------------
 
-void CCompositionProcessorEngine::GetCandidateList(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList, BOOL isIncrementalWordSearch, BOOL isWildcardSearch)
+void CCompositionProcessorEngine::GetCandidateList(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList)
 {
-    if (!IsDictionaryAvailable())
+    if (pCandidateList == nullptr)
     {
         return;
     }
 
-    if (isIncrementalWordSearch)
-    {
-        CStringRange wildcardSearch;
-        DWORD_PTR keystrokeBufLen = _keystrokeBuffer.GetLength() + 2;
-        PWCHAR pwch = new (std::nothrow) WCHAR[ keystrokeBufLen ];
-        if (!pwch)
-        {
-            return;
-        }
-
-        // check keystroke buffer already has wildcard char which end user want wildcard serach
-        DWORD wildcardIndex = 0;
-        BOOL isFindWildcard = FALSE;
-
-        if (IsWildcard())
-        {
-            for (wildcardIndex = 0; wildcardIndex < _keystrokeBuffer.GetLength(); wildcardIndex++)
-            {
-                if (IsWildcardChar(*(_keystrokeBuffer.Get() + wildcardIndex)))
-                {
-                    isFindWildcard = TRUE;
-                    break;
-                }
-            }
-        }
-
-        StringCchCopyN(pwch, keystrokeBufLen, _keystrokeBuffer.Get(), _keystrokeBuffer.GetLength());
-
-        if (!isFindWildcard)
-        {
-            // add wildcard char for incremental search
-            StringCchCat(pwch, keystrokeBufLen, L"*");
-        }
-
-        size_t len = 0;
-        if (StringCchLength(pwch, STRSAFE_MAX_CCH, &len) == S_OK)
-        {
-            wildcardSearch.Set(pwch, len);
-        }
-        else
-        {
-            return;
-        }
-
-        _pTableDictionaryEngine->CollectWordForWildcard(&wildcardSearch, pCandidateList);
-
-        if (0 >= pCandidateList->Count())
-        {
-            return;
-        }
-
-        if (IsKeystrokeSort())
-        {
-            _pTableDictionaryEngine->SortListItemByFindKeyCode(pCandidateList);
-        }
-
-        // Incremental search would show keystroke data from all candidate list items
-        // but wont show identical keystroke data for user inputted.
-        for (UINT index = 0; index < pCandidateList->Count(); index++)
-        {
-            CCandidateListItem *pLI = pCandidateList->GetAt(index);
-            DWORD_PTR keystrokeBufferLen = 0;
-
-            if (IsWildcard())
-            {
-                keystrokeBufferLen = wildcardIndex;
-            }
-            else
-            {
-                keystrokeBufferLen = _keystrokeBuffer.GetLength();
-            }
-
-            CStringRange newFindKeyCode;
-            newFindKeyCode.Set(pLI->_FindKeyCode.Get() + keystrokeBufferLen, pLI->_FindKeyCode.GetLength() - keystrokeBufferLen);
-            pLI->_FindKeyCode.Set(newFindKeyCode);
-        }
-
-        delete [] pwch;
-    }
-    else if (isWildcardSearch)
-    {
-        _pTableDictionaryEngine->CollectWordForWildcard(&_keystrokeBuffer, pCandidateList);
-    }
-    else
-    {
-        _pTableDictionaryEngine->CollectWord(&_keystrokeBuffer, pCandidateList);
-    }
-
-    for (UINT index = 0; index < pCandidateList->Count();)
-    {
-        CCandidateListItem *pLI = pCandidateList->GetAt(index);
-        CStringRange startItemString;
-        CStringRange endItemString;
-
-        startItemString.Set(pLI->_ItemString.Get(), 1);
-        endItemString.Set(pLI->_ItemString.Get() + pLI->_ItemString.GetLength() - 1, 1);
-
-        index++;
-    }
-}
-
-//+---------------------------------------------------------------------------
-//
-// GetCandidateStringInConverted
-//
-//----------------------------------------------------------------------------
-
-void CCompositionProcessorEngine::GetCandidateStringInConverted(CStringRange &searchString, _In_ CJyutpingArray<CCandidateListItem> *pCandidateList)
-{
-    if (!IsDictionaryAvailable())
-    {
-        return;
-    }
-
-    // Search phrase from SECTION_TEXT's converted string list
-    CStringRange wildcardSearch;
-    DWORD_PTR srgKeystrokeBufLen = searchString.GetLength() + 2;
-    PWCHAR pwch = new (std::nothrow) WCHAR[ srgKeystrokeBufLen ];
-    if (!pwch)
-    {
-        return;
-    }
-
-    StringCchCopyN(pwch, srgKeystrokeBufLen, searchString.Get(), searchString.GetLength());
-    StringCchCat(pwch, srgKeystrokeBufLen, L"*");
-
-    // add wildcard char
-	size_t len = 0;
-	if (StringCchLength(pwch, STRSAFE_MAX_CCH, &len) != S_OK)
-    {
-        return;
-    }
-    wildcardSearch.Set(pwch, len);
-
-    _pTableDictionaryEngine->CollectWordFromConvertedStringForWildcard(&wildcardSearch, pCandidateList);
-
-    if (IsKeystrokeSort())
-    {
-        _pTableDictionaryEngine->SortListItemByFindKeyCode(pCandidateList);
-    }
-
-    wildcardSearch.Clear();
-    delete [] pwch;
+    AppendInputEngineCandidates(pCandidateList);
 }
 
 //+---------------------------------------------------------------------------
@@ -857,11 +741,6 @@ void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsE
 
 void CCompositionProcessorEngine::SetupConfiguration()
 {
-    _isWildcard = TRUE;
-    _isDisableWildcardAtFirst = TRUE;
-    _hasMakePhraseFromText = TRUE;
-    _isKeystrokeSort = TRUE;
-
     SetInitialCandidateListRange();
 
     return;
@@ -949,77 +828,81 @@ BOOL CCompositionProcessorEngine::InitLanguageBar(_In_ CLangBarItemButton *pLang
     return FALSE;
 }
 
-//+---------------------------------------------------------------------------
-//
-// SetupDictionaryFile
-//
-//----------------------------------------------------------------------------
-
-BOOL CCompositionProcessorEngine::SetupDictionaryFile()
+BOOL CCompositionProcessorEngine::SetupInputEngine()
 {
-    // Not yet registered
-    // Register CFileMapping
-    WCHAR wszFileName[MAX_PATH] = {'\0'};
-    DWORD cchA = GetModuleFileName(Global::dllInstanceHandle, wszFileName, ARRAYSIZE(wszFileName));
-    size_t iDicFileNameLen = cchA + wcslen(TEXTSERVICE_DIC);
-    WCHAR *pwszFileName = new (std::nothrow) WCHAR[iDicFileNameLen + 1];
-    if (!pwszFileName)
+    _isInputEngineReady = _inputEngine.Prepare() ? TRUE : FALSE;
+    if (!_isInputEngineReady)
     {
-        goto ErrorExit;
+        _cachedInputText.clear();
+        _cachedSuggestions.clear();
     }
-    *pwszFileName = L'\0';
-
-    // find the last '/'
-    while (cchA--)
-    {
-        WCHAR wszChar = wszFileName[cchA];
-        if (wszChar == '\\' || wszChar == '/')
-        {
-            StringCchCopyN(pwszFileName, iDicFileNameLen + 1, wszFileName, cchA + 1);
-            StringCchCatN(pwszFileName, iDicFileNameLen + 1, TEXTSERVICE_DIC, wcslen(TEXTSERVICE_DIC));
-            break;
-        }
-    }
-
-    // create CFileMapping object
-    if (_pDictionaryFile == nullptr)
-    {
-        _pDictionaryFile = new (std::nothrow) CFileMapping();
-        if (!_pDictionaryFile)
-        {
-            goto ErrorExit;
-        }
-    }
-    if (!(_pDictionaryFile)->CreateFile(pwszFileName, GENERIC_READ, OPEN_EXISTING, FILE_SHARE_READ))
-    {
-        goto ErrorExit;
-    }
-
-    _pTableDictionaryEngine = new (std::nothrow) CTableDictionaryEngine(GetLocale(), _pDictionaryFile);
-    if (!_pTableDictionaryEngine)
-    {
-        goto ErrorExit;
-    }
-
-    delete []pwszFileName;
-    return TRUE;
-ErrorExit:
-    if (pwszFileName)
-    {
-        delete []pwszFileName;
-    }
-    return FALSE;
+    return _isInputEngineReady;
 }
 
-//+---------------------------------------------------------------------------
-//
-// GetDictionaryFile
-//
-//----------------------------------------------------------------------------
-
-CFile* CCompositionProcessorEngine::GetDictionaryFile()
+std::wstring CCompositionProcessorEngine::CurrentInputText() const
 {
-    return _pDictionaryFile;
+    const WCHAR* buffer = _keystrokeBuffer.Get();
+    if (buffer == nullptr || _keystrokeBuffer.GetLength() == 0)
+    {
+        return std::wstring();
+    }
+    return std::wstring(buffer, static_cast<size_t>(_keystrokeBuffer.GetLength()));
+}
+
+const std::vector<Ime::Lexicon>& CCompositionProcessorEngine::GetInputSuggestions()
+{
+    std::wstring inputText = CurrentInputText();
+    if (!_isInputEngineReady || inputText.empty())
+    {
+        _cachedInputText = inputText;
+        _cachedSuggestions.clear();
+        return _cachedSuggestions;
+    }
+
+    if (inputText != _cachedInputText)
+    {
+        _cachedInputText = inputText;
+        _cachedSuggestions = _inputEngine.Suggest(_cachedInputText);
+    }
+    return _cachedSuggestions;
+}
+
+void CCompositionProcessorEngine::AppendInputEngineCandidates(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList)
+{
+    if (pCandidateList == nullptr)
+    {
+        return;
+    }
+
+    const std::vector<Ime::Lexicon>& suggestions = GetInputSuggestions();
+    if (suggestions.empty())
+    {
+        return;
+    }
+
+    _candidateItemTextStorage.clear();
+    _candidateItemCommentStorage.clear();
+    _candidateItemTextStorage.reserve(suggestions.size());
+    _candidateItemCommentStorage.reserve(suggestions.size());
+
+    for (const Ime::Lexicon& suggestion : suggestions)
+    {
+        CCandidateListItem* pItem = pCandidateList->Append();
+        if (pItem == nullptr)
+        {
+            return;
+        }
+
+        _candidateItemTextStorage.push_back(suggestion.text);
+        _candidateItemCommentStorage.push_back(suggestion.romanization);
+
+        const std::wstring& text = _candidateItemTextStorage.back();
+        const std::wstring& comment = _candidateItemCommentStorage.back();
+
+        pItem->_ItemString.Set(text.c_str(), text.length());
+        pItem->_ItemComment.Set(comment.c_str(), comment.length());
+        pItem->_InputCount = static_cast<DWORD_PTR>(suggestion.inputCount);
+    }
 }
 
 //+---------------------------------------------------------------------------
@@ -1517,7 +1400,7 @@ void CCompositionProcessorEngine::SetInitialCandidateListRange()
 //     If engine need this virtual key code, returns true. Otherwise returns false.
 //----------------------------------------------------------------------------
 
-BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCHAR *pwch, BOOL fComposing, CANDIDATE_MODE candidateMode, BOOL hasCandidateWithWildcard, _Out_opt_ _KEYSTROKE_STATE *pKeyState)
+BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCHAR *pwch, BOOL fComposing, CANDIDATE_MODE candidateMode, _Out_opt_ _KEYSTROKE_STATE *pKeyState)
 {
     if (pKeyState)
     {
@@ -1532,12 +1415,10 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
 
     if (fComposing || candidateMode == CANDIDATE_INCREMENTAL || candidateMode == CANDIDATE_NONE)
     {
-        if (IsVirtualKeyKeystrokeComposition(uCode, pKeyState, FUNCTION_NONE))
-        {
-            return TRUE;
-        }
-        else if ((IsWildcard() && IsWildcardChar(*pwch) && !IsDisableWildcardAtFirst()) ||
-            (IsWildcard() && IsWildcardChar(*pwch) &&  IsDisableWildcardAtFirst() && _keystrokeBuffer.GetLength()))
+        if ((fComposing || candidateMode == CANDIDATE_INCREMENTAL) &&
+            uCode == VirtualInputKey::apostrophe.keyCode &&
+            *pwch == VirtualInputKey::apostrophe.character &&
+            Global::ModifiersValue == 0)
         {
             if (pKeyState)
             {
@@ -1546,9 +1427,19 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
             }
             return TRUE;
         }
-        else if (_hasWildcardIncludedInKeystrokeBuffer && uCode == VK_SPACE)
+        else if (VirtualInputKey::IsMatchedLetter(uCode) &&
+            (Global::ModifiersValue == 0 || Global::CheckModifiers(Global::ModifiersValue, TF_MOD_SHIFT)))
         {
-            if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_CONVERT_WILDCARD; } return TRUE;
+            if (pKeyState)
+            {
+                pKeyState->Category = CATEGORY_COMPOSING;
+                pKeyState->Function = FUNCTION_INPUT;
+            }
+            return TRUE;
+        }
+        else if (IsVirtualKeyKeystrokeComposition(uCode, pKeyState, FUNCTION_NONE))
+        {
+            return TRUE;
         }
     }
 
@@ -1558,14 +1449,6 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
         if (IsVirtualKeyKeystrokeCandidate(uCode, pKeyState, candidateMode, &isRetCode, &_KeystrokeCandidate))
         {
             return isRetCode;
-        }
-
-        if (hasCandidateWithWildcard)
-        {
-            if (IsVirtualKeyKeystrokeCandidate(uCode, pKeyState, candidateMode, &isRetCode, &_KeystrokeCandidateWildcard))
-            {
-                return isRetCode;
-            }
         }
 
         // Candidate list could not handle key. We can try to restart the composition.
@@ -1610,7 +1493,7 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
             {
             case VK_LEFT:   if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_MOVE_LEFT; } return TRUE;
             case VK_RIGHT:  if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_MOVE_RIGHT; } return TRUE;
-            case VK_RETURN: if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_FINALIZE_CANDIDATELIST; } return TRUE;
+            case VK_RETURN: if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_FINALIZE_TEXTSTORE; } return TRUE;
             case VK_ESCAPE: if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_CANCEL; } return TRUE;
             case VK_BACK:   if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_BACKSPACE; } return TRUE;
 
@@ -1622,7 +1505,7 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
             case VK_HOME:   if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_MOVE_PAGE_TOP; } return TRUE;
             case VK_END:    if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_MOVE_PAGE_BOTTOM; } return TRUE;
 
-            case VK_SPACE:  if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_CONVERT; } return TRUE;
+            case VK_SPACE:  if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_FINALIZE_TEXTSTORE; } return TRUE;
             }
         }
         else if ((candidateMode == CANDIDATE_INCREMENTAL))
@@ -1642,7 +1525,7 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
                 }
                 return FALSE;
 
-            case VK_RETURN: if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_FINALIZE_CANDIDATELIST; } return TRUE;
+            case VK_RETURN: if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_FINALIZE_TEXTSTORE; } return TRUE;
             case VK_ESCAPE: if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_CANCEL; } return TRUE;
 
                 // VK_BACK - remove one char from reading string.

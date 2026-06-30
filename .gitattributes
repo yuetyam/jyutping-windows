@@ -28,6 +28,3 @@
 *.sqlite binary
 *.sqlite3 binary
 *.db binary
-
-# Others
-Lexicon.txt binary

@@ -65,12 +65,13 @@ public:
     virtual HRESULT _StartCandidateList(TfClientId tfClientId, _In_ ITfDocumentMgr *pDocumentMgr, _In_ ITfContext *pContextDocument, TfEditCookie ec, _In_ ITfRange *pRangeComposition);
     void _EndCandidateList();
 
-    void _SetText(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList, BOOL isAddFindKeyCode);
+    void _SetText(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList);
     void _ClearList();
     VOID _SetTextColor(COLORREF crColor, COLORREF crBkColor);
     VOID _SetFillColor(HBRUSH hBrush);
 
     DWORD_PTR _GetSelectedCandidateString(_Outptr_result_maybenull_ const WCHAR **ppwchCandidateString);
+    DWORD_PTR _GetSelectedCandidateInputCount();
     BOOL _SetSelectionInPage(int nPos) { return _pCandidateWnd->_SetSelectionInPage(nPos); }
 
     BOOL _MoveSelection(_In_ int offSet);
@@ -109,7 +110,7 @@ private:
     HRESULT MakeCandidateWindow(_In_ ITfContext *pContextDocument);
     void DisposeCandidateWindow();
 
-    void AddCandidateToCandidateListUI(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList, BOOL isAddFindKeyCode);
+    void AddCandidateToCandidateListUI(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList);
 
     void SetPageIndexWithScrollInfo(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList);
 

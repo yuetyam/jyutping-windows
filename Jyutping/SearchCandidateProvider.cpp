@@ -162,7 +162,7 @@ STDMETHODIMP CSearchCandidateProvider::GetSearchCandidates(BSTR bstrQuery, BSTR 
     }
 
     CJyutpingArray<CCandidateListItem> candidateList;
-    pCompositionProcessorEngine->GetCandidateList(&candidateList, TRUE, FALSE);
+    pCompositionProcessorEngine->GetCandidateList(&candidateList);
 
     int cCand = min(candidateList.Count(), FAKECANDIDATENUMBER);
     if (0 < cCand)
@@ -200,4 +200,3 @@ STDMETHODIMP CSearchCandidateProvider::SetResult(BSTR bstrQuery, BSTR bstrApplic
 
     return E_NOTIMPL;
 }
-
