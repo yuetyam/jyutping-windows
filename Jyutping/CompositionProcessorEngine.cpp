@@ -353,10 +353,15 @@ std::wstring CCompositionProcessorEngine::GetCandidateTailInputText(DWORD_PTR in
 {
     std::vector<VirtualInputKey> inputKeys = CurrentInputKeys();
     size_t offset = (std::min)(static_cast<size_t>(inputCount), inputKeys.size());
+    BOOL isReverseLookupBuffer = ReverseLookupMethodFromKeys(inputKeys) != Ime::ReverseLookupMethod::None;
     std::vector<VirtualInputKey> tail(inputKeys.begin() + offset, inputKeys.end());
     while (!tail.empty() && tail.front().IsApostrophe())
     {
         tail.erase(tail.begin());
+    }
+    if (isReverseLookupBuffer && offset > 0 && !tail.empty())
+    {
+        tail.insert(tail.begin(), inputKeys.front());
     }
     return Ime::TextFromKeys(tail);
 }
@@ -1040,7 +1045,7 @@ void CCompositionProcessorEngine::AppendInputEngineCandidates(_Inout_ CJyutpingA
 
     std::vector<VirtualInputKey> inputKeys = CurrentInputKeys();
     BOOL isReverseLookupBuffer = ReverseLookupMethodFromKeys(inputKeys) != Ime::ReverseLookupMethod::None;
-    DWORD_PTR reverseLookupInputCount = static_cast<DWORD_PTR>(inputKeys.size());
+    size_t reverseLookupQueryLength = (isReverseLookupBuffer && !inputKeys.empty()) ? inputKeys.size() - 1 : 0;
 
     for (const Ime::Lexicon& suggestion : suggestions)
     {
@@ -1058,9 +1063,15 @@ void CCompositionProcessorEngine::AppendInputEngineCandidates(_Inout_ CJyutpingA
 
         pItem->_ItemString.Set(text.c_str(), text.length());
         pItem->_ItemComment.Set(comment.c_str(), comment.length());
-        pItem->_InputCount = isReverseLookupBuffer ?
-            reverseLookupInputCount :
-            static_cast<DWORD_PTR>(suggestion.inputCount);
+        if (isReverseLookupBuffer)
+        {
+            size_t consumedQueryLength = (std::min)(suggestion.inputCount, reverseLookupQueryLength);
+            pItem->_InputCount = static_cast<DWORD_PTR>(consumedQueryLength + 1);
+        }
+        else
+        {
+            pItem->_InputCount = static_cast<DWORD_PTR>(suggestion.inputCount);
+        }
     }
 }
 
