@@ -271,9 +271,7 @@ std::vector<ImeDatabase::LexiconRow> ImeDatabase::QueryLexiconStrict(int64_t spe
 
 std::vector<ImeDatabase::SyllableRow> ImeDatabase::QuerySyllables() const
 {
-    static constexpr WCHAR sql[] =
-        L"SELECT alias_code, origin_code, nine_key_alias_code, nine_key_origin_code, alias, origin "
-        L"FROM core_syllable_table;";
+    static constexpr WCHAR sql[] = L"SELECT alias_code, origin_code, alias, origin FROM core_syllable_table;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))
@@ -288,10 +286,8 @@ std::vector<ImeDatabase::SyllableRow> ImeDatabase::QuerySyllables() const
         rows.push_back({
             sqlite3_column_int64(statement.Get(), 0),
             sqlite3_column_int64(statement.Get(), 1),
-            sqlite3_column_int64(statement.Get(), 2),
-            sqlite3_column_int64(statement.Get(), 3),
-            ColumnText(statement.Get(), 4),
-            ColumnText(statement.Get(), 5)
+            ColumnText(statement.Get(), 2),
+            ColumnText(statement.Get(), 3)
         });
     }
 

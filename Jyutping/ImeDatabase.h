@@ -24,8 +24,6 @@ public:
     {
         int64_t aliasCode = 0;
         int64_t originCode = 0;
-        int64_t nineKeyAliasCode = 0;
-        int64_t nineKeyOriginCode = 0;
         std::wstring alias;
         std::wstring origin;
     };

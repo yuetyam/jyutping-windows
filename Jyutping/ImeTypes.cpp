@@ -50,49 +50,6 @@ std::optional<int> VirtualInputCode(WCHAR character)
     return NumberCode(character);
 }
 
-std::optional<int> NineKeyCode(WCHAR character)
-{
-    switch (character)
-    {
-    case L'a':
-    case L'b':
-    case L'c':
-        return 2;
-    case L'd':
-    case L'e':
-    case L'f':
-        return 3;
-    case L'g':
-    case L'h':
-    case L'i':
-        return 4;
-    case L'j':
-    case L'k':
-    case L'l':
-        return 5;
-    case L'm':
-    case L'n':
-    case L'o':
-        return 6;
-    case L'p':
-    case L'q':
-    case L'r':
-    case L's':
-        return 7;
-    case L't':
-    case L'u':
-    case L'v':
-        return 8;
-    case L'w':
-    case L'x':
-    case L'y':
-    case L'z':
-        return 9;
-    default:
-        return std::nullopt;
-    }
-}
-
 WCHAR UppercaseAscii(WCHAR character)
 {
     if (L'a' <= character && character <= L'z')
@@ -422,21 +379,6 @@ int64_t Radix100Combined(const std::vector<int>& codes)
     return result;
 }
 
-int64_t DecimalCombined(const std::vector<int>& codes)
-{
-    if (codes.size() >= 19)
-    {
-        return 0;
-    }
-
-    int64_t result = 0;
-    for (int code : codes)
-    {
-        result = result * 10 + code;
-    }
-    return result;
-}
-
 std::optional<int64_t> CharCodeFromText(std::wstring_view text)
 {
     if (text.size() >= 10)
@@ -483,27 +425,6 @@ std::optional<int64_t> AnchorsCodeFromText(std::wstring_view text)
         return std::nullopt;
     }
     return result;
-}
-
-std::optional<int64_t> NineKeyCharCodeFromText(std::wstring_view text)
-{
-    if (text.size() >= 19)
-    {
-        return std::nullopt;
-    }
-
-    std::vector<int> codes;
-    codes.reserve(text.size());
-    for (WCHAR character : text)
-    {
-        auto code = NineKeyCode(character);
-        if (!code)
-        {
-            return std::nullopt;
-        }
-        codes.push_back(*code);
-    }
-    return DecimalCombined(codes);
 }
 
 std::vector<VirtualInputKey> InputKeysFromCode(int64_t code)

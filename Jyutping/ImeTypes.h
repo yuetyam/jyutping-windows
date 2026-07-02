@@ -118,10 +118,8 @@ std::wstring ToneDigitOnly(std::wstring_view text);
 std::wstring LatinLetterOnly(std::wstring_view text);
 
 int64_t Radix100Combined(const std::vector<int>& codes);
-int64_t DecimalCombined(const std::vector<int>& codes);
 std::optional<int64_t> CharCodeFromText(std::wstring_view text);
 std::optional<int64_t> AnchorsCodeFromText(std::wstring_view text);
-std::optional<int64_t> NineKeyCharCodeFromText(std::wstring_view text);
 
 std::vector<VirtualInputKey> InputKeysFromCode(int64_t code);
 std::wstring TextFromKeys(const std::vector<VirtualInputKey>& keys);
