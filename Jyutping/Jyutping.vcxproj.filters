@@ -155,6 +155,9 @@
     <ClInclude Include="Segmenter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PinyinSegmenter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ActiveLanguageProfileNotifySink.cpp">
@@ -293,6 +296,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Segmenter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PinyinSegmenter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

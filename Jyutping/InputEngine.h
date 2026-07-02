@@ -3,6 +3,7 @@
 #include "stdafx.h"
 #include "ImeDatabase.h"
 #include "ImeTypes.h"
+#include "PinyinSegmenter.h"
 #include "Segmenter.h"
 #include "sal.h"
 
@@ -46,11 +47,13 @@ private:
     std::vector<Lexicon> SpellMatch(std::wstring_view text, std::wstring input, std::optional<std::wstring> mark = std::nullopt, std::optional<int> limit = std::nullopt) const;
     std::vector<Lexicon> StrictMatch(int64_t anchors, int64_t spell, std::wstring input, std::optional<std::wstring> mark = std::nullopt, std::optional<int> limit = std::nullopt) const;
     std::vector<Lexicon> ReverseLookupWord(const std::wstring& word, const std::wstring& input, std::optional<std::wstring> mark = std::nullopt) const;
+    std::vector<Lexicon> PinyinReverseLookup(const std::vector<VirtualInputKey>& keys) const;
 
     Lexicon Modify(const Lexicon& item, const std::vector<VirtualInputKey>& keys, const std::wstring& text, size_t inputLength) const;
 
     ImeDatabase _database;
     Segmenter _segmenter;
+    PinyinSegmenter _pinyinSegmenter;
 };
 
 } // namespace Ime
