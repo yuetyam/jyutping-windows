@@ -122,6 +122,7 @@ std::optional<int64_t> CharCodeFromText(std::wstring_view text);
 std::optional<int64_t> AnchorsCodeFromText(std::wstring_view text);
 
 std::vector<VirtualInputKey> InputKeysFromCode(int64_t code);
+std::vector<VirtualInputKey> InputKeysFromText(std::wstring_view text);
 std::wstring TextFromKeys(const std::vector<VirtualInputKey>& keys);
 std::wstring TextFromEvents(const std::vector<BasicInputEvent>& events);
 std::wstring PreviewMarkNormalized(const std::vector<BasicInputEvent>& events);

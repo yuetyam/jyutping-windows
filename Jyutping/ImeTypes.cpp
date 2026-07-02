@@ -451,6 +451,22 @@ std::vector<VirtualInputKey> InputKeysFromCode(int64_t code)
     return keys;
 }
 
+std::vector<VirtualInputKey> InputKeysFromText(std::wstring_view text)
+{
+    std::vector<VirtualInputKey> keys;
+    keys.reserve(text.size());
+    for (WCHAR character : text)
+    {
+        VirtualInputKey key;
+        if (!VirtualInputKey::MatchInputKeyForCharacter(character, &key))
+        {
+            return std::vector<VirtualInputKey>();
+        }
+        keys.push_back(key);
+    }
+    return keys;
+}
+
 std::wstring TextFromKeys(const std::vector<VirtualInputKey>& keys)
 {
     std::wstring result;

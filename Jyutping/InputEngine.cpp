@@ -9,30 +9,6 @@ int QueryLimit(std::optional<int> limit, int defaultLimit)
     return limit.value_or(defaultLimit);
 }
 
-std::vector<VirtualInputKey> KeysFromText(std::wstring_view input)
-{
-    std::vector<VirtualInputKey> keys;
-    keys.reserve(input.size());
-    for (WCHAR character : input)
-    {
-        VirtualInputKey key;
-        if (character == VirtualInputKey::apostrophe.character)
-        {
-            key = VirtualInputKey::apostrophe;
-        }
-        else if (character == VirtualInputKey::grave.character)
-        {
-            key = VirtualInputKey::grave;
-        }
-        else if (!VirtualInputKey::MatchInputKeyForCharacter(character, &key))
-        {
-            return std::vector<VirtualInputKey>();
-        }
-        keys.push_back(key);
-    }
-    return keys;
-}
-
 bool StartsWith(std::wstring_view text, std::wstring_view prefix)
 {
     return text.size() >= prefix.size() && text.substr(0, prefix.size()) == prefix;
@@ -333,7 +309,7 @@ bool InputEngine::IsPrepared() const
 
 std::vector<Lexicon> InputEngine::Suggest(std::wstring_view input, bool deepSearch) const
 {
-    return Suggest(KeysFromText(input), deepSearch);
+    return Suggest(InputKeysFromText(input), deepSearch);
 }
 
 std::vector<Lexicon> InputEngine::Suggest(const std::vector<VirtualInputKey>& keys, bool deepSearch) const
@@ -372,7 +348,7 @@ std::vector<Lexicon> InputEngine::Suggest(const std::vector<VirtualInputKey>& ke
 
 std::vector<Lexicon> InputEngine::ReverseLookup(ReverseLookupMethod method, std::wstring_view input) const
 {
-    return ReverseLookup(method, KeysFromText(input));
+    return ReverseLookup(method, InputKeysFromText(input));
 }
 
 std::vector<Lexicon> InputEngine::ReverseLookup(ReverseLookupMethod method, const std::vector<VirtualInputKey>& keys) const

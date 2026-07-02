@@ -97,10 +97,11 @@ private:
 
     BOOL SetupInputEngine();
     std::wstring CurrentInputText() const;
+    std::vector<VirtualInputKey> CurrentInputKeys() const;
     Ime::ReverseLookupMethod CurrentReverseLookupMethod() const;
-    std::wstring ReverseLookupQueryText() const;
+    std::vector<VirtualInputKey> ReverseLookupQueryKeys() const;
     std::wstring ReverseLookupReadingText(const std::vector<Ime::Lexicon>& suggestions) const;
-    BOOL IsReverseLookupInputKey(UINT uCode, WCHAR wch) const;
+    BOOL IsReverseLookupInputKey(UINT uCode) const;
     const std::vector<Ime::Lexicon>& GetInputSuggestions();
     void AppendInputEngineCandidates(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
 

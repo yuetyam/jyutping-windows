@@ -23,14 +23,6 @@ __inline UINT VKeyFromVKPacketAndWchar(UINT vk, WCHAR wch)
         {
             vkRet = inputKey.keyCode;
         }
-        else if (wch == VirtualInputKey::apostrophe.character)
-        {
-            vkRet = VirtualInputKey::apostrophe.keyCode;
-        }
-        else if (wch == VirtualInputKey::grave.character)
-        {
-            vkRet = VirtualInputKey::grave.keyCode;
-        }
         else if (wch == L' ')
         {
             vkRet = VK_SPACE;
@@ -136,7 +128,11 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     //
     // Punctuation
     //
-    if (!(pCompositionProcessorEngine->IsReverseLookupBuffer() && wch == VirtualInputKey::apostrophe.character) &&
+    VirtualInputKey punctuationInputKey;
+    BOOL isReverseLookupApostrophe = pCompositionProcessorEngine->IsReverseLookupBuffer() &&
+        VirtualInputKey::MatchInputKeyForCharacter(wch, &punctuationInputKey) &&
+        punctuationInputKey.IsApostrophe();
+    if (!isReverseLookupApostrophe &&
         pCompositionProcessorEngine->IsPunctuation(wch))
     {
         if ((_candidateMode == CANDIDATE_NONE) && isPunctuation)
