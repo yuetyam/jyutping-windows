@@ -39,6 +39,8 @@ std::vector<Lexicon> InputEngine::ReverseLookup(ReverseLookupMethod method, cons
         return PinyinReverseLookup(keys);
     case ReverseLookupMethod::Cangjie:
         return CangjieReverseLookup(keys);
+    case ReverseLookupMethod::Stroke:
+        return StrokeReverseLookup(keys);
     default:
         return std::vector<Lexicon>();
     }
