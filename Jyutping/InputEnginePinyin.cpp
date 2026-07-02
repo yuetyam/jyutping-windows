@@ -736,10 +736,6 @@ std::vector<Lexicon> InputEngine::PinyinReverseLookup(const std::vector<VirtualI
     {
         return std::vector<Lexicon>();
     }
-    if (searchKeys.size() < 2)
-    {
-        return std::vector<Lexicon>();
-    }
 
     std::vector<PinyinLexicon> pinyinLexicons;
     PinyinSegmentation segmentation = _pinyinSegmenter.Segment(searchKeys);

@@ -47,15 +47,6 @@ BOOL IsStrokeMethod(Ime::ReverseLookupMethod method)
     return method == Ime::ReverseLookupMethod::Stroke;
 }
 
-size_t MinimumReverseLookupQueryKeyCount(Ime::ReverseLookupMethod method)
-{
-    if (method == Ime::ReverseLookupMethod::Pinyin)
-    {
-        return 2;
-    }
-    return 1;
-}
-
 } // namespace
 
 //+---------------------------------------------------------------------------
@@ -1005,8 +996,7 @@ const std::vector<Ime::Lexicon>& CCompositionProcessorEngine::GetInputSuggestion
         reverseLookupQueryKeys = std::vector<VirtualInputKey>(inputKeys.begin() + 1, inputKeys.end());
     }
 
-    if (reverseLookupMethod != Ime::ReverseLookupMethod::None &&
-        reverseLookupQueryKeys.size() < MinimumReverseLookupQueryKeyCount(reverseLookupMethod))
+    if (reverseLookupMethod != Ime::ReverseLookupMethod::None && reverseLookupQueryKeys.empty())
     {
         _cachedInputText = inputText;
         _cachedReverseLookupMethod = reverseLookupMethod;
