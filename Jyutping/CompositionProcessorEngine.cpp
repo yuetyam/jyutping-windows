@@ -47,6 +47,15 @@ BOOL IsStrokeMethod(Ime::ReverseLookupMethod method)
     return method == Ime::ReverseLookupMethod::Stroke;
 }
 
+size_t MinimumReverseLookupQueryKeyCount(Ime::ReverseLookupMethod method)
+{
+    if (method == Ime::ReverseLookupMethod::Pinyin)
+    {
+        return 2;
+    }
+    return 1;
+}
+
 } // namespace
 
 //+---------------------------------------------------------------------------
@@ -990,6 +999,21 @@ const std::vector<Ime::Lexicon>& CCompositionProcessorEngine::GetInputSuggestion
         return _cachedSuggestions;
     }
 
+    std::vector<VirtualInputKey> reverseLookupQueryKeys;
+    if (reverseLookupMethod != Ime::ReverseLookupMethod::None)
+    {
+        reverseLookupQueryKeys = std::vector<VirtualInputKey>(inputKeys.begin() + 1, inputKeys.end());
+    }
+
+    if (reverseLookupMethod != Ime::ReverseLookupMethod::None &&
+        reverseLookupQueryKeys.size() < MinimumReverseLookupQueryKeyCount(reverseLookupMethod))
+    {
+        _cachedInputText = inputText;
+        _cachedReverseLookupMethod = reverseLookupMethod;
+        _cachedSuggestions.clear();
+        return _cachedSuggestions;
+    }
+
     if (inputText != _cachedInputText || reverseLookupMethod != _cachedReverseLookupMethod)
     {
         _cachedInputText = inputText;
@@ -1000,8 +1024,7 @@ const std::vector<Ime::Lexicon>& CCompositionProcessorEngine::GetInputSuggestion
         }
         else
         {
-            std::vector<VirtualInputKey> queryKeys(inputKeys.begin() + 1, inputKeys.end());
-            _cachedSuggestions = _inputEngine.ReverseLookup(reverseLookupMethod, queryKeys);
+            _cachedSuggestions = _inputEngine.ReverseLookup(reverseLookupMethod, reverseLookupQueryKeys);
         }
     }
     return _cachedSuggestions;

@@ -520,6 +520,11 @@ STDAPI CCandidateListUIPresenter::Show(BOOL showCandidateWindow)
 
 HRESULT CCandidateListUIPresenter::ToShowCandidateWindow()
 {
+    if (_pCandidateWnd == nullptr)
+    {
+        return S_OK;
+    }
+
     if (_hideWindow)
     {
         _pCandidateWnd->_Show(FALSE);
@@ -555,7 +560,7 @@ HRESULT CCandidateListUIPresenter::ToHideCandidateWindow()
 
 STDAPI CCandidateListUIPresenter::IsShown(BOOL *pIsShow)
 {
-    *pIsShow = _pCandidateWnd->_IsWindowVisible();
+    *pIsShow = (_pCandidateWnd != nullptr) ? _pCandidateWnd->_IsWindowVisible() : FALSE;
     return S_OK;
 }
 
@@ -856,6 +861,11 @@ void CCandidateListUIPresenter::_EndCandidateList()
 
 void CCandidateListUIPresenter::_SetText(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList)
 {
+    if (_pCandidateWnd == nullptr)
+    {
+        return;
+    }
+
     AddCandidateToCandidateListUI(pCandidateList);
 
     SetPageIndexWithScrollInfo(pCandidateList);
@@ -878,6 +888,11 @@ void CCandidateListUIPresenter::_SetText(_In_ CJyutpingArray<CCandidateListItem>
 
 void CCandidateListUIPresenter::AddCandidateToCandidateListUI(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList)
 {
+    if (_pCandidateWnd == nullptr || pCandidateList == nullptr)
+    {
+        return;
+    }
+
     for (UINT index = 0; index < pCandidateList->Count(); index++)
     {
         _pCandidateWnd->_AddString(pCandidateList->GetAt(index));
@@ -886,7 +901,17 @@ void CCandidateListUIPresenter::AddCandidateToCandidateListUI(_In_ CJyutpingArra
 
 void CCandidateListUIPresenter::SetPageIndexWithScrollInfo(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList)
 {
+    if (_pCandidateWnd == nullptr || pCandidateList == nullptr)
+    {
+        return;
+    }
+
     UINT candCntInPage = _pIndexRange->Count();
+    if (candCntInPage == 0)
+    {
+        return;
+    }
+
     UINT bufferSize = pCandidateList->Count() / candCntInPage + 1;
     UINT* puPageIndex = new (std::nothrow) UINT[ bufferSize ];
     if (puPageIndex != nullptr)
@@ -910,6 +935,11 @@ void CCandidateListUIPresenter::SetPageIndexWithScrollInfo(_In_ CJyutpingArray<C
 
 void CCandidateListUIPresenter::_ClearList()
 {
+    if (_pCandidateWnd == nullptr)
+    {
+        return;
+    }
+
     _pCandidateWnd->_ClearList();
     _pCandidateWnd->_InvalidateRect();
 }
@@ -923,11 +953,21 @@ void CCandidateListUIPresenter::_ClearList()
 
 void CCandidateListUIPresenter::_SetTextColor(COLORREF crColor, COLORREF crBkColor)
 {
+    if (_pCandidateWnd == nullptr)
+    {
+        return;
+    }
+
     _pCandidateWnd->_SetTextColor(crColor, crBkColor);
 }
 
 void CCandidateListUIPresenter::_SetFillColor(HBRUSH hBrush)
 {
+    if (_pCandidateWnd == nullptr)
+    {
+        return;
+    }
+
     _pCandidateWnd->_SetFillColor(hBrush);
 }
 
@@ -939,11 +979,25 @@ void CCandidateListUIPresenter::_SetFillColor(HBRUSH hBrush)
 
 DWORD_PTR CCandidateListUIPresenter::_GetSelectedCandidateString(_Outptr_result_maybenull_ const WCHAR **ppwchCandidateString)
 {
+    if (ppwchCandidateString != nullptr)
+    {
+        *ppwchCandidateString = nullptr;
+    }
+    if (_pCandidateWnd == nullptr)
+    {
+        return 0;
+    }
+
     return _pCandidateWnd->_GetSelectedCandidateString(ppwchCandidateString);
 }
 
 DWORD_PTR CCandidateListUIPresenter::_GetSelectedCandidateInputCount()
 {
+    if (_pCandidateWnd == nullptr)
+    {
+        return 0;
+    }
+
     return _pCandidateWnd->_GetSelectedCandidateInputCount();
 }
 
@@ -955,6 +1009,11 @@ DWORD_PTR CCandidateListUIPresenter::_GetSelectedCandidateInputCount()
 
 BOOL CCandidateListUIPresenter::_MoveSelection(_In_ int offSet)
 {
+    if (_pCandidateWnd == nullptr)
+    {
+        return FALSE;
+    }
+
     BOOL ret = _pCandidateWnd->_MoveSelection(offSet, TRUE);
     if (ret)
     {
@@ -979,6 +1038,11 @@ BOOL CCandidateListUIPresenter::_MoveSelection(_In_ int offSet)
 
 BOOL CCandidateListUIPresenter::_SetSelection(_In_ int selectedIndex)
 {
+    if (_pCandidateWnd == nullptr)
+    {
+        return FALSE;
+    }
+
     BOOL ret = _pCandidateWnd->_SetSelection(selectedIndex, TRUE);
     if (ret)
     {
@@ -1004,6 +1068,11 @@ BOOL CCandidateListUIPresenter::_SetSelection(_In_ int selectedIndex)
 
 BOOL CCandidateListUIPresenter::_MovePage(_In_ int offSet)
 {
+    if (_pCandidateWnd == nullptr)
+    {
+        return FALSE;
+    }
+
     BOOL ret = _pCandidateWnd->_MovePage(offSet, TRUE);
     if (ret)
     {
@@ -1284,6 +1353,7 @@ HRESULT CCandidateListUIPresenter::EndUIElement()
         pUIElementMgr->EndUIElement(_uiElementId);
         pUIElementMgr->Release();
     }
+    _uiElementId = (DWORD)-1;
 
     return hr;
 }

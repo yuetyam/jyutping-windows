@@ -28,7 +28,7 @@ std::vector<Lexicon> InputEngine::ReverseLookup(ReverseLookupMethod method, std:
 
 std::vector<Lexicon> InputEngine::ReverseLookup(ReverseLookupMethod method, const std::vector<VirtualInputKey>& keys) const
 {
-    if (!IsPrepared())
+    if (!IsPrepared() || keys.empty())
     {
         return std::vector<Lexicon>();
     }

@@ -49,6 +49,8 @@ VOID CJyutping::_DeleteCandidateList(BOOL isForce, _In_opt_ ITfContext *pContext
     if (_pCandidateListUIPresenter)
     {
         _pCandidateListUIPresenter->_EndCandidateList();
+        delete _pCandidateListUIPresenter;
+        _pCandidateListUIPresenter = nullptr;
 
         _candidateMode = CANDIDATE_NONE;
     }
