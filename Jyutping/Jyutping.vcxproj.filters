@@ -295,6 +295,12 @@
     <ClCompile Include="InputEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="InputEnginePinyin.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="InputEngineReverseLookup.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Segmenter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
