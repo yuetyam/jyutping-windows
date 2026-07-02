@@ -192,7 +192,10 @@ HRESULT CJyutping::_HandleCompositionInputWorker(_In_ CCompositionProcessorEngin
     }
     else if (_pCandidateListUIPresenter)
     {
-        _pCandidateListUIPresenter->_ClearList();
+        _pCandidateListUIPresenter->_EndCandidateList();
+        delete _pCandidateListUIPresenter;
+        _pCandidateListUIPresenter = nullptr;
+        _candidateMode = CANDIDATE_NONE;
     }
     return hr;
 }

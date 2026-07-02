@@ -98,6 +98,7 @@
     <ClCompile Include="InputEnginePinyin.cpp" />
     <ClCompile Include="InputEngineReverseLookup.cpp" />
     <ClCompile Include="InputEngineStroke.cpp" />
+    <ClCompile Include="InputEngineStructure.cpp" />
     <ClCompile Include="ImeDatabase.cpp" />
     <ClCompile Include="ImeTypes.cpp" />
     <ClCompile Include="KeyEventSink.cpp" />

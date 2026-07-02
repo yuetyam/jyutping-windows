@@ -41,6 +41,8 @@ std::vector<Lexicon> InputEngine::ReverseLookup(ReverseLookupMethod method, cons
         return CangjieReverseLookup(keys);
     case ReverseLookupMethod::Stroke:
         return StrokeReverseLookup(keys);
+    case ReverseLookupMethod::Structure:
+        return StructureReverseLookup(keys);
     default:
         return std::vector<Lexicon>();
     }

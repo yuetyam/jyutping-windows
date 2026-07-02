@@ -307,6 +307,9 @@
     <ClCompile Include="InputEngineStroke.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="InputEngineStructure.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="Segmenter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>

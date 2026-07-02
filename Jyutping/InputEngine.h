@@ -51,6 +51,7 @@ private:
     std::vector<Lexicon> ReverseLookupWord(const std::wstring& word, const std::wstring& input, std::optional<std::wstring> mark = std::nullopt) const;
     std::vector<Lexicon> PinyinReverseLookup(const std::vector<VirtualInputKey>& keys) const;
     std::vector<Lexicon> StrokeReverseLookup(const std::vector<VirtualInputKey>& keys) const;
+    std::vector<Lexicon> StructureReverseLookup(const std::vector<VirtualInputKey>& keys) const;
 
     Lexicon Modify(const Lexicon& item, const std::vector<VirtualInputKey>& keys, const std::wstring& text, size_t inputLength) const;
 
