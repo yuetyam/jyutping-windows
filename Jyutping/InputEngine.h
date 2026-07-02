@@ -33,6 +33,8 @@ public:
     std::vector<Lexicon> Suggest(const std::vector<VirtualInputKey>& keys, bool deepSearch = true) const;
     std::vector<Lexicon> ReverseLookup(ReverseLookupMethod method, std::wstring_view input) const;
     std::vector<Lexicon> ReverseLookup(ReverseLookupMethod method, const std::vector<VirtualInputKey>& keys) const;
+    std::vector<Lexicon> CangjieReverseLookup(std::wstring_view input, CangjieVariant variant = CangjieVariant::Cangjie5) const;
+    std::vector<Lexicon> CangjieReverseLookup(const std::vector<VirtualInputKey>& keys, CangjieVariant variant = CangjieVariant::Cangjie5) const;
     Segmentation Segment(const std::vector<VirtualInputKey>& keys) const;
 
 private:
