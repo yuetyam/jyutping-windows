@@ -281,6 +281,17 @@ BOOL VirtualInputKey::MatchInputKeyForCharacter(WCHAR character, _Out_ VirtualIn
     }
 
     WCHAR normalizedCharacter = NormalizeInputCharacter(character);
+    if (normalizedCharacter == apostrophe.character)
+    {
+        *pInputKey = apostrophe;
+        return TRUE;
+    }
+    if (normalizedCharacter == grave.character)
+    {
+        *pInputKey = grave;
+        return TRUE;
+    }
+
     return MatchInputKeyByCharacter(alphabetSet, alphabetSetCount, normalizedCharacter, pInputKey) ||
         MatchInputKeyByCharacter(digitSet, digitSetCount, normalizedCharacter, pInputKey);
 }

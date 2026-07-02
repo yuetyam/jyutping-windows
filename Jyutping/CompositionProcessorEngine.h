@@ -54,6 +54,7 @@ public:
     WCHAR GetPunctuation(WCHAR wch);
 
     BOOL IsDoubleSingleByte(WCHAR wch);
+    BOOL IsReverseLookupBuffer() const;
 
     // Language bar control
     void SetLanguageBarStatus(DWORD status, BOOL isSet);
@@ -96,6 +97,10 @@ private:
 
     BOOL SetupInputEngine();
     std::wstring CurrentInputText() const;
+    Ime::ReverseLookupMethod CurrentReverseLookupMethod() const;
+    std::wstring ReverseLookupQueryText() const;
+    std::wstring ReverseLookupReadingText(const std::vector<Ime::Lexicon>& suggestions) const;
+    BOOL IsReverseLookupInputKey(UINT uCode, WCHAR wch) const;
     const std::vector<Ime::Lexicon>& GetInputSuggestions();
     void AppendInputEngineCandidates(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
 
@@ -168,6 +173,7 @@ private:
     Ime::InputEngine _inputEngine;
     BOOL _isInputEngineReady;
     std::wstring _cachedInputText;
+    Ime::ReverseLookupMethod _cachedReverseLookupMethod;
     std::vector<Ime::Lexicon> _cachedSuggestions;
     std::vector<std::wstring> _candidateItemTextStorage;
     std::vector<std::wstring> _candidateItemCommentStorage;

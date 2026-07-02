@@ -12,6 +12,15 @@
 
 namespace Ime {
 
+enum class ReverseLookupMethod
+{
+    None,
+    Pinyin,
+    Cangjie,
+    Stroke,
+    Structure
+};
+
 class InputEngine
 {
 public:
@@ -21,6 +30,8 @@ public:
 
     std::vector<Lexicon> Suggest(std::wstring_view input, bool deepSearch = true) const;
     std::vector<Lexicon> Suggest(const std::vector<VirtualInputKey>& keys, bool deepSearch = true) const;
+    std::vector<Lexicon> ReverseLookup(ReverseLookupMethod method, std::wstring_view input) const;
+    std::vector<Lexicon> ReverseLookup(ReverseLookupMethod method, const std::vector<VirtualInputKey>& keys) const;
     Segmentation Segment(const std::vector<VirtualInputKey>& keys) const;
 
 private:

@@ -9,6 +9,37 @@
 
 #include <algorithm>
 
+namespace {
+
+Ime::ReverseLookupMethod ReverseLookupMethodFromCharacter(WCHAR character)
+{
+    switch (character)
+    {
+    case L'r':
+        return Ime::ReverseLookupMethod::Pinyin;
+    case L'v':
+        return Ime::ReverseLookupMethod::Cangjie;
+    case L'x':
+        return Ime::ReverseLookupMethod::Stroke;
+    case L'q':
+        return Ime::ReverseLookupMethod::Structure;
+    default:
+        return Ime::ReverseLookupMethod::None;
+    }
+}
+
+BOOL IsPinyinOrStructureMethod(Ime::ReverseLookupMethod method)
+{
+    return method == Ime::ReverseLookupMethod::Pinyin || method == Ime::ReverseLookupMethod::Structure;
+}
+
+BOOL IsStrokeMethod(Ime::ReverseLookupMethod method)
+{
+    return method == Ime::ReverseLookupMethod::Stroke;
+}
+
+} // namespace
+
 //+---------------------------------------------------------------------------
 //
 // _AddTextProcessorEngine
@@ -100,6 +131,7 @@ CCompositionProcessorEngine::CCompositionProcessorEngine()
     _pCompartmentPunctuationEventSink = nullptr;
 
     _isInputEngineReady = FALSE;
+    _cachedReverseLookupMethod = Ime::ReverseLookupMethod::None;
 
     _candidateListPhraseModifier = 0;
 
@@ -324,6 +356,7 @@ BOOL CCompositionProcessorEngine::SetRawInputText(const std::wstring& inputText)
     {
         PurgeVirtualKey();
         _cachedInputText.clear();
+        _cachedReverseLookupMethod = Ime::ReverseLookupMethod::None;
         _cachedSuggestions.clear();
         return TRUE;
     }
@@ -343,6 +376,7 @@ BOOL CCompositionProcessorEngine::SetRawInputText(const std::wstring& inputText)
 
     _keystrokeBuffer.Set(pwch, inputText.length());
     _cachedInputText.clear();
+    _cachedReverseLookupMethod = Ime::ReverseLookupMethod::None;
     _cachedSuggestions.clear();
     return TRUE;
 }
@@ -365,7 +399,7 @@ void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStri
         const std::vector<Ime::Lexicon>& suggestions = GetInputSuggestions();
         if (!suggestions.empty())
         {
-            _readingStringStorage = suggestions.front().mark;
+            _readingStringStorage = IsReverseLookupBuffer() ? ReverseLookupReadingText(suggestions) : suggestions.front().mark;
         }
         else
         {
@@ -849,20 +883,98 @@ std::wstring CCompositionProcessorEngine::CurrentInputText() const
     return std::wstring(buffer, static_cast<size_t>(_keystrokeBuffer.GetLength()));
 }
 
+Ime::ReverseLookupMethod CCompositionProcessorEngine::CurrentReverseLookupMethod() const
+{
+    const WCHAR* buffer = _keystrokeBuffer.Get();
+    if (buffer == nullptr || _keystrokeBuffer.GetLength() == 0)
+    {
+        return Ime::ReverseLookupMethod::None;
+    }
+    return ReverseLookupMethodFromCharacter(*buffer);
+}
+
+BOOL CCompositionProcessorEngine::IsReverseLookupBuffer() const
+{
+    return CurrentReverseLookupMethod() != Ime::ReverseLookupMethod::None;
+}
+
+std::wstring CCompositionProcessorEngine::ReverseLookupQueryText() const
+{
+    std::wstring inputText = CurrentInputText();
+    if (inputText.empty() || CurrentReverseLookupMethod() == Ime::ReverseLookupMethod::None)
+    {
+        return std::wstring();
+    }
+    return inputText.substr(1);
+}
+
+std::wstring CCompositionProcessorEngine::ReverseLookupReadingText(const std::vector<Ime::Lexicon>& suggestions) const
+{
+    Ime::ReverseLookupMethod method = CurrentReverseLookupMethod();
+    if (suggestions.empty() || suggestions.front().mark.empty())
+    {
+        return CurrentInputText();
+    }
+
+    if (method == Ime::ReverseLookupMethod::Pinyin)
+    {
+        return std::wstring(L"r ") + suggestions.front().mark;
+    }
+    if (method == Ime::ReverseLookupMethod::Structure)
+    {
+        return std::wstring(L"q ") + suggestions.front().mark;
+    }
+    return suggestions.front().mark;
+}
+
+BOOL CCompositionProcessorEngine::IsReverseLookupInputKey(UINT uCode, WCHAR wch) const
+{
+    Ime::ReverseLookupMethod method = CurrentReverseLookupMethod();
+    if (method == Ime::ReverseLookupMethod::None || Global::ModifiersValue != 0)
+    {
+        return FALSE;
+    }
+
+    if (IsPinyinOrStructureMethod(method) &&
+        uCode == VirtualInputKey::apostrophe.keyCode &&
+        wch == VirtualInputKey::apostrophe.character)
+    {
+        return TRUE;
+    }
+
+    if (IsStrokeMethod(method) && VirtualInputKey::IsMatchedNumber(uCode))
+    {
+        VirtualInputKey inputKey;
+        return VirtualInputKey::MatchInputKeyForKeyCode(uCode, &inputKey) && inputKey.IsToneNumber();
+    }
+
+    return FALSE;
+}
+
 const std::vector<Ime::Lexicon>& CCompositionProcessorEngine::GetInputSuggestions()
 {
     std::wstring inputText = CurrentInputText();
+    Ime::ReverseLookupMethod reverseLookupMethod = CurrentReverseLookupMethod();
     if (!_isInputEngineReady || inputText.empty())
     {
         _cachedInputText = inputText;
+        _cachedReverseLookupMethod = reverseLookupMethod;
         _cachedSuggestions.clear();
         return _cachedSuggestions;
     }
 
-    if (inputText != _cachedInputText)
+    if (inputText != _cachedInputText || reverseLookupMethod != _cachedReverseLookupMethod)
     {
         _cachedInputText = inputText;
-        _cachedSuggestions = _inputEngine.Suggest(_cachedInputText);
+        _cachedReverseLookupMethod = reverseLookupMethod;
+        if (reverseLookupMethod == Ime::ReverseLookupMethod::None)
+        {
+            _cachedSuggestions = _inputEngine.Suggest(_cachedInputText);
+        }
+        else
+        {
+            _cachedSuggestions = _inputEngine.ReverseLookup(reverseLookupMethod, ReverseLookupQueryText());
+        }
     }
     return _cachedSuggestions;
 }
@@ -901,7 +1013,9 @@ void CCompositionProcessorEngine::AppendInputEngineCandidates(_Inout_ CJyutpingA
 
         pItem->_ItemString.Set(text.c_str(), text.length());
         pItem->_ItemComment.Set(comment.c_str(), comment.length());
-        pItem->_InputCount = static_cast<DWORD_PTR>(suggestion.inputCount);
+        pItem->_InputCount = IsReverseLookupBuffer() ?
+            static_cast<DWORD_PTR>(CurrentInputText().length()) :
+            static_cast<DWORD_PTR>(suggestion.inputCount);
     }
 }
 
@@ -1415,10 +1529,7 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
 
     if (fComposing || candidateMode == CANDIDATE_INCREMENTAL || candidateMode == CANDIDATE_NONE)
     {
-        if ((fComposing || candidateMode == CANDIDATE_INCREMENTAL) &&
-            uCode == VirtualInputKey::apostrophe.keyCode &&
-            *pwch == VirtualInputKey::apostrophe.character &&
-            Global::ModifiersValue == 0)
+        if ((fComposing || candidateMode == CANDIDATE_INCREMENTAL) && IsReverseLookupInputKey(uCode, *pwch))
         {
             if (pKeyState)
             {

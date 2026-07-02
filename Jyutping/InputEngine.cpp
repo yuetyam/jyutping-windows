@@ -370,6 +370,24 @@ std::vector<Lexicon> InputEngine::Suggest(const std::vector<VirtualInputKey>& ke
     }
 }
 
+std::vector<Lexicon> InputEngine::ReverseLookup(ReverseLookupMethod method, std::wstring_view input) const
+{
+    return ReverseLookup(method, KeysFromText(input));
+}
+
+std::vector<Lexicon> InputEngine::ReverseLookup(ReverseLookupMethod method, const std::vector<VirtualInputKey>& keys) const
+{
+    method;
+    keys;
+
+    if (!IsPrepared())
+    {
+        return std::vector<Lexicon>();
+    }
+
+    return std::vector<Lexicon>();
+}
+
 Segmentation InputEngine::Segment(const std::vector<VirtualInputKey>& keys) const
 {
     return _segmenter.Segment(keys);

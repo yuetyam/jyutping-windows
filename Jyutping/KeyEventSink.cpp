@@ -136,7 +136,8 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     //
     // Punctuation
     //
-    if (pCompositionProcessorEngine->IsPunctuation(wch))
+    if (!(pCompositionProcessorEngine->IsReverseLookupBuffer() && wch == VirtualInputKey::apostrophe.character) &&
+        pCompositionProcessorEngine->IsPunctuation(wch))
     {
         if ((_candidateMode == CANDIDATE_NONE) && isPunctuation)
         {
