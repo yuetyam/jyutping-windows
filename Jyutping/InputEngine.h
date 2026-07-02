@@ -34,6 +34,7 @@ private:
     std::vector<Lexicon> AnchorsMatch(const std::vector<VirtualInputKey>& keys, std::optional<std::wstring> input = std::nullopt, std::optional<int> limit = std::nullopt) const;
     std::vector<Lexicon> SpellMatch(std::wstring_view text, std::wstring input, std::optional<std::wstring> mark = std::nullopt, std::optional<int> limit = std::nullopt) const;
     std::vector<Lexicon> StrictMatch(int64_t anchors, int64_t spell, std::wstring input, std::optional<std::wstring> mark = std::nullopt, std::optional<int> limit = std::nullopt) const;
+    std::vector<Lexicon> ReverseLookupWord(const std::wstring& word, const std::wstring& input, std::optional<std::wstring> mark = std::nullopt) const;
 
     Lexicon Modify(const Lexicon& item, const std::vector<VirtualInputKey>& keys, const std::wstring& text, size_t inputLength) const;
 

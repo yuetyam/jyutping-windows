@@ -216,6 +216,21 @@ std::vector<Ime::Lexicon> LexiconsFromRows(
     return result;
 }
 
+std::vector<Ime::Lexicon> LexiconsFromRomanizations(
+    const std::wstring& word,
+    const std::vector<std::wstring>& romanizations,
+    const std::wstring& input,
+    const std::optional<std::wstring>& mark)
+{
+    std::vector<Ime::Lexicon> result;
+    result.reserve(romanizations.size());
+    for (const std::wstring& romanization : romanizations)
+    {
+        result.push_back(Ime::Lexicon::Cantonese(word, romanization, input, mark));
+    }
+    return result;
+}
+
 size_t FirstAliasCount(const Ime::Segmentation& segmentation)
 {
     if (segmentation.empty() || segmentation.front().empty())
@@ -291,12 +306,20 @@ bool InputEngine::Prepare()
     {
         return false;
     }
+    if (!_database.VerifySchema())
+    {
+        return false;
+    }
     return _segmenter.Prepare(_database);
 }
 
 bool InputEngine::Prepare(_In_z_ PCWSTR databasePath)
 {
     if (!_database.Open(databasePath))
+    {
+        return false;
+    }
+    if (!_database.VerifySchema())
     {
         return false;
     }
@@ -853,6 +876,71 @@ std::vector<Lexicon> InputEngine::StrictMatch(int64_t anchors, int64_t spell, st
 {
     std::vector<ImeDatabase::LexiconRow> rows = _database.QueryLexiconStrict(spell, anchors, QueryLimit(limit, -1));
     return LexiconsFromRows(rows, input, mark);
+}
+
+std::vector<Lexicon> InputEngine::ReverseLookupWord(const std::wstring& word, const std::wstring& input, std::optional<std::wstring> mark) const
+{
+    if (word.empty())
+    {
+        return std::vector<Lexicon>();
+    }
+
+    std::vector<std::wstring> exactRomanizations = _database.LookupRomanizationsForWord(word);
+    if (!exactRomanizations.empty())
+    {
+        return LexiconsFromRomanizations(word, exactRomanizations, input, mark);
+    }
+
+    if (word.size() <= 1)
+    {
+        return std::vector<Lexicon>();
+    }
+
+    std::wstring remaining = word;
+    std::vector<std::wstring> romanizations;
+    while (!remaining.empty())
+    {
+        std::optional<std::wstring> matchedRomanization;
+        size_t matchedLength = 0;
+        std::wstring leading = remaining;
+        while (!leading.empty())
+        {
+            std::vector<std::wstring> leadingRomanizations = _database.LookupRomanizationsForWord(leading);
+            if (!leadingRomanizations.empty())
+            {
+                matchedRomanization = leadingRomanizations.front();
+                matchedLength = leading.size();
+                break;
+            }
+            leading.pop_back();
+        }
+
+        if (!matchedRomanization || matchedLength == 0)
+        {
+            romanizations.clear();
+            break;
+        }
+
+        romanizations.push_back(*matchedRomanization);
+        remaining.erase(0, matchedLength);
+    }
+
+    if (romanizations.empty())
+    {
+        return std::vector<Lexicon>();
+    }
+
+    std::wstring romanization;
+    for (const std::wstring& item : romanizations)
+    {
+        if (!romanization.empty())
+        {
+            romanization.push_back(L' ');
+        }
+        romanization.append(item);
+    }
+
+    return LexiconsFromRomanizations(word, { romanization }, input, mark);
 }
 
 Lexicon InputEngine::Modify(const Lexicon& item, const std::vector<VirtualInputKey>& keys, const std::wstring& text, size_t inputLength) const
