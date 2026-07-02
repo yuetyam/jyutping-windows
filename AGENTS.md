@@ -68,3 +68,6 @@ Check the root `.editorconfig` for code style and formatting.
 - Use descriptive boolean names.
 - Add comments where they clarify non-obvious behavior or important state.
 - When adding/deleting source files, update both `Jyutping\Jyutping.vcxproj` and `Jyutping\Jyutping.vcxproj.filters`.
+
+## Porting from the Swift/macOS version of code
+- The Windows version should be dedicated to the 26-key QWERTY destkop input, 9-key and other layouts are excluded.

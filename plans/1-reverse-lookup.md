@@ -1,0 +1,492 @@
+# Reverse Lookup Porting Roadmap
+
+This plan covers porting the Swift/macOS reverse lookup behavior into the Windows TSF C++ project.
+
+Target methods:
+
+- Mandarin Pinyin reverse lookup
+- Cangjie and Quick(Sucheng) reverse lookup
+- Stroke (筆畫) reverse lookup
+- Character decomposition (拆字) reverse lookup
+
+## Source Of Truth
+
+Use the Swift CoreIME implementation as the behavioral source of truth:
+
+- `Modules/CoreIME/Sources/CoreIME/Pinyin.swift`
+- `Modules/CoreIME/Sources/CoreIME/PinyinSegmenter.swift`
+- `Modules/CoreIME/Sources/CoreIME/Cangjie.swift`
+- `Modules/CoreIME/Sources/CoreIME/Quick.swift`
+- `Modules/CoreIME/Sources/CoreIME/CangjieVariant.swift`
+- `Modules/CoreIME/Sources/CoreIME/Converter+Cangjie.swift`
+- `Modules/CoreIME/Sources/CoreIME/Stroke.swift`
+- `Modules/CoreIME/Sources/CoreIME/StrokeVirtualKey.swift`
+- `Modules/CoreIME/Sources/CoreIME/Structure.swift`
+- `Modules/CoreIME/Sources/CoreIME/ShapeLexicon.swift`
+- `Modules/CoreIME/Sources/CoreIME/Lookup.swift`
+
+The macOS input-controller behavior is in:
+
+- `InputMethod/JyutpingInputController.swift`
+
+Important trigger keys from Swift:
+
+- `r`: Mandarin Pinyin reverse lookup
+- `v`: Cangjie/Quick reverse lookup
+- `x`: Stroke reverse lookup
+- `q`: Structure(拆字) reverse lookup
+
+The Windows `VirtualInputKey::IsReverseLookupTrigger()` already recognizes
+`r`, `v`, `x`, and `q`, so the roadmap should preserve these trigger keys.
+
+## Current Windows Baseline
+
+Relevant Windows files:
+
+- `Jyutping/InputEngine.*`: current Cantonese lookup and segmentation dispatch.
+- `Jyutping/ImeDatabase.*`: SQLite wrapper, currently only exposes
+  `core_lexicon` and `core_syllable_table` queries.
+- `Jyutping/ImeTypes.*`: `Lexicon`, code/hash helpers, tone and text helpers.
+- `Jyutping/Segmenter.*`: Jyutping segmentation.
+- `Jyutping/VirtualInputKey.*`: key definitions and trigger detection.
+- `Jyutping/CompositionProcessorEngine.*`: owns the raw input buffer, calls
+  `Ime::InputEngine::Suggest`, and builds candidate UI items.
+- `Jyutping/KeyHandler.cpp` and `Jyutping/KeyStateCategory.*`: route TSF key
+  handling, candidate selection, cancellation, and raw finalization.
+
+
+Swift CoreIME `ime.sqlite3` includes the needed tables:
+
+- `core_lexicon`
+- `pinyin_lexicon`
+- `pinyin_syllable_table`
+- `cangjie_table`
+- `quick_table`
+- `stroke_table`
+- `structure_table`
+
+## Design Goals
+
+- Keep the trigger-key behavior identical to Swift/macOS where practical.
+- Keep method-specific lookup logic inside the IME engine/database layer, not
+  in TSF UI code.
+- Use a method enum instead of stacking booleans for each lookup mode.
+- Preserve candidate selection semantics: selecting a reverse lookup candidate
+  commits the Cantonese word and consumes the trigger plus lookup query.
+- Preserve the visible pre-edit mark behavior:
+  - Pinyin: `r <pinyin mark>`
+  - Cangjie/Quick: root characters such as `日月金`
+  - Stroke: stroke glyphs such as `⼀⼁⼃`
+  - Structure: `q <segmented Jyutping/decomposition mark>`
+- Prefer prepared/bound SQLite statements for user input instead of string
+  interpolation.
+- Port for 26-key QWERTY desktop input only, exclude the 9-key version of code.
+
+## Phase 1: Data And Schema Readiness
+
+1. Validate the Windows database in `Jyutping/Resources/ime.sqlite3`.
+
+2. Expand `ImeDatabase::VerifySchema()` to require all reverse lookup tables:
+   - `core_lexicon`
+   - `core_syllable_table`
+   - `pinyin_lexicon`
+   - `pinyin_syllable_table`
+   - `cangjie_table`
+   - `quick_table`
+   - `stroke_table`
+   - `structure_table`
+
+3. Add database query methods with small row structs:
+   - `PinyinLexiconRow`: `rowId`, `word`, `romanization`
+   - `ShapeRow`: `rowId`, `word`, `complex`
+   - `StructureRow`: `word`, `romanization`
+   - `PinyinSyllableRow`: `code`, `syllable`
+
+4. Add query APIs matching Swift tables:
+   - `QueryPinyinBySpell(spell, limit)`
+   - `QueryPinyinByAnchors(anchors, limit)`
+   - `QueryPinyinSyllables()`
+   - `QueryCangjieByExactCode(variant, code)`
+   - `QueryCangjieByPrefix(variant, prefix, limit)`
+   - `QueryQuickByExactCode(variant, code)`
+   - `QueryQuickByPrefix(variant, prefix, limit)`
+   - `QueryStrokeByCode(code)`
+   - `QueryStrokeBySpell(spell)`
+   - `QueryStrokeByPattern(pattern, isLike, limit)`
+   - `QueryStructureBySpell(spell)`
+   - `LookupRomanizationsForWord(word)`
+
+5. Port Swift `Engine.reveresLookup` behavior:
+   - Look up `core_lexicon.romanization` by exact `word`.
+   - If no exact word match and the word has multiple characters, greedily
+     fetch leading substrings and join romanizations with spaces.
+   - Return Cantonese `Ime::Lexicon` instances using the original reverse
+     lookup input and optional mark.
+
+## Phase 2: Shared Reverse Lookup Mode Plumbing
+
+1. Add a Windows method enum, for example:
+
+   ```cpp
+   enum class ReverseLookupMethod
+   {
+       None,
+       Pinyin,
+       Cangjie,
+       Stroke,
+       Structure
+   };
+   ```
+
+2. Add a helper that maps the first buffer key:
+   - `r` -> `Pinyin`
+   - `v` -> `Cangjie`
+   - `x` -> `Stroke`
+   - `q` -> `Structure`
+   - otherwise `None`
+
+3. Add helper APIs around the composition buffer:
+   - Current method from first key.
+   - Query text/keys after the trigger.
+   - Full raw input including trigger.
+   - Whether the buffer is a reverse lookup buffer.
+
+4. Update `CCompositionProcessorEngine::GetInputSuggestions()`:
+   - If no reverse lookup trigger, keep current `InputEngine::Suggest()`.
+   - If reverse lookup trigger exists, dispatch to `InputEngine::ReverseLookup()`
+     using the method and the tail query.
+   - Cache by raw input and method so mode changes cannot reuse stale
+     suggestions.
+
+5. Update `GetReadingStrings()` to show reverse lookup marks:
+   - Use the first candidate mark when available.
+   - Fall back to raw buffer text when the method has no valid candidates.
+   - Keep trigger labels visible in the composition, following Swift's
+     `bufferText.prefix(1) + " " + tailMark` behavior for Pinyin and Structure.
+
+6. Keep candidate item `_InputCount` aligned with full raw input consumption:
+   - Reverse lookup candidates should consume trigger plus query, not only the
+     query.
+   - If the engine stores candidate input without the trigger, wrap or replace
+     it before exposing the candidate to `CCandidateListItem`.
+
+7. Confirm backspace/cancel/finalize behavior:
+   - Backspace removes query keys and eventually exits lookup mode when the
+     trigger is removed.
+   - Escape cancels composition.
+   - Enter/Space with no candidate should finalize raw text consistently with
+     current Windows behavior.
+
+## Phase 3: Mandarin Pinyin Reverse Lookup
+
+Swift behavior:
+
+- Trigger: `r`
+- Query is the buffer after `r`.
+- Uses `PinyinSegmenter.segment(keys)`.
+- Searches `pinyin_lexicon` by full spell and anchors.
+- Supports partial/prefix matching and recursive concatenation.
+- Supports explicit apostrophe separators by searching letter-only keys and
+  post-filtering against separated syllables.
+- Converts matched Mandarin words through Cantonese `core_lexicon` lookup.
+
+Implementation tasks:
+
+1. Port `PinyinSegmenter.swift` to C++ as a separate `PinyinSegmenter`.
+   - Load `pinyin_syllable_table`.
+   - Build split edges up to six keys.
+   - Sort segmentations by longer consumed length, then fewer syllables.
+
+2. Add Pinyin reverse lookup models:
+   - A private `PinyinLexicon`/row-to-result type with `text`, `pinyin`,
+     `input`, `mark`, `number`, and `inputCount`.
+   - Distinct and sorting behavior equivalent to Swift.
+
+3. Port `Engine.pinyinReverseLookup`.
+   - If apostrophes are present, search only letter keys and then filter.
+   - Otherwise search all query keys.
+   - Use `ReverseLookupWord()` to transform Mandarin words into Cantonese
+     lexicons.
+
+4. Port `letterKeysSearch`, `pinyinSearch`, `pinyinQuery`,
+   `processPinyinSlices`, and `modify`.
+
+5. Port Pinyin database matching:
+   - `pinyinSpellMatch`: `pinyin_lexicon.spell = HashCode(text)`.
+   - `pinyinAnchorsMatch`: `pinyin_lexicon.anchors = CombinedCode(keys)`.
+
+6. Add separator-aware filtering.
+   - Preserve typed apostrophes in `Lexicon.input` so candidate selection
+     consumes the full raw buffer.
+   - Match `xi'an'shi` and reject ambiguous results that only match
+     `xianshi`.
+
+7. Pre-edit mark behavior:
+   - Show `r ` plus the Pinyin syllable mark when candidates are Cantonese.
+   - For peculiar input, show formatted raw tail text.
+
+Verification examples:
+
+- `rni` should return Cantonese readings for Mandarin `ni`.
+- `rhao` should return Cantonese readings for Mandarin `hao`.
+- `rxi'an'shi` should respect explicit syllable separators.
+- `rxianshi` should not be over-filtered as if separators were typed.
+
+## Phase 4: Cangjie And Quick/Sucheng Reverse Lookup
+
+Swift behavior:
+
+- Trigger: `v`
+- Query is the buffer after `v`.
+- All query keys must map to Cangjie radicals.
+- Variant controls table/columns:
+  - Cangjie 5: `cangjie_table.c5code`, `cangjie_table.cangjie5`,
+    `cangjie_table.c5complex`
+  - Cangjie 3: `cangjie_table.c3code`, `cangjie_table.cangjie3`,
+    `cangjie_table.c3complex`
+  - Quick 5: `quick_table.q5code`, `quick_table.quick5`,
+    `quick_table.q5complex`
+  - Quick 3: `quick_table.q3code`, `quick_table.quick3`,
+    `quick_table.q3complex`
+- Exact-code matches are combined with prefix `GLOB '<text>*'` matches.
+- Shape results are distinct by word and sorted by complexity then row order.
+- Matched words are converted back through Cantonese `core_lexicon`.
+
+Implementation tasks:
+
+1. Add `CangjieVariant` in C++:
+   - `Cangjie5`
+   - `Cangjie3`
+   - `Quick5`
+   - `Quick3`
+
+2. Decide initial Windows variant behavior.
+   - Minimal implementation: default to `Cangjie5`.
+   - Preferred implementation: add a persistent setting/compartment or registry
+     value for the variant, then default to `Cangjie5` when absent.
+   - Future UI can expose the variant choice; the engine API should support all
+     four variants immediately.
+
+3. Port `Converter.cangjie(of:)` root map:
+   - `a 日`, `b 月`, `c 金`, `d 木`, `e 水`, `f 火`, `g 土`, `h 竹`,
+     `i 戈`, `j 十`, `k 大`, `l 中`, `m 一`, `n 弓`, `o 人`, `p 心`,
+     `q 手`, `r 口`, `s 尸`, `t 廿`, `u 山`, `v 女`, `w 田`, `x 難`,
+     `y 卜`, `z 重`
+
+4. Add a `ShapeLexicon` helper for Cangjie/Quick/Stroke:
+   - Equality/distinct by `text`.
+   - Sort by `complex`, then `number`.
+
+5. Implement Cangjie/Quick lookup:
+   - Convert query keys to lowercase text.
+   - Reject empty or unmappable queries.
+   - Use `CharCodeFromText(text)` for exact code lookup.
+   - Use prefix query for glob/prefix lookup with limit 100.
+   - Distinct and transform through `ReverseLookupWord()`.
+
+6. Pre-edit mark behavior:
+   - If first candidate is Cantonese, show root characters only.
+   - Otherwise show raw buffer text.
+
+Verification examples:
+
+- `va` should show candidates for the Cangjie root `日`.
+- `vd` should show candidates for `木`.
+- `vab` should include exact and prefix Cangjie results.
+- Variant smoke tests should prove Cangjie 5, Cangjie 3, Quick 5, and Quick 3
+  query different table columns.
+
+## Phase 5: Stroke (筆畫) Reverse Lookup
+
+Swift behavior:
+
+- Trigger: `x`
+- Query is the buffer after `x`.
+- Stroke mapping:
+  - Horizontal: `w`, `h`, `t`, `j`, `1`
+  - Vertical: `s`, `k`, `2`
+  - Left-falling: `a`, `p`, `l`, `3`
+  - Right-falling: `d`, `n`, `u`, `4`
+  - Turning: `z`, `i`, `5`
+  - Wildcard: `x`, `o`, `6`
+- Display glyphs:
+  - Horizontal: `⼀`
+  - Vertical: `⼁`
+  - Left-falling: `⼃`
+  - Right-falling: `⼂`
+  - Turning: `乛`
+  - Wildcard: `＊`
+- Wildcard uses `LIKE` with `6` replaced by `[12345]`.
+- Non-wildcard exact match uses:
+  - `stroke_table.code` for sequences shorter than 19 strokes.
+  - `stroke_table.spell` for sequences of 19 strokes or longer.
+- Prefix match uses `stroke_table.stroke GLOB '<pattern>*'`.
+
+Implementation tasks:
+
+1. Add `StrokeVirtualKey`-style helper in C++.
+   - Convert `VirtualInputKey` to stroke code.
+   - Validate that all query keys are stroke keys.
+   - Produce display glyph mark from query keys.
+
+2. Implement `InputEngine::StrokeReverseLookup`.
+   - Reject empty or invalid stroke queries.
+   - Build `input` from stroke digits.
+   - Build wildcard/prefix pattern.
+   - Query exact or wildcard matches.
+   - Add prefix matches.
+   - Distinct, sort, and transform through `ReverseLookupWord()`.
+
+3. Preserve input consumption.
+   - Candidate input should represent the full raw buffer (`x` plus query) at
+     the composition layer.
+
+4. Pre-edit mark behavior:
+   - If first candidate is Cantonese, show stroke glyphs.
+   - Otherwise show raw buffer text.
+
+Verification examples:
+
+- `xw` should show horizontal-stroke candidates and mark `⼀`.
+- `xws` should mark `⼀⼁`.
+- `xjku` should behave like macOS built-in stroke keys for 1/2/4.
+- `xwx` should exercise wildcard matching.
+- Long input of 19+ strokes should use `stroke_table.spell`.
+
+## Phase 6: Character Decomposition (拆字) Reverse Lookup
+
+Swift behavior:
+
+- Trigger: `q`
+- Query is the buffer after `q`.
+- Search text is built from syllable letters only, excluding tone letters.
+- Uses regular Cantonese `Segmenter.segment(keys)`.
+- Searches `structure_table.spell = HashCode(text)`.
+- Also searches segmentation schemes whose length equals the search text.
+- Filters results when apostrophes and/or tone input are present.
+- Matched structure words are converted back through Cantonese `core_lexicon`.
+
+Implementation tasks:
+
+1. Implement `InputEngine::StructureReverseLookup(keys, segmentation)`.
+   - Build `markFreeText` from query keys where `IsSyllableLetter()`.
+   - Query `structure_table` by `HashCode(markFreeText)`.
+   - For segmentation schemes whose length equals `markFreeText.size()`, query
+     by `HashCode(SchemeOriginText(scheme))`.
+
+2. Port tone/apostrophe filtering from Swift:
+   - Apostrophe + tone: allow exactly one tone digit; match tone prefix or
+     suffix depending on where the tone appears.
+   - Tone only: support one-tone, two-tone, and prefix cases.
+   - Apostrophe only: compare apostrophe-separated input parts to tone-stripped
+     romanization syllables.
+   - No apostrophe/tone: return all searched results.
+
+3. Transform filtered structure rows through `ReverseLookupWord()`.
+
+4. Pre-edit mark behavior:
+   - Show `q ` plus segmented mark when the first candidate is Cantonese.
+   - For tone/apostrophe-heavy input, show formatted converted tail text.
+
+Verification examples:
+
+- `qmukmuk` should find characters decomposed as `木 + 木`, such as `林`, if
+  present in `structure_table`.
+- Queries with tone letters should filter by the target Jyutping tones.
+- Queries with apostrophes should enforce syllable boundaries.
+
+## Phase 7: Candidate And UI Integration
+
+1. Candidate list display:
+   - Continue showing candidate text as `_ItemString`.
+   - Continue showing Cantonese romanization as `_ItemComment`.
+   - Ensure reverse lookup marks do not replace candidate comments.
+
+2. Input buffer after candidate selection:
+   - Verify candidate `_InputCount` and existing finalize logic consume the
+     trigger and query.
+   - If needed, add an explicit method on `CCompositionProcessorEngine` to
+     replace reverse lookup candidate input before creating candidate items.
+
+3. Invalid reverse lookup input:
+   - Match Swift behavior by still offering defined/text-mark candidates for
+     the full raw buffer only if those features are later ported.
+   - Until then, show raw buffer mark and no lookup candidates.
+
+4. Punctuation interaction:
+   - Apostrophe must remain valid inside Pinyin and Structure reverse lookup.
+   - Do not let smart punctuation conversion turn lookup apostrophes into curly
+     quotes while composing a reverse lookup query.
+
+5. Cangjie variant UI:
+   - The first code implementation can default to Cangjie 5.
+   - Add a follow-up settings task for switching Cangjie 5, Cangjie 3, Quick 5,
+     and Quick 3.
+
+## Phase 8: Tests And Verification
+
+There is no visible Windows unit-test project in the current checkout. Add a
+small engine-level test target or command-line harness if possible before large
+behavioral changes. The engine tests should open a known `ime.sqlite3` and call
+`Ime::InputEngine` directly.
+
+Suggested engine tests:
+
+- Existing Cantonese suggestion still works for common Jyutping input.
+- `HashCode`, `CharCodeFromText`, `CombinedCode`, and tone helpers match Swift
+  values for known samples.
+- Pinyin reverse lookup:
+  - normal spell match
+  - anchors match
+  - apostrophe separator match
+  - no false separator match
+- Cangjie/Quick:
+  - exact match by code
+  - prefix match
+  - each variant queries the intended table/columns
+- Stroke:
+  - all key aliases map to expected stroke codes
+  - wildcard query uses the expected pattern
+  - long sequence uses spell hash
+- Structure:
+  - direct spell lookup
+  - segmentation-based lookup
+  - apostrophe filtering
+  - tone filtering
+- Candidate integration:
+  - reverse lookup candidate `inputCount` consumes trigger plus query
+  - backspace and cancel leave the composition state clean
+
+Manual TSF verification on Windows:
+
+1. Build Debug x64:
+
+   ```powershell
+   msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=x64
+   ```
+
+2. Register/install the Debug DLL using the project's existing workflow.
+3. Test in Notepad and a Chromium text field:
+   - `r...`
+   - `v...`
+   - `x...`
+   - `q...`
+4. Check `%LOCALAPPDATA%\Jyutping\Jyutping.log` for database open/schema errors.
+5. Repeat Release x64, then ARM64 when code-level behavior is stable.
+
+## Suggested Implementation Order
+
+1. Database verification and `LookupRomanizationsForWord`.
+2. `ReverseLookupMethod` plumbing and candidate input-count handling.
+3. Pinyin reverse lookup, because it exercises segmentation, apostrophes, and
+   reverse lookup transformation.
+4. Cangjie 5 lookup with Cangjie root marks.
+5. Add Cangjie 3, Quick 5, and Quick 3 variants.
+6. Stroke lookup.
+7. Structure lookup.
+8. Settings/UI for Cangjie/Quick variant selection.
+9. Broaden tests and manual TSF verification across architectures.
+
+## Open Decisions
+
+- Where to store the persistent settings for the Cangjie/Quick variant selections.
