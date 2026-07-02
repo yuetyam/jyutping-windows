@@ -93,6 +93,7 @@
     <ClCompile Include="FunctionProviderSink.cpp" />
     <ClCompile Include="GetTextExtentEditSession.cpp" />
     <ClCompile Include="Globals.cpp" />
+    <ClCompile Include="InputEngineCangjie.cpp" />
     <ClCompile Include="InputEngine.cpp" />
     <ClCompile Include="InputEnginePinyin.cpp" />
     <ClCompile Include="InputEngineReverseLookup.cpp" />

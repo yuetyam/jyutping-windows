@@ -295,6 +295,9 @@
     <ClCompile Include="InputEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="InputEngineCangjie.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="InputEnginePinyin.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
