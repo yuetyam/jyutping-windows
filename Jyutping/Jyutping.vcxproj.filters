@@ -24,26 +24,26 @@
     <None Include="Resources\ime.sqlite3">
       <Filter>Resources</Filter>
     </None>
-    <None Include="image\ime.ico">
-      <Filter>Resource Files</Filter>
+    <None Include="Resources\ime.ico">
+      <Filter>Resources</Filter>
     </None>
-    <None Include="image\zh.ico">
-      <Filter>Resource Files</Filter>
+    <None Include="Resources\zh.ico">
+      <Filter>Resources</Filter>
     </None>
-    <None Include="image\abc.ico">
-      <Filter>Resource Files</Filter>
+    <None Include="Resources\abc.ico">
+      <Filter>Resources</Filter>
     </None>
-    <None Include="image\DoubleSingleByteOn.ico">
-      <Filter>Resource Files</Filter>
+    <None Include="Resources\DoubleSingleByteOn.ico">
+      <Filter>Resources</Filter>
     </None>
-    <None Include="image\DoubleSingleByteOff.ico">
-      <Filter>Resource Files</Filter>
+    <None Include="Resources\DoubleSingleByteOff.ico">
+      <Filter>Resources</Filter>
     </None>
-    <None Include="image\PunctuationOn.ico">
-      <Filter>Resource Files</Filter>
+    <None Include="Resources\PunctuationOn.ico">
+      <Filter>Resources</Filter>
     </None>
-    <None Include="image\PunctuationOff.ico">
-      <Filter>Resource Files</Filter>
+    <None Include="Resources\PunctuationOff.ico">
+      <Filter>Resources</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

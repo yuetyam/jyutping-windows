@@ -15,13 +15,13 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDIS_Jyutping          ICON                    "image\\ime.ico"
-IDI_IME_MODE_ON         ICON                    "image\\zh.ico"
-IDI_IME_MODE_OFF        ICON                    "image\\abc.ico"
-IDI_DOUBLE_SINGLE_BYTE_ON ICON                    "image\\DoubleSingleByteOn.ico"
-IDI_DOUBLE_SINGLE_BYTE_OFF ICON                    "image\\DoubleSingleByteOff.ico"
-IDI_PUNCTUATION_ON      ICON                    "image\\PunctuationOn.ico"
-IDI_PUNCTUATION_OFF     ICON                    "image\\PunctuationOff.ico"
+IDIS_Jyutping          ICON                    "Resources\\ime.ico"
+IDI_IME_MODE_ON         ICON                    "Resources\\zh.ico"
+IDI_IME_MODE_OFF        ICON                    "Resources\\abc.ico"
+IDI_DOUBLE_SINGLE_BYTE_ON ICON                    "Resources\\DoubleSingleByteOn.ico"
+IDI_DOUBLE_SINGLE_BYTE_OFF ICON                    "Resources\\DoubleSingleByteOff.ico"
+IDI_PUNCTUATION_ON      ICON                    "Resources\\PunctuationOn.ico"
+IDI_PUNCTUATION_OFF     ICON                    "Resources\\PunctuationOff.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -119,4 +119,3 @@ END
 
 /////////////////////////////////////////////////////////////////////////////
 #endif    // not APSTUDIO_INVOKED
-
