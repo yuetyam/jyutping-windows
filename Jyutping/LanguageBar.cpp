@@ -62,8 +62,8 @@ void CJyutping::_UpdateLanguageBarOnSetFocus(_In_ ITfDocumentMgr *pDocMgrFocus)
 
 VOID CCompositionProcessorEngine::SetLanguageBarStatus(DWORD status, BOOL isSet)
 {
-    if (_pLanguageBar_IMEMode) {
-        _pLanguageBar_IMEMode->SetStatus(status, isSet);
+    if (_pLanguageBar_InputMethodMode) {
+        _pLanguageBar_InputMethodMode->SetStatus(status, isSet);
     }
 }
 

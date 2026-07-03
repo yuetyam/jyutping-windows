@@ -110,9 +110,9 @@ extern const size_t candidateFontNamesCount;
 
 extern const CLSID JyutpingCLSID;
 extern const CLSID JyutpingGuidProfile;
-extern const CLSID JyutpingGuidImeModePreserveKey;
-extern const CLSID JyutpingGuidDoubleSingleBytePreserveKey;
-extern const CLSID JyutpingGuidPunctuationPreserveKey;
+extern const CLSID JyutpingGuidInputMethodModePreserveKey;
+extern const CLSID JyutpingGuidCharacterFormPreserveKey;
+extern const CLSID JyutpingGuidPunctuationFormPreserveKey;
 
 LRESULT CALLBACK ThreadKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
 BOOL CheckModifiers(UINT uModCurrent, UINT uMod);
@@ -123,13 +123,13 @@ extern BOOL IsShiftKeyDownOnly;
 extern BOOL IsControlKeyDownOnly;
 extern BOOL IsAltKeyDownOnly;
 
-extern const GUID JyutpingGuidCompartmentDoubleSingleByte;
-extern const GUID JyutpingGuidCompartmentPunctuation;
+extern const GUID JyutpingGuidCompartmentCharacterForm;
+extern const GUID JyutpingGuidCompartmentPunctuationForm;
 
 extern const WCHAR FullWidthCharTable[];
 extern const struct _PUNCTUATION PunctuationTable[14];
 
-extern const GUID JyutpingGuidLangBarIMEMode;
+extern const GUID JyutpingGuidLangBarInputMethodMode;
 
 extern const GUID JyutpingGuidDisplayAttributeInput;
 extern const GUID JyutpingGuidDisplayAttributeConverted;
@@ -140,15 +140,15 @@ extern const WCHAR UnicodeByteOrderMark;
 extern const WCHAR KeywordDelimiter;
 extern const WCHAR StringDelimiter;
 
-extern const WCHAR ImeModeDescription[];
-extern const int ImeModeOnIcoIndex;
-extern const int ImeModeOffIcoIndex;
+extern const WCHAR InputMethodModeDescription[];
+extern const int InputMethodModeCantoneseIcoIndex;
+extern const int InputMethodModeABCIcoIndex;
 
-extern const WCHAR DoubleSingleByteDescription[];
+extern const WCHAR CharacterFormDescription[];
 
-extern const WCHAR PunctuationDescription[];
+extern const WCHAR PunctuationFormDescription[];
 
-extern const WCHAR LangbarImeModeDescription[];
+extern const WCHAR LangbarInputMethodModeDescription[];
 
 //---------------------------------------------------------------------
 // Themes

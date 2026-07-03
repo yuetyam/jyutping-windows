@@ -44,7 +44,7 @@ extern const GUID JyutpingGuidProfile = {
 // PreserveKey GUID
 //---------------------------------------------------------------------
 // {4B62B54B-F828-43B5-9095-A96DF9CBDF38}
-extern const GUID JyutpingGuidImeModePreserveKey = {
+extern const GUID JyutpingGuidInputMethodModePreserveKey = {
     0x4b62b54b,
     0xf828,
     0x43b5,
@@ -52,7 +52,7 @@ extern const GUID JyutpingGuidImeModePreserveKey = {
 };
 
 // {5A08D6C4-4563-4E46-8DDB-65E75C4E73A3}
-extern const GUID JyutpingGuidDoubleSingleBytePreserveKey = {
+extern const GUID JyutpingGuidCharacterFormPreserveKey = {
     0x5a08d6c4,
     0x4563,
     0x4e46,
@@ -60,7 +60,7 @@ extern const GUID JyutpingGuidDoubleSingleBytePreserveKey = {
 };
 
 // {175F062E-B961-4AED-A3DF-59F78A02862D}
-extern const GUID JyutpingGuidPunctuationPreserveKey = {
+extern const GUID JyutpingGuidPunctuationFormPreserveKey = {
     0x175f062e,
     0xb961,
     0x4aed,
@@ -71,7 +71,7 @@ extern const GUID JyutpingGuidPunctuationPreserveKey = {
 // Compartments
 //---------------------------------------------------------------------
 // {101011C5-CF72-4F0C-A515-153019593F10}
-extern const GUID JyutpingGuidCompartmentDoubleSingleByte = {
+extern const GUID JyutpingGuidCompartmentCharacterForm = {
     0x101011c5,
     0xcf72,
     0x4f0c,
@@ -79,7 +79,7 @@ extern const GUID JyutpingGuidCompartmentDoubleSingleByte = {
 };
 
 // {DD321BCC-A7F8-4561-9B61-9B3508C9BA97}
-extern const GUID JyutpingGuidCompartmentPunctuation = {
+extern const GUID JyutpingGuidCompartmentPunctuationForm = {
     0xdd321bcc,
     0xa7f8,
     0x4561,
@@ -92,7 +92,7 @@ extern const GUID JyutpingGuidCompartmentPunctuation = {
 //---------------------------------------------------------------------
 
 // {89BE500C-9462-4070-9DB0-B467BB051327}
-extern const GUID JyutpingGuidLangBarIMEMode = {
+extern const GUID JyutpingGuidLangBarInputMethodMode = {
     0x89be500c,
     0x9462,
     0x4070,
@@ -142,18 +142,18 @@ extern const WCHAR StringDelimiter  = L'\"';
 //---------------------------------------------------------------------
 // defined item in setting file table [PreservedKey] section
 //---------------------------------------------------------------------
-extern const WCHAR ImeModeDescription[] = L"Cantonese/ABC mode (Shift)";
-extern const int ImeModeOnIcoIndex = IME_MODE_ON_ICON_INDEX;
-extern const int ImeModeOffIcoIndex = IME_MODE_OFF_ICON_INDEX;
+extern const WCHAR InputMethodModeDescription[] = L"Input method mode (Cantonese/ABC, Shift)";
+extern const int InputMethodModeCantoneseIcoIndex = INPUT_METHOD_MODE_CANTONESE_ICON_INDEX;
+extern const int InputMethodModeABCIcoIndex = INPUT_METHOD_MODE_ABC_ICON_INDEX;
 
-extern const WCHAR DoubleSingleByteDescription[] = L"Double/Single byte (Shift+Space)";
+extern const WCHAR CharacterFormDescription[] = L"Character form (Half-width/Full-width, Shift+Space)";
 
-extern const WCHAR PunctuationDescription[] = L"Cantonese/English punctuation (Ctrl+.)";
+extern const WCHAR PunctuationFormDescription[] = L"Punctuation form (Cantonese/English, Ctrl+.)";
 
 //---------------------------------------------------------------------
 // defined item in setting file table [LanguageBar] section
 //---------------------------------------------------------------------
-extern const WCHAR LangbarImeModeDescription[] = L"Conversion mode";
+extern const WCHAR LangbarInputMethodModeDescription[] = L"Input method mode";
 
 //---------------------------------------------------------------------
 // windows class / titile / atom
@@ -230,7 +230,7 @@ void UninitDirectWrite()
 }
 
 //---------------------------------------------------------------------
-// defined full width characters for Double/Single byte conversion
+// defined full width characters for character form conversion
 //---------------------------------------------------------------------
 extern const WCHAR FullWidthCharTable[] = {
     //         !       "       #       $       %       &       '       (    )       *       +       ,       -       .       /

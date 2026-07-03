@@ -16,8 +16,8 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
 IDIS_Jyutping          ICON                    "Resources\\ime.ico"
-IDI_IME_MODE_ON         ICON                    "Resources\\zh.ico"
-IDI_IME_MODE_OFF        ICON                    "Resources\\abc.ico"
+IDI_INPUT_METHOD_MODE_CANTONESE ICON                    "Resources\\zh.ico"
+IDI_INPUT_METHOD_MODE_ABC       ICON                    "Resources\\abc.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -96,7 +96,7 @@ END
 
 STRINGTABLE
 BEGIN
-    IDS_IME_MODE            "Cantonese/ABC mode (Shift)"
+    IDS_INPUT_METHOD_MODE   "Input method mode (Cantonese/ABC, Shift)"
 END
 
 #endif    // English (United States) resources

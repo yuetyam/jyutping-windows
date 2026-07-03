@@ -107,10 +107,10 @@ HRESULT CKeyStateCategory::KeyStateHandler(KEYSTROKE_FUNCTION function, KeyHandl
     case FUNCTION_MOVE_PAGE_BOTTOM:
         return HandleKeyArrow(dto);
 
-    case FUNCTION_DOUBLE_SINGLE_BYTE:
-        return HandleKeyDoubleSingleByte(dto);
+    case FUNCTION_CHARACTER_FORM:
+        return HandleKeyCharacterForm(dto);
 
-    case FUNCTION_PUNCTUATION:
+    case FUNCTION_PUNCTUATION_FORM:
         return HandleKeyPunctuation(dto);
 
     case FUNCTION_SELECT_BY_NUMBER:
@@ -187,8 +187,8 @@ HRESULT CKeyStateCategory::HandleKeyArrow(KeyHandlerEditSessionDTO dto)
     return E_NOTIMPL;
 }
 
-//_HandleCompositionDoubleSingleByte
-HRESULT CKeyStateCategory::HandleKeyDoubleSingleByte(KeyHandlerEditSessionDTO dto)
+//_HandleCompositionCharacterForm
+HRESULT CKeyStateCategory::HandleKeyCharacterForm(KeyHandlerEditSessionDTO dto)
 {
 	dto;
     return E_NOTIMPL;
@@ -265,9 +265,9 @@ HRESULT CKeyStateComposing::HandleKeyArrow(KeyHandlerEditSessionDTO dto)
     return _pTextService->_HandleCompositionArrowKey(dto.ec, dto.pContext, dto.arrowKey);
 }
 
-HRESULT CKeyStateComposing::HandleKeyDoubleSingleByte(KeyHandlerEditSessionDTO dto)
+HRESULT CKeyStateComposing::HandleKeyCharacterForm(KeyHandlerEditSessionDTO dto)
 {
-    return _pTextService->_HandleCompositionDoubleSingleByte(dto.ec, dto.pContext, dto.wch);
+    return _pTextService->_HandleCompositionCharacterForm(dto.ec, dto.pContext, dto.wch);
 }
 
 HRESULT CKeyStateComposing::HandleKeyPunctuation(KeyHandlerEditSessionDTO dto)

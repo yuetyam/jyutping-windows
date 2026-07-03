@@ -55,13 +55,13 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     CCompartment CompartmentKeyboardOpen(_pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
     CompartmentKeyboardOpen._GetCompartmentBOOL(isOpen);
 
-    BOOL isDoubleSingleByte = FALSE;
-    CCompartment CompartmentDoubleSingleByte(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentDoubleSingleByte);
-    CompartmentDoubleSingleByte._GetCompartmentBOOL(isDoubleSingleByte);
+    BOOL isFullWidth = FALSE;
+    CCompartment CompartmentCharacterForm(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
+    CompartmentCharacterForm._GetCompartmentBOOL(isFullWidth);
 
-    BOOL isPunctuation = FALSE;
-    CCompartment CompartmentPunctuation(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentPunctuation);
-    CompartmentPunctuation._GetCompartmentBOOL(isPunctuation);
+    BOOL isCantonesePunctuation = FALSE;
+    CCompartment CompartmentPunctuationForm(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentPunctuationForm);
+    CompartmentPunctuationForm._GetCompartmentBOOL(isCantonesePunctuation);
 
     if (pKeyState)
     {
@@ -96,7 +96,7 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     }
 
     // if the keyboard is closed, we don't eat keys, with the exception of the touch keyboard specials keys
-    if (!isOpen && !isDoubleSingleByte && !isPunctuation)
+    if (!isOpen && !isFullWidth && !isCantonesePunctuation)
     {
         return isTouchKeyboardSpecialKeys;
     }
@@ -135,28 +135,28 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     if (!isReverseLookupApostrophe &&
         pCompositionProcessorEngine->IsPunctuation(wch))
     {
-        if ((_candidateMode == CANDIDATE_NONE) && isPunctuation)
+        if ((_candidateMode == CANDIDATE_NONE) && isCantonesePunctuation)
         {
             if (pKeyState)
             {
                 pKeyState->Category = CATEGORY_COMPOSING;
-                pKeyState->Function = FUNCTION_PUNCTUATION;
+                pKeyState->Function = FUNCTION_PUNCTUATION_FORM;
             }
             return TRUE;
         }
     }
 
     //
-    // Double/Single byte
+    // Character form
     //
-    if (isDoubleSingleByte && pCompositionProcessorEngine->IsDoubleSingleByte(wch))
+    if (isFullWidth && pCompositionProcessorEngine->IsCharacterFormConvertible(wch))
     {
         if (_candidateMode == CANDIDATE_NONE)
         {
             if (pKeyState)
             {
                 pKeyState->Category = CATEGORY_COMPOSING;
-                pKeyState->Function = FUNCTION_DOUBLE_SINGLE_BYTE;
+                pKeyState->Function = FUNCTION_CHARACTER_FORM;
             }
             return TRUE;
         }

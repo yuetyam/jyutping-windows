@@ -329,11 +329,11 @@ STDAPI CJyutping::Deactivate()
     CCompartment CompartmentKeyboardOpen(_pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
     CompartmentKeyboardOpen._ClearCompartment();
 
-    CCompartment CompartmentDoubleSingleByte(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentDoubleSingleByte);
-    CompartmentDoubleSingleByte._ClearCompartment();
+    CCompartment CompartmentCharacterForm(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
+    CompartmentCharacterForm._ClearCompartment();
 
-    CCompartment CompartmentPunctuation(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentPunctuation);
-    CompartmentDoubleSingleByte._ClearCompartment();
+    CCompartment CompartmentPunctuationForm(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentPunctuationForm);
+    CompartmentPunctuationForm._ClearCompartment();
 
     if (_pThreadMgr != nullptr)
     {

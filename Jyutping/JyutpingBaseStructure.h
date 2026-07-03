@@ -53,11 +53,11 @@ enum KEYSTROKE_FUNCTION
     FUNCTION_MOVE_PAGE_TOP,
     FUNCTION_MOVE_PAGE_BOTTOM,
 
-    // Function Double/Single byte
-    FUNCTION_DOUBLE_SINGLE_BYTE,
+    // Function character form
+    FUNCTION_CHARACTER_FORM,
 
-    // Function Punctuation
-    FUNCTION_PUNCTUATION
+    // Function punctuation form
+    FUNCTION_PUNCTUATION_FORM
 };
 
 //---------------------------------------------------------------------

@@ -54,7 +54,7 @@ public:
     BOOL IsPunctuation(WCHAR wch);
     WCHAR GetPunctuation(WCHAR wch);
 
-    BOOL IsDoubleSingleByte(WCHAR wch);
+    BOOL IsCharacterFormConvertible(WCHAR wch);
     BOOL IsReverseLookupBuffer() const;
 
     // Language bar control
@@ -150,23 +150,23 @@ private:
         LPCWSTR Description;
     };
 
-    XPreservedKey _PreservedKey_IMEMode;
-    XPreservedKey _PreservedKey_DoubleSingleByte;
-    XPreservedKey _PreservedKey_Punctuation;
+    XPreservedKey _PreservedKey_InputMethodMode;
+    XPreservedKey _PreservedKey_CharacterForm;
+    XPreservedKey _PreservedKey_PunctuationForm;
 
     // Punctuation data
     CJyutpingArray<CPunctuationPair> _PunctuationPair;
     CJyutpingArray<CPunctuationNestPair> _PunctuationNestPair;
 
     // Language bar data
-    CLangBarItemButton* _pLanguageBar_IMEMode;
+    CLangBarItemButton* _pLanguageBar_InputMethodMode;
 
     // Compartment
     CCompartment* _pCompartmentConversion;
     CCompartmentEventSink* _pCompartmentConversionEventSink;
     CCompartmentEventSink* _pCompartmentKeyboardOpenEventSink;
-    CCompartmentEventSink* _pCompartmentDoubleSingleByteEventSink;
-    CCompartmentEventSink* _pCompartmentPunctuationEventSink;
+    CCompartmentEventSink* _pCompartmentCharacterFormEventSink;
+    CCompartmentEventSink* _pCompartmentPunctuationFormEventSink;
 
     ImeSettings _settings;
     SettingsStore _settingsStore;

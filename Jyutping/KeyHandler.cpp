@@ -583,11 +583,11 @@ HRESULT CJyutping::_HandleCompositionPunctuation(TfEditCookie ec, _In_ ITfContex
 
 //+---------------------------------------------------------------------------
 //
-// _HandleCompositionDoubleSingleByte
+// _HandleCompositionCharacterForm
 //
 //----------------------------------------------------------------------------
 
-HRESULT CJyutping::_HandleCompositionDoubleSingleByte(TfEditCookie ec, _In_ ITfContext *pContext, WCHAR wch)
+HRESULT CJyutping::_HandleCompositionCharacterForm(TfEditCookie ec, _In_ ITfContext *pContext, WCHAR wch)
 {
     HRESULT hr = S_OK;
 

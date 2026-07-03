@@ -78,8 +78,8 @@ protected:
     // HandleKeyArrow
     virtual HRESULT HandleKeyArrow(KeyHandlerEditSessionDTO dto);
 
-    // HandleKeyDoubleSingleByte
-    virtual HRESULT HandleKeyDoubleSingleByte(KeyHandlerEditSessionDTO dto);
+    // HandleKeyCharacterForm
+    virtual HRESULT HandleKeyCharacterForm(KeyHandlerEditSessionDTO dto);
 
     // HandleKeyPunctuation
     virtual HRESULT HandleKeyPunctuation(KeyHandlerEditSessionDTO dto);
@@ -124,8 +124,8 @@ protected:
     // HandleArrowKey
     HRESULT HandleKeyArrow(KeyHandlerEditSessionDTO dto);
 
-    // HandleKeyDoubleSingleByte
-    HRESULT HandleKeyDoubleSingleByte(KeyHandlerEditSessionDTO dto);
+    // HandleKeyCharacterForm
+    HRESULT HandleKeyCharacterForm(KeyHandlerEditSessionDTO dto);
 
     // HandleKeyCompositionPunctuation
     HRESULT HandleKeyPunctuation(KeyHandlerEditSessionDTO dto);
@@ -209,8 +209,8 @@ protected:
     //_HandleNullArrowKey
     HRESULT HandleKeyArrow(KeyHandlerEditSessionDTO dto) { return __super::HandleKeyArrow(dto); };
 
-    // HandleKeyDoubleSingleByte
-    HRESULT HandleKeyDoubleSingleByte(KeyHandlerEditSessionDTO dto) { return __super::HandleKeyDoubleSingleByte(dto); };
+    // HandleKeyCharacterForm
+    HRESULT HandleKeyCharacterForm(KeyHandlerEditSessionDTO dto) { return __super::HandleKeyCharacterForm(dto); };
 
     // HandleKeyPunctuation
     HRESULT HandleKeyPunctuation(KeyHandlerEditSessionDTO dto) { return __super::HandleKeyPunctuation(dto); };
