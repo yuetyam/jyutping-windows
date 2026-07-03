@@ -99,22 +99,6 @@ extern const GUID JyutpingGuidLangBarIMEMode = {
     { 0x9d, 0xb0, 0xb4, 0x67, 0xbb, 0x5, 0x13, 0x27 }
 };
 
-// {6A11D9DE-46DB-455B-A257-2EB615746BF4}
-extern const GUID JyutpingGuidLangBarDoubleSingleByte = {
-    0x6a11d9de,
-    0x46db,
-    0x455b,
-    { 0xa2, 0x57, 0x2e, 0xb6, 0x15, 0x74, 0x6b, 0xf4 }
-};
-
-// {F29C731A-A51E-49FB-8A3C-EE51752912E2}
-extern const GUID JyutpingGuidLangBarPunctuation = {
-    0xf29c731a,
-    0xa51e,
-    0x49fb,
-    { 0x8a, 0x3c, 0xee, 0x51, 0x75, 0x29, 0x12, 0xe2 }
-};
-
 // {4C802E2C-8140-4436-A5E5-F7C544EBC9CD}
 extern const GUID JyutpingGuidDisplayAttributeInput = {
     0x4c802e2c,
@@ -163,19 +147,13 @@ extern const int ImeModeOnIcoIndex = IME_MODE_ON_ICON_INDEX;
 extern const int ImeModeOffIcoIndex = IME_MODE_OFF_ICON_INDEX;
 
 extern const WCHAR DoubleSingleByteDescription[] = L"Double/Single byte (Shift+Space)";
-extern const int DoubleSingleByteOnIcoIndex = IME_DOUBLE_ON_INDEX;
-extern const int DoubleSingleByteOffIcoIndex = IME_DOUBLE_OFF_INDEX;
 
 extern const WCHAR PunctuationDescription[] = L"Cantonese/English punctuation (Ctrl+.)";
-extern const int PunctuationOnIcoIndex = IME_PUNCTUATION_ON_INDEX;
-extern const int PunctuationOffIcoIndex = IME_PUNCTUATION_OFF_INDEX;
 
 //---------------------------------------------------------------------
 // defined item in setting file table [LanguageBar] section
 //---------------------------------------------------------------------
 extern const WCHAR LangbarImeModeDescription[] = L"Conversion mode";
-extern const WCHAR LangbarDoubleSingleByteDescription[] = L"Character width";
-extern const WCHAR LangbarPunctuationDescription[] = L"Punctuation";
 
 //---------------------------------------------------------------------
 // windows class / titile / atom

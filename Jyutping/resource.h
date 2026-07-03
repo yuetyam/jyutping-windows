@@ -9,12 +9,6 @@
 #define IDS_IME_MODE                    20
 #define IDI_IME_MODE_ON                 21
 #define IDI_IME_MODE_OFF                22
-#define IDS_DOUBLE_SINGLE_BYTE          23
-#define IDI_DOUBLE_SINGLE_BYTE_ON       24
-#define IDI_DOUBLE_SINGLE_BYTE_OFF      25
-#define IDS_PUNCTUATION                 26
-#define IDI_PUNCTUATION_ON              27
-#define IDI_PUNCTUATION_OFF             28
 #define IDR_VERSION2                    107
 
 // Next default values for new objects

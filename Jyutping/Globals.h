@@ -130,8 +130,6 @@ extern const WCHAR FullWidthCharTable[];
 extern const struct _PUNCTUATION PunctuationTable[14];
 
 extern const GUID JyutpingGuidLangBarIMEMode;
-extern const GUID JyutpingGuidLangBarDoubleSingleByte;
-extern const GUID JyutpingGuidLangBarPunctuation;
 
 extern const GUID JyutpingGuidDisplayAttributeInput;
 extern const GUID JyutpingGuidDisplayAttributeConverted;
@@ -147,16 +145,10 @@ extern const int ImeModeOnIcoIndex;
 extern const int ImeModeOffIcoIndex;
 
 extern const WCHAR DoubleSingleByteDescription[];
-extern const int DoubleSingleByteOnIcoIndex;
-extern const int DoubleSingleByteOffIcoIndex;
 
 extern const WCHAR PunctuationDescription[];
-extern const int PunctuationOnIcoIndex;
-extern const int PunctuationOffIcoIndex;
 
 extern const WCHAR LangbarImeModeDescription[];
-extern const WCHAR LangbarDoubleSingleByteDescription[];
-extern const WCHAR LangbarPunctuationDescription[];
 
 //---------------------------------------------------------------------
 // Themes

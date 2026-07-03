@@ -33,18 +33,6 @@
     <None Include="Resources\abc.ico">
       <Filter>Resources</Filter>
     </None>
-    <None Include="Resources\DoubleSingleByteOn.ico">
-      <Filter>Resources</Filter>
-    </None>
-    <None Include="Resources\DoubleSingleByteOff.ico">
-      <Filter>Resources</Filter>
-    </None>
-    <None Include="Resources\PunctuationOn.ico">
-      <Filter>Resources</Filter>
-    </None>
-    <None Include="Resources\PunctuationOff.ico">
-      <Filter>Resources</Filter>
-    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseWindow.h">

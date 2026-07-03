@@ -20,12 +20,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\ime.sqlite3" />
-    <None Include="Resources\DoubleSingleByteOff.ico" />
-    <None Include="Resources\DoubleSingleByteOn.ico" />
     <None Include="Resources\abc.ico" />
     <None Include="Resources\zh.ico" />
-    <None Include="Resources\PunctuationOff.ico" />
-    <None Include="Resources\PunctuationOn.ico" />
     <None Include="Resources\ime.ico" />
     <None Include="Jyutping.def" />
   </ItemGroup>

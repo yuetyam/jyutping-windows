@@ -18,10 +18,6 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 IDIS_Jyutping          ICON                    "Resources\\ime.ico"
 IDI_IME_MODE_ON         ICON                    "Resources\\zh.ico"
 IDI_IME_MODE_OFF        ICON                    "Resources\\abc.ico"
-IDI_DOUBLE_SINGLE_BYTE_ON ICON                    "Resources\\DoubleSingleByteOn.ico"
-IDI_DOUBLE_SINGLE_BYTE_OFF ICON                    "Resources\\DoubleSingleByteOff.ico"
-IDI_PUNCTUATION_ON      ICON                    "Resources\\PunctuationOn.ico"
-IDI_PUNCTUATION_OFF     ICON                    "Resources\\PunctuationOff.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -101,8 +97,6 @@ END
 STRINGTABLE
 BEGIN
     IDS_IME_MODE            "Cantonese/ABC mode (Shift)"
-    IDS_DOUBLE_SINGLE_BYTE  "Double/Single byte (Shift+Space)"
-    IDS_PUNCTUATION         "Cantonese/English punctuation (Ctrl+.)"
 END
 
 #endif    // English (United States) resources
