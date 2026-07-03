@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Project Overview
-This project is a Windows Input Method Editor for Cantonese Jyutping romanization. It is a native Visual Studio C++ project that implements the Windows Text Services Framework (TSF) as an in-process COM DLL integrated with the Windows text input system.
+This project is a Windows Input Method Editor for Cantonese Jyutping romanization. It is a native Visual Studio C++ project that implements the Windows Text Services Framework (TSF) as an in-process COM DLL integrated with the Windows text input system. The input engine supports normal Jyutping input and reverse lookup from other input methods back to Cantonese romanizations.
 
 ## Build
 - Development platform: Windows 11 or later, x64 and ARM64
@@ -27,8 +27,9 @@ The solution is `Jyutping.sln`; the native project is `Jyutping\Jyutping.vcxproj
 - Main text service: `CJyutping` in `Jyutping.h` and `Jyutping.cpp` is the central TSF object. It implements activation, deactivation, key handling, thread/document sinks, text edit sinks, composition callbacks, display attributes, language profile notifications, thread focus handling, function provider support, and touch keyboard layout preference.
 - TSF sink implementations: `ThreadMgrEventSink.cpp`, `TextEditSink.cpp`, `KeyEventSink.cpp`, `ActiveLanguageProfileNotifySink.cpp`, `ThreadFocusSink.cpp`, and `FunctionProviderSink.cpp` split the `CJyutping` interface implementations by responsibility.
 - Composition flow: `KeyEventSink.cpp` decides whether a key should be eaten, then `_InvokeKeyHandler` schedules `CKeyHandlerEditSession`. `KeyHandler.cpp`, `KeyHandlerEditSession.cpp`, `Composition.cpp`, `StartComposition.cpp`, and `EndComposition.cpp` update TSF ranges, composition text, display attributes, and final committed text.
-- Input engine: `CompositionProcessorEngine.*` owns keystroke tables, preserved keys, punctuation and full-width conversion, candidate index ranges, language bar state, compartments, and the raw input buffer. It delegates Cantonese lookup to `Ime::InputEngine`.
-- IME lookup: `InputEngine.*`, `ImeDatabase.*`, `ImeTypes.*`, `Segmenter.*`, and `VirtualInputKey.*` convert keystrokes into input keys, segment Jyutping syllables, query the SQLite lexicon database, and return ranked `Ime::Lexicon` suggestions.
+- Input engine: `CompositionProcessorEngine.*` owns keystroke tables, preserved keys, punctuation and full-width conversion, candidate index ranges, language bar state, compartments, the raw input buffer, and reverse-lookup buffer handling. It delegates Jyutping suggestions and reverse lookup to `Ime::InputEngine`.
+- IME lookup: `InputEngine.*`, `InputEngineReverseLookup.cpp`, `ImeDatabase.*`, `ImeTypes.*`, `Segmenter.*`, `PinyinSegmenter.*`, and `VirtualInputKey.*` convert keystrokes into input keys, segment Jyutping and Pinyin syllables, query the SQLite lexicon database, and return ranked `Ime::Lexicon` suggestions.
+- Reverse lookup: `InputEnginePinyin.cpp`, `InputEngineCangjie.cpp`, `InputEngineStroke.cpp`, and `InputEngineStructure.cpp` implement the ported reverse lookup methods. The first input key selects the method (`r` = Pinyin, `v` = Cangjie, `x` = Stroke, `q` = Structure); `CompositionProcessorEngine.*` keeps that selector in the user-visible buffer but passes only the remaining query keys to `Ime::InputEngine::ReverseLookup`.
 - Candidate UI: `CandidateListUIPresenter.*` bridges TSF candidate UI interfaces with the custom Win32 candidate window. `CandidateWindow.*`, `BaseWindow.*`, `ShadowWindow.*`, `ScrollBarWindow.*`, and `ButtonWindow.*` implement the visible UI using Win32, DirectWrite, and Direct2D.
 - Candidate positioning: `TfTextLayoutSink.*` and `GetTextExtentEditSession.*` track composition text layout and move the candidate window near the active text range.
 - Language bar, compartments, and display attributes: `LanguageBar.*`, `Compartment.*`, `DisplayAttribute*.cpp`, `DisplayAttributeInfo.*`, and `EnumDisplayAttributeInfo.*` manage TSF UI state, mode toggles, and visual composition attributes.
@@ -43,10 +44,12 @@ TSF key event
   -> CKeyHandlerEditSession
   -> CJyutping composition handlers
   -> CCompositionProcessorEngine
-  -> Ime::InputEngine / ImeDatabase / Segmenter
+  -> Ime::InputEngine / ImeDatabase / Segmenter / PinyinSegmenter
   -> CCandidateListUIPresenter / CCandidateWindow
   -> selected candidate committed back through TSF ranges
 ```
+
+Reverse lookup follows the same TSF composition and candidate UI path, but `CCompositionProcessorEngine` recognizes the leading method selector and calls `Ime::InputEngine::ReverseLookup` instead of `Suggest`. Reverse lookup candidates display the matched character or word as candidate text and the Cantonese romanization as the comment.
 
 ## Debugging
 Runtime logging is written to:
@@ -70,4 +73,5 @@ Check the root `.editorconfig` for code style and formatting.
 - When adding/deleting source files, update both `Jyutping\Jyutping.vcxproj` and `Jyutping\Jyutping.vcxproj.filters`.
 
 ## Porting from the Swift/macOS version of code
-- The Windows version should be dedicated to the 26-key QWERTY destkop input, 9-key and other layouts are excluded.
+- The reverse lookup methods from the macOS/Swift code have been ported into the Windows C++ input engine: Pinyin, Cangjie, Stroke, and Structure are implemented and wired into composition/candidate handling.
+- The Windows version should remain dedicated to the 26-key QWERTY desktop input; 9-key and other layouts are excluded.
