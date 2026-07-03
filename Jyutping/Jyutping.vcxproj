@@ -245,8 +245,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>false</EnableCOMDATFolding>
-      <OptimizeReferences>false</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>d2d1.lib;dwrite.lib;shlwapi.lib;winsqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>Jyutping.def</ModuleDefinitionFile>
@@ -269,8 +269,8 @@
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <EnableCOMDATFolding>false</EnableCOMDATFolding>
-      <OptimizeReferences>false</OptimizeReferences>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>d2d1.lib;dwrite.lib;shlwapi.lib;winsqlite3.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <ModuleDefinitionFile>Jyutping.def</ModuleDefinitionFile>
