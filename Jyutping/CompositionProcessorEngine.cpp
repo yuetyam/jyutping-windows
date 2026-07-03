@@ -6,6 +6,7 @@
 #include "Compartment.h"
 #include "LanguageBar.h"
 #include "RegKey.h"
+#include "Settings.h"
 
 #include <algorithm>
 
@@ -139,6 +140,9 @@ CCompositionProcessorEngine::CCompositionProcessorEngine()
     _pCompartmentDoubleSingleByteEventSink = nullptr;
     _pCompartmentPunctuationEventSink = nullptr;
 
+    _isApplyingSettings = FALSE;
+    _isMirroringConversionMode = FALSE;
+
     _isInputEngineReady = FALSE;
     _cachedReverseLookupMethod = Ime::ReverseLookupMethod::None;
 
@@ -235,14 +239,33 @@ BOOL CCompositionProcessorEngine::SetupLanguageProfile(LANGID langid, REFGUID gu
     _tfClientId = tfClientId;
 
     SetupPreserved(pThreadMgr, tfClientId);
-	InitializeJyutpingCompartment(pThreadMgr, tfClientId);
+    _settings = _settingsStore.Load();
+    _isApplyingSettings = TRUE;
+    InitializeJyutpingCompartment(pThreadMgr, tfClientId);
     SetupPunctuationPair();
     SetupLanguageBar(pThreadMgr, tfClientId, isSecureMode);
+    PrivateCompartmentsUpdated(pThreadMgr);
+    KeyboardOpenCompartmentUpdated(pThreadMgr);
+    _isApplyingSettings = FALSE;
     SetupKeystroke();
     SetupConfiguration();
     SetupInputEngine();
 
     return TRUE;
+}
+
+void CCompositionProcessorEngine::ApplyPersistedInputMethodMode(_In_ ITfThreadMgr *pThreadMgr)
+{
+    if (pThreadMgr == nullptr)
+    {
+        return;
+    }
+
+    _settings = _settingsStore.Load();
+    _isApplyingSettings = TRUE;
+    ApplyInputMethodModeToCompartment(pThreadMgr);
+    KeyboardOpenCompartmentUpdated(pThreadMgr);
+    _isApplyingSettings = FALSE;
 }
 
 //+---------------------------------------------------------------------------
@@ -752,8 +775,24 @@ void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsE
         }
         BOOL isOpen = FALSE;
         CCompartment CompartmentKeyboardOpen(pThreadMgr, tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
-        CompartmentKeyboardOpen._GetCompartmentBOOL(isOpen);
-        CompartmentKeyboardOpen._SetCompartmentBOOL(isOpen ? FALSE : TRUE);
+        HRESULT hr = CompartmentKeyboardOpen._GetCompartmentBOOL(isOpen);
+        if (FAILED(hr))
+        {
+            *pIsEaten = FALSE;
+            return;
+        }
+
+        BOOL newIsOpen = isOpen ? FALSE : TRUE;
+        hr = CompartmentKeyboardOpen._SetCompartmentBOOL(newIsOpen);
+        if (FAILED(hr))
+        {
+            *pIsEaten = FALSE;
+            return;
+        }
+
+        InputMethodMode mode = InputMethodModeFromKeyboardOpen(newIsOpen);
+        _settings.inputMethodMode = mode;
+        _settingsStore.SaveInputMethodMode(mode);
 
         *pIsEaten = TRUE;
     }
@@ -1108,17 +1147,20 @@ void CCompositionProcessorEngine::SetupPunctuationPair()
 
 void CCompositionProcessorEngine::InitializeJyutpingCompartment(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId)
 {
-	// set initial mode
-    CCompartment CompartmentKeyboardOpen(pThreadMgr, tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
-    CompartmentKeyboardOpen._SetCompartmentBOOL(TRUE);
+    // set initial mode
+    ApplyInputMethodModeToCompartment(pThreadMgr);
 
     CCompartment CompartmentDoubleSingleByte(pThreadMgr, tfClientId, Global::JyutpingGuidCompartmentDoubleSingleByte);
     CompartmentDoubleSingleByte._SetCompartmentBOOL(FALSE);
 
     CCompartment CompartmentPunctuation(pThreadMgr, tfClientId, Global::JyutpingGuidCompartmentPunctuation);
     CompartmentPunctuation._SetCompartmentBOOL(TRUE);
+}
 
-    PrivateCompartmentsUpdated(pThreadMgr);
+void CCompositionProcessorEngine::ApplyInputMethodModeToCompartment(_In_ ITfThreadMgr *pThreadMgr)
+{
+    CCompartment CompartmentKeyboardOpen(pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
+    CompartmentKeyboardOpen._SetCompartmentBOOL(KeyboardOpenFromInputMethodMode(_settings.inputMethodMode));
 }
 //+---------------------------------------------------------------------------
 //
@@ -1176,6 +1218,11 @@ void CCompositionProcessorEngine::ConversionModeCompartmentUpdated(_In_ ITfThrea
         return;
     }
 
+    if (_isApplyingSettings)
+    {
+        return;
+    }
+
     DWORD conversionMode = 0;
     if (FAILED(_pCompartmentConversion->_GetCompartmentDWORD(conversionMode)))
     {
@@ -1213,6 +1260,7 @@ void CCompositionProcessorEngine::ConversionModeCompartmentUpdated(_In_ ITfThrea
     CCompartment CompartmentKeyboardOpen(pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
     if (SUCCEEDED(CompartmentKeyboardOpen._GetCompartmentBOOL(fOpen)))
     {
+        _isMirroringConversionMode = TRUE;
         if (fOpen && !(conversionMode & TF_CONVERSIONMODE_NATIVE))
         {
             CompartmentKeyboardOpen._SetCompartmentBOOL(FALSE);
@@ -1221,6 +1269,7 @@ void CCompositionProcessorEngine::ConversionModeCompartmentUpdated(_In_ ITfThrea
         {
             CompartmentKeyboardOpen._SetCompartmentBOOL(TRUE);
         }
+        _isMirroringConversionMode = FALSE;
     }
 }
 
@@ -1280,6 +1329,20 @@ void CCompositionProcessorEngine::PrivateCompartmentsUpdated(_In_ ITfThreadMgr *
     }
 }
 
+void CCompositionProcessorEngine::PersistInputMethodModeFromCompartment(_In_ ITfThreadMgr *pThreadMgr)
+{
+    BOOL isOpen = FALSE;
+    CCompartment CompartmentKeyboardOpen(pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
+    if (FAILED(CompartmentKeyboardOpen._GetCompartmentBOOL(isOpen)))
+    {
+        return;
+    }
+
+    InputMethodMode mode = InputMethodModeFromKeyboardOpen(isOpen);
+    _settings.inputMethodMode = mode;
+    _settingsStore.SaveInputMethodMode(mode);
+}
+
 //+---------------------------------------------------------------------------
 //
 // KeyboardOpenCompartmentUpdated
@@ -1319,6 +1382,11 @@ void CCompositionProcessorEngine::KeyboardOpenCompartmentUpdated(_In_ ITfThreadM
     if (conversionMode != conversionModePrev)
     {
         _pCompartmentConversion->_SetCompartmentDWORD(conversionMode);
+    }
+
+    if (!_isApplyingSettings && !_isMirroringConversionMode)
+    {
+        PersistInputMethodModeFromCompartment(pThreadMgr);
     }
 }
 

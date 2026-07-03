@@ -44,6 +44,7 @@
     <ClInclude Include="PinyinSegmenter.h" />
     <ClInclude Include="SearchCandidateProvider.h" />
     <ClInclude Include="Segmenter.h" />
+    <ClInclude Include="Settings.h" />
     <ClInclude Include="DisplayAttributeInfo.h" />
     <ClInclude Include="EditSession.h" />
     <ClInclude Include="EnumDisplayAttributeInfo.h" />
@@ -83,6 +84,7 @@
     <ClCompile Include="PinyinSegmenter.cpp" />
     <ClCompile Include="SearchCandidateProvider.cpp" />
     <ClCompile Include="Segmenter.cpp" />
+    <ClCompile Include="Settings.cpp" />
     <ClCompile Include="DisplayAttribute.cpp" />
     <ClCompile Include="DisplayAttributeInfo.cpp" />
     <ClCompile Include="DisplayAttributeProvider.cpp" />

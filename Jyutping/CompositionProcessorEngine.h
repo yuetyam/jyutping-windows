@@ -6,6 +6,7 @@
 #include "Compartment.h"
 #include "define.h"
 #include "InputEngine.h"
+#include "Settings.h"
 #include "VirtualInputKey.h"
 
 #include <string>
@@ -60,6 +61,7 @@ public:
     void SetLanguageBarStatus(DWORD status, BOOL isSet);
 
     void ConversionModeCompartmentUpdated(_In_ ITfThreadMgr *pThreadMgr);
+    void ApplyPersistedInputMethodMode(_In_ ITfThreadMgr *pThreadMgr);
 
     void ShowAllLanguageBarIcons();
     void HideAllLanguageBarIcons();
@@ -94,6 +96,8 @@ private:
     static HRESULT CompartmentCallback(_In_ void *pv, REFGUID guidCompartment);
     void PrivateCompartmentsUpdated(_In_ ITfThreadMgr *pThreadMgr);
     void KeyboardOpenCompartmentUpdated(_In_ ITfThreadMgr *pThreadMgr);
+    void PersistInputMethodModeFromCompartment(_In_ ITfThreadMgr *pThreadMgr);
+    void ApplyInputMethodModeToCompartment(_In_ ITfThreadMgr *pThreadMgr);
 
     BOOL SetupInputEngine();
     std::wstring CurrentInputText() const;
@@ -165,6 +169,11 @@ private:
     CCompartmentEventSink* _pCompartmentKeyboardOpenEventSink;
     CCompartmentEventSink* _pCompartmentDoubleSingleByteEventSink;
     CCompartmentEventSink* _pCompartmentPunctuationEventSink;
+
+    ImeSettings _settings;
+    SettingsStore _settingsStore;
+    BOOL _isApplyingSettings;
+    BOOL _isMirroringConversionMode;
 
     // Configuration data
     BOOL _isComLessMode : 1;
