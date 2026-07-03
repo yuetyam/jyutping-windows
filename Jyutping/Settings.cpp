@@ -7,12 +7,26 @@ namespace {
 constexpr PCWSTR SettingsKeyPath = L"Software\\Jyutping\\Settings";
 constexpr PCWSTR VersionValueName = L"Version";
 constexpr PCWSTR InputMethodModeValueName = L"InputMethodMode";
+constexpr PCWSTR CharacterFormValueName = L"CharacterForm";
+constexpr PCWSTR PunctuationFormValueName = L"PunctuationForm";
 constexpr DWORD CurrentSettingsVersion = 1;
 
 bool IsValidInputMethodMode(DWORD value)
 {
     return value == static_cast<DWORD>(InputMethodMode::Cantonese) ||
         value == static_cast<DWORD>(InputMethodMode::ABC);
+}
+
+bool IsValidCharacterForm(DWORD value)
+{
+    return value == static_cast<DWORD>(CharacterForm::HalfWidth) ||
+        value == static_cast<DWORD>(CharacterForm::FullWidth);
+}
+
+bool IsValidPunctuationForm(DWORD value)
+{
+    return value == static_cast<DWORD>(PunctuationForm::Cantonese) ||
+        value == static_cast<DWORD>(PunctuationForm::English);
 }
 
 } // namespace
@@ -33,6 +47,18 @@ ImeSettings SettingsStore::Load() const
         settings.inputMethodMode = static_cast<InputMethodMode>(inputMethodMode);
     }
 
+    DWORD characterForm = 0;
+    if (ReadDWORD(CharacterFormValueName, characterForm) && IsValidCharacterForm(characterForm))
+    {
+        settings.characterForm = static_cast<CharacterForm>(characterForm);
+    }
+
+    DWORD punctuationForm = 0;
+    if (ReadDWORD(PunctuationFormValueName, punctuationForm) && IsValidPunctuationForm(punctuationForm))
+    {
+        settings.punctuationForm = static_cast<PunctuationForm>(punctuationForm);
+    }
+
     return settings;
 }
 
@@ -49,13 +75,37 @@ bool SettingsStore::Save(const ImeSettings& settings) const
         return false;
     }
 
-    return key.SetDWORDValue(InputMethodModeValueName, static_cast<DWORD>(settings.inputMethodMode)) == ERROR_SUCCESS;
+    if (key.SetDWORDValue(InputMethodModeValueName, static_cast<DWORD>(settings.inputMethodMode)) != ERROR_SUCCESS)
+    {
+        return false;
+    }
+
+    if (key.SetDWORDValue(CharacterFormValueName, static_cast<DWORD>(settings.characterForm)) != ERROR_SUCCESS)
+    {
+        return false;
+    }
+
+    return key.SetDWORDValue(PunctuationFormValueName, static_cast<DWORD>(settings.punctuationForm)) == ERROR_SUCCESS;
 }
 
 bool SettingsStore::SaveInputMethodMode(InputMethodMode mode) const
 {
     ImeSettings settings = Load();
     settings.inputMethodMode = mode;
+    return Save(settings);
+}
+
+bool SettingsStore::SaveCharacterForm(CharacterForm form) const
+{
+    ImeSettings settings = Load();
+    settings.characterForm = form;
+    return Save(settings);
+}
+
+bool SettingsStore::SavePunctuationForm(PunctuationForm form) const
+{
+    ImeSettings settings = Load();
+    settings.punctuationForm = form;
     return Save(settings);
 }
 
@@ -89,4 +139,24 @@ InputMethodMode InputMethodModeFromKeyboardOpen(BOOL isOpen)
 BOOL KeyboardOpenFromInputMethodMode(InputMethodMode mode)
 {
     return mode == InputMethodMode::Cantonese ? TRUE : FALSE;
+}
+
+CharacterForm CharacterFormFromFullWidth(BOOL isFullWidth)
+{
+    return isFullWidth ? CharacterForm::FullWidth : CharacterForm::HalfWidth;
+}
+
+BOOL FullWidthFromCharacterForm(CharacterForm form)
+{
+    return form == CharacterForm::FullWidth ? TRUE : FALSE;
+}
+
+PunctuationForm PunctuationFormFromCantonesePunctuation(BOOL isCantonesePunctuation)
+{
+    return isCantonesePunctuation ? PunctuationForm::Cantonese : PunctuationForm::English;
+}
+
+BOOL CantonesePunctuationFromPunctuationForm(PunctuationForm form)
+{
+    return form == PunctuationForm::Cantonese ? TRUE : FALSE;
 }

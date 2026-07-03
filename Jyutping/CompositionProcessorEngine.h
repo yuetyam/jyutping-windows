@@ -61,7 +61,7 @@ public:
     void SetLanguageBarStatus(DWORD status, BOOL isSet);
 
     void ConversionModeCompartmentUpdated(_In_ ITfThreadMgr *pThreadMgr);
-    void ApplyPersistedInputMethodMode(_In_ ITfThreadMgr *pThreadMgr);
+    void ApplyPersistedSettings(_In_ ITfThreadMgr *pThreadMgr);
 
     void ShowAllLanguageBarIcons();
     void HideAllLanguageBarIcons();
@@ -97,7 +97,9 @@ private:
     void PrivateCompartmentsUpdated(_In_ ITfThreadMgr *pThreadMgr);
     void KeyboardOpenCompartmentUpdated(_In_ ITfThreadMgr *pThreadMgr);
     void PersistInputMethodModeFromCompartment(_In_ ITfThreadMgr *pThreadMgr);
-    void ApplyInputMethodModeToCompartment(_In_ ITfThreadMgr *pThreadMgr);
+    void PersistCharacterFormFromCompartment(_In_ ITfThreadMgr *pThreadMgr);
+    void PersistPunctuationFormFromCompartment(_In_ ITfThreadMgr *pThreadMgr);
+    void ApplySettingsToCompartments(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
 
     BOOL SetupInputEngine();
     std::wstring CurrentInputText() const;

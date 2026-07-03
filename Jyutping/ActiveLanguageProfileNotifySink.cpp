@@ -42,7 +42,7 @@ STDAPI CJyutping::OnActivated(_In_ REFCLSID clsid, _In_ REFGUID guidProfile, _In
     {
         _pCompositionProcessorEngine->ShowAllLanguageBarIcons();
 
-        _pCompositionProcessorEngine->ApplyPersistedInputMethodMode(_pThreadMgr);
+        _pCompositionProcessorEngine->ApplyPersistedSettings(_pThreadMgr);
     }
     else
     {

@@ -240,7 +240,7 @@ BOOL CCompositionProcessorEngine::SetupLanguageProfile(LANGID langid, REFGUID gu
     return TRUE;
 }
 
-void CCompositionProcessorEngine::ApplyPersistedInputMethodMode(_In_ ITfThreadMgr *pThreadMgr)
+void CCompositionProcessorEngine::ApplyPersistedSettings(_In_ ITfThreadMgr *pThreadMgr)
 {
     if (pThreadMgr == nullptr)
     {
@@ -249,7 +249,8 @@ void CCompositionProcessorEngine::ApplyPersistedInputMethodMode(_In_ ITfThreadMg
 
     _settings = _settingsStore.Load();
     _isApplyingSettings = TRUE;
-    ApplyInputMethodModeToCompartment(pThreadMgr);
+    ApplySettingsToCompartments(pThreadMgr, _tfClientId);
+    PrivateCompartmentsUpdated(pThreadMgr);
     KeyboardOpenCompartmentUpdated(pThreadMgr);
     _isApplyingSettings = FALSE;
 }
@@ -791,8 +792,24 @@ void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsE
         }
         BOOL isFullWidth = FALSE;
         CCompartment CompartmentCharacterForm(pThreadMgr, tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
-        CompartmentCharacterForm._GetCompartmentBOOL(isFullWidth);
-        CompartmentCharacterForm._SetCompartmentBOOL(isFullWidth ? FALSE : TRUE);
+        HRESULT hr = CompartmentCharacterForm._GetCompartmentBOOL(isFullWidth);
+        if (FAILED(hr))
+        {
+            *pIsEaten = FALSE;
+            return;
+        }
+
+        BOOL newIsFullWidth = isFullWidth ? FALSE : TRUE;
+        hr = CompartmentCharacterForm._SetCompartmentBOOL(newIsFullWidth);
+        if (FAILED(hr))
+        {
+            *pIsEaten = FALSE;
+            return;
+        }
+
+        CharacterForm form = CharacterFormFromFullWidth(newIsFullWidth);
+        _settings.characterForm = form;
+        _settingsStore.SaveCharacterForm(form);
         *pIsEaten = TRUE;
     }
     else if (IsEqualGUID(rguid, _PreservedKey_PunctuationForm.Guid))
@@ -804,8 +821,24 @@ void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsE
         }
         BOOL isCantonesePunctuation = FALSE;
         CCompartment CompartmentPunctuationForm(pThreadMgr, tfClientId, Global::JyutpingGuidCompartmentPunctuationForm);
-        CompartmentPunctuationForm._GetCompartmentBOOL(isCantonesePunctuation);
-        CompartmentPunctuationForm._SetCompartmentBOOL(isCantonesePunctuation ? FALSE : TRUE);
+        HRESULT hr = CompartmentPunctuationForm._GetCompartmentBOOL(isCantonesePunctuation);
+        if (FAILED(hr))
+        {
+            *pIsEaten = FALSE;
+            return;
+        }
+
+        BOOL newIsCantonesePunctuation = isCantonesePunctuation ? FALSE : TRUE;
+        hr = CompartmentPunctuationForm._SetCompartmentBOOL(newIsCantonesePunctuation);
+        if (FAILED(hr))
+        {
+            *pIsEaten = FALSE;
+            return;
+        }
+
+        PunctuationForm form = PunctuationFormFromCantonesePunctuation(newIsCantonesePunctuation);
+        _settings.punctuationForm = form;
+        _settingsStore.SavePunctuationForm(form);
         *pIsEaten = TRUE;
     }
     else
@@ -1129,20 +1162,19 @@ void CCompositionProcessorEngine::SetupPunctuationPair()
 
 void CCompositionProcessorEngine::InitializeJyutpingCompartment(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId)
 {
-    // set initial mode
-    ApplyInputMethodModeToCompartment(pThreadMgr);
-
-    CCompartment CompartmentCharacterForm(pThreadMgr, tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
-    CompartmentCharacterForm._SetCompartmentBOOL(FALSE);
-
-    CCompartment CompartmentPunctuationForm(pThreadMgr, tfClientId, Global::JyutpingGuidCompartmentPunctuationForm);
-    CompartmentPunctuationForm._SetCompartmentBOOL(TRUE);
+    ApplySettingsToCompartments(pThreadMgr, tfClientId);
 }
 
-void CCompositionProcessorEngine::ApplyInputMethodModeToCompartment(_In_ ITfThreadMgr *pThreadMgr)
+void CCompositionProcessorEngine::ApplySettingsToCompartments(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId)
 {
-    CCompartment CompartmentKeyboardOpen(pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
+    CCompartment CompartmentKeyboardOpen(pThreadMgr, tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
     CompartmentKeyboardOpen._SetCompartmentBOOL(KeyboardOpenFromInputMethodMode(_settings.inputMethodMode));
+
+    CCompartment CompartmentCharacterForm(pThreadMgr, tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
+    CompartmentCharacterForm._SetCompartmentBOOL(FullWidthFromCharacterForm(_settings.characterForm));
+
+    CCompartment CompartmentPunctuationForm(pThreadMgr, tfClientId, Global::JyutpingGuidCompartmentPunctuationForm);
+    CompartmentPunctuationForm._SetCompartmentBOOL(CantonesePunctuationFromPunctuationForm(_settings.punctuationForm));
 }
 //+---------------------------------------------------------------------------
 //
@@ -1211,6 +1243,8 @@ void CCompositionProcessorEngine::ConversionModeCompartmentUpdated(_In_ ITfThrea
         return;
     }
 
+    _isMirroringConversionMode = TRUE;
+
     BOOL isFullWidth = FALSE;
     CCompartment CompartmentCharacterForm(pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
     if (SUCCEEDED(CompartmentCharacterForm._GetCompartmentBOOL(isFullWidth)))
@@ -1242,7 +1276,6 @@ void CCompositionProcessorEngine::ConversionModeCompartmentUpdated(_In_ ITfThrea
     CCompartment CompartmentKeyboardOpen(pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
     if (SUCCEEDED(CompartmentKeyboardOpen._GetCompartmentBOOL(fOpen)))
     {
-        _isMirroringConversionMode = TRUE;
         if (fOpen && !(conversionMode & TF_CONVERSIONMODE_NATIVE))
         {
             CompartmentKeyboardOpen._SetCompartmentBOOL(FALSE);
@@ -1251,8 +1284,9 @@ void CCompositionProcessorEngine::ConversionModeCompartmentUpdated(_In_ ITfThrea
         {
             CompartmentKeyboardOpen._SetCompartmentBOOL(TRUE);
         }
-        _isMirroringConversionMode = FALSE;
     }
+
+    _isMirroringConversionMode = FALSE;
 }
 
 //+---------------------------------------------------------------------------
@@ -1309,6 +1343,12 @@ void CCompositionProcessorEngine::PrivateCompartmentsUpdated(_In_ ITfThreadMgr *
     {
         _pCompartmentConversion->_SetCompartmentDWORD(conversionMode);
     }
+
+    if (!_isApplyingSettings && !_isMirroringConversionMode)
+    {
+        PersistCharacterFormFromCompartment(pThreadMgr);
+        PersistPunctuationFormFromCompartment(pThreadMgr);
+    }
 }
 
 void CCompositionProcessorEngine::PersistInputMethodModeFromCompartment(_In_ ITfThreadMgr *pThreadMgr)
@@ -1323,6 +1363,34 @@ void CCompositionProcessorEngine::PersistInputMethodModeFromCompartment(_In_ ITf
     InputMethodMode mode = InputMethodModeFromKeyboardOpen(isOpen);
     _settings.inputMethodMode = mode;
     _settingsStore.SaveInputMethodMode(mode);
+}
+
+void CCompositionProcessorEngine::PersistCharacterFormFromCompartment(_In_ ITfThreadMgr *pThreadMgr)
+{
+    BOOL isFullWidth = FALSE;
+    CCompartment CompartmentCharacterForm(pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
+    if (FAILED(CompartmentCharacterForm._GetCompartmentBOOL(isFullWidth)))
+    {
+        return;
+    }
+
+    CharacterForm form = CharacterFormFromFullWidth(isFullWidth);
+    _settings.characterForm = form;
+    _settingsStore.SaveCharacterForm(form);
+}
+
+void CCompositionProcessorEngine::PersistPunctuationFormFromCompartment(_In_ ITfThreadMgr *pThreadMgr)
+{
+    BOOL isCantonesePunctuation = FALSE;
+    CCompartment CompartmentPunctuationForm(pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentPunctuationForm);
+    if (FAILED(CompartmentPunctuationForm._GetCompartmentBOOL(isCantonesePunctuation)))
+    {
+        return;
+    }
+
+    PunctuationForm form = PunctuationFormFromCantonesePunctuation(isCantonesePunctuation);
+    _settings.punctuationForm = form;
+    _settingsStore.SavePunctuationForm(form);
 }
 
 //+---------------------------------------------------------------------------
