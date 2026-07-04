@@ -298,12 +298,12 @@ std::wstring InputEngine::ConvertText(std::wstring_view text, CharacterStandard 
     return Ime::ConvertText(_database, text, standard);
 }
 
-std::vector<Lexicon> InputEngine::Suggest(std::wstring_view input, bool deepSearch) const
+std::vector<Lexicon> InputEngine::Suggest(std::wstring_view input) const
 {
-    return Suggest(InputKeysFromText(input), deepSearch);
+    return Suggest(InputKeysFromText(input));
 }
 
-std::vector<Lexicon> InputEngine::Suggest(const std::vector<VirtualInputKey>& keys, bool deepSearch) const
+std::vector<Lexicon> InputEngine::Suggest(const std::vector<VirtualInputKey>& keys) const
 {
     if (!IsPrepared())
     {
@@ -333,7 +333,7 @@ std::vector<Lexicon> InputEngine::Suggest(const std::vector<VirtualInputKey>& ke
         }
         return AnchorsMatch(keys);
     default:
-        return Dispatch(keys, _segmenter.Segment(keys), deepSearch);
+        return Dispatch(keys, _segmenter.Segment(keys));
     }
 }
 
@@ -342,7 +342,7 @@ Segmentation InputEngine::Segment(const std::vector<VirtualInputKey>& keys) cons
     return _segmenter.Segment(keys);
 }
 
-std::vector<Lexicon> InputEngine::Dispatch(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation, bool deepSearch) const
+std::vector<Lexicon> InputEngine::Dispatch(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation) const
 {
     std::vector<VirtualInputKey> syllableKeys = SyllableKeys(keys);
     std::wstring syllableText = TextFromKeys(syllableKeys);
@@ -351,16 +351,16 @@ std::vector<Lexicon> InputEngine::Dispatch(const std::vector<VirtualInputKey>& k
     size_t aliasCount = FirstAliasCount(segmentation);
     if (aliasCount == 0)
     {
-        lexicons = deepSearch ? ProcessSlices(syllableKeys, syllableText, std::nullopt) : AnchorsMatch(syllableKeys, syllableText);
+        lexicons = ProcessSlices(syllableKeys, syllableText, std::nullopt);
     }
     else if ((aliasCount == 1 && syllableKeys.size() > 1) || syllableKeys.size() != keys.size())
     {
-        lexicons = Search(syllableKeys, segmentation, std::nullopt, deepSearch);
+        lexicons = Search(syllableKeys, segmentation, std::nullopt);
         Append(lexicons, ProcessSlices(syllableKeys, syllableText, std::nullopt));
     }
     else
     {
-        lexicons = Search(syllableKeys, segmentation, std::nullopt, deepSearch);
+        lexicons = Search(syllableKeys, segmentation, std::nullopt);
     }
 
     if (ContainsApostrophe(keys) && !ContainsToneInputKey(keys))
@@ -370,7 +370,7 @@ std::vector<Lexicon> InputEngine::Dispatch(const std::vector<VirtualInputKey>& k
     return lexicons;
 }
 
-std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation, std::optional<int> limit, bool deepSearch) const
+std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation, std::optional<int> limit) const
 {
     size_t inputLength = keys.size();
     std::wstring text = TextFromKeys(keys);
@@ -380,7 +380,7 @@ std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& key
     std::vector<Lexicon> queried = Query(inputLength, segmentation, limit);
 
     bool shouldMatchPrefixes = false;
-    if (deepSearch && inputLength > 2 && inputLength < 25)
+    if (inputLength > 2 && inputLength < 25)
     {
         shouldMatchPrefixes = keys.back() == VirtualInputKey::letterM || keys.front() == VirtualInputKey::letterM;
         if (!shouldMatchPrefixes)
@@ -531,11 +531,11 @@ std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& key
 
     if (fetched.empty())
     {
-        return deepSearch ? ProcessSlices(keys, text, limit) : AnchorsMatch(keys, text, limit);
+        return ProcessSlices(keys, text, limit);
     }
 
     size_t firstInputCount = fetched.front().inputCount;
-    if (firstInputCount >= inputLength || !deepSearch)
+    if (firstInputCount >= inputLength)
     {
         return fetched;
     }
@@ -544,7 +544,7 @@ std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& key
     for (size_t headLength : DistinctInputCounts(fetched))
     {
         std::vector<VirtualInputKey> tailKeys = DropFirst(keys, headLength);
-        std::vector<Lexicon> tailLexicons = Search(tailKeys, _segmenter.Segment(tailKeys), 50, deepSearch);
+        std::vector<Lexicon> tailLexicons = Search(tailKeys, _segmenter.Segment(tailKeys), 50);
         const Lexicon* headLexicon = FindWithInputCount(fetched, headLength);
         if (tailLexicons.empty() || headLexicon == nullptr)
         {

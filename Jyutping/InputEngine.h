@@ -31,8 +31,8 @@ public:
     bool Prepare(_In_z_ PCWSTR databasePath);
     bool IsPrepared() const;
 
-    std::vector<Lexicon> Suggest(std::wstring_view input, bool deepSearch = true) const;
-    std::vector<Lexicon> Suggest(const std::vector<VirtualInputKey>& keys, bool deepSearch = true) const;
+    std::vector<Lexicon> Suggest(std::wstring_view input) const;
+    std::vector<Lexicon> Suggest(const std::vector<VirtualInputKey>& keys) const;
     std::vector<Lexicon> ReverseLookup(ReverseLookupMethod method, std::wstring_view input) const;
     std::vector<Lexicon> ReverseLookup(ReverseLookupMethod method, const std::vector<VirtualInputKey>& keys) const;
     std::vector<Lexicon> CangjieReverseLookup(std::wstring_view input, CangjieVariant variant = CangjieVariant::Cangjie5) const;
@@ -41,8 +41,8 @@ public:
     std::wstring ConvertText(std::wstring_view text, CharacterStandard standard) const;
 
 private:
-    std::vector<Lexicon> Dispatch(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation, bool deepSearch) const;
-    std::vector<Lexicon> Search(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation, std::optional<int> limit, bool deepSearch) const;
+    std::vector<Lexicon> Dispatch(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation) const;
+    std::vector<Lexicon> Search(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation, std::optional<int> limit) const;
     std::vector<Lexicon> Query(size_t inputLength, const Segmentation& segmentation, std::optional<int> limit) const;
     std::vector<Lexicon> Perform(const Scheme& scheme, std::optional<int> limit) const;
     std::vector<Lexicon> ProcessSlices(const std::vector<VirtualInputKey>& keys, const std::wstring& text, std::optional<int> limit) const;
