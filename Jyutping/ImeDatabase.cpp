@@ -1,5 +1,6 @@
 #include "Private.h"
 #include "ImeDatabase.h"
+#include "CharacterStandard.h"
 #include "Define.h"
 #include "Globals.h"
 #include "Logger.h"
@@ -205,6 +206,83 @@ ImeDatabase::~ImeDatabase()
     Close();
 }
 
+ImeDatabase::VariantLookup::VariantLookup() :
+    _database(nullptr),
+    _statement(nullptr)
+{
+}
+
+ImeDatabase::VariantLookup::VariantLookup(const ImeDatabase* database, sqlite3_stmt* statement) :
+    _database(database),
+    _statement(statement)
+{
+}
+
+ImeDatabase::VariantLookup::~VariantLookup()
+{
+    sqlite3_finalize(_statement);
+}
+
+ImeDatabase::VariantLookup::VariantLookup(VariantLookup&& other) noexcept :
+    _database(other._database),
+    _statement(other._statement)
+{
+    other._database = nullptr;
+    other._statement = nullptr;
+}
+
+ImeDatabase::VariantLookup& ImeDatabase::VariantLookup::operator=(VariantLookup&& other) noexcept
+{
+    if (this != &other)
+    {
+        sqlite3_finalize(_statement);
+        _database = other._database;
+        _statement = other._statement;
+        other._database = nullptr;
+        other._statement = nullptr;
+    }
+    return *this;
+}
+
+bool ImeDatabase::VariantLookup::IsValid() const
+{
+    return _database != nullptr && _statement != nullptr;
+}
+
+std::optional<uint32_t> ImeDatabase::VariantLookup::Query(uint32_t source) const
+{
+    if (!IsValid())
+    {
+        return std::nullopt;
+    }
+
+    sqlite3_reset(_statement);
+    sqlite3_clear_bindings(_statement);
+    int result = sqlite3_bind_int64(_statement, 1, source);
+    if (result != SQLITE_OK)
+    {
+        _database->LogError(L"bind variant source", result);
+        return std::nullopt;
+    }
+
+    result = sqlite3_step(_statement);
+    if (result == SQLITE_ROW)
+    {
+        int64_t target = sqlite3_column_int64(_statement, 0);
+        if (target >= 0 && target <= 0x10FFFF)
+        {
+            return static_cast<uint32_t>(target);
+        }
+        return std::nullopt;
+    }
+
+    if (result != SQLITE_DONE)
+    {
+        _database->LogError(L"query variant target", result);
+    }
+    return std::nullopt;
+}
+
 bool ImeDatabase::Open()
 {
     return Open(DefaultDatabasePath().c_str());
@@ -281,7 +359,13 @@ bool ImeDatabase::VerifySchema() const
         L"SELECT rowid, word, code, spell, stroke, complex FROM stroke_table WHERE code = ? ORDER BY rowid LIMIT 0;",
         L"SELECT rowid, word, complex FROM stroke_table WHERE spell = ? ORDER BY rowid LIMIT 0;",
         L"SELECT rowid, word, complex FROM stroke_table WHERE stroke GLOB ? ORDER BY complex ASC, rowid ASC LIMIT 0;",
-        L"SELECT word, romanization FROM structure_table WHERE spell = ? LIMIT 0;"
+        L"SELECT word, romanization FROM structure_table WHERE spell = ? LIMIT 0;",
+        L"SELECT target FROM variant_old WHERE source = ? LIMIT 0;",
+        L"SELECT target FROM variant_hk WHERE source = ? LIMIT 0;",
+        L"SELECT target FROM variant_tw WHERE source = ? LIMIT 0;",
+        L"SELECT target FROM variant_prc WHERE source = ? LIMIT 0;",
+        L"SELECT target FROM variant_abp WHERE source = ? LIMIT 0;",
+        L"SELECT target FROM variant_sim WHERE source = ? LIMIT 0;"
     };
 
     for (PCWSTR sql : statements)
@@ -599,6 +683,32 @@ std::vector<std::wstring> ImeDatabase::LookupRomanizationsForWord(const std::wst
         LogError(L"lookup romanizations for word", result);
     }
     return romanizations;
+}
+
+ImeDatabase::VariantLookup ImeDatabase::CreateVariantLookup(CharacterStandard standard) const
+{
+    PCWSTR tableName = Ime::CharacterStandardConverterDetail::VariantTableName(standard);
+    if (tableName == nullptr || *tableName == L'\0')
+    {
+        return VariantLookup();
+    }
+
+    std::wstring sql = L"SELECT target FROM ";
+    sql.append(tableName);
+    sql.append(L" WHERE source = ? LIMIT 1;");
+
+    sqlite3_stmt* statement = nullptr;
+    if (!Prepare(sql.c_str(), &statement))
+    {
+        return VariantLookup();
+    }
+    return VariantLookup(this, statement);
+}
+
+std::optional<uint32_t> ImeDatabase::QueryVariantTarget(CharacterStandard standard, uint32_t source) const
+{
+    VariantLookup lookup = CreateVariantLookup(standard);
+    return lookup.Query(source);
 }
 
 std::wstring ImeDatabase::DefaultDatabasePath()

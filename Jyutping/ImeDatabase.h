@@ -4,11 +4,14 @@
 #include "sal.h"
 
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <vector>
 
 struct sqlite3;
 struct sqlite3_stmt;
+
+enum class CharacterStandard : int;
 
 enum class CangjieVariant
 {
@@ -21,6 +24,29 @@ enum class CangjieVariant
 class ImeDatabase
 {
 public:
+    class VariantLookup
+    {
+    public:
+        VariantLookup();
+        ~VariantLookup();
+
+        VariantLookup(const VariantLookup&) = delete;
+        VariantLookup& operator=(const VariantLookup&) = delete;
+        VariantLookup(VariantLookup&& other) noexcept;
+        VariantLookup& operator=(VariantLookup&& other) noexcept;
+
+        bool IsValid() const;
+        std::optional<uint32_t> Query(uint32_t source) const;
+
+    private:
+        friend class ImeDatabase;
+
+        VariantLookup(const ImeDatabase* database, sqlite3_stmt* statement);
+
+        const ImeDatabase* _database;
+        sqlite3_stmt* _statement;
+    };
+
     struct LexiconRow
     {
         int64_t rowId = 0;
@@ -92,6 +118,8 @@ public:
     std::vector<ShapeRow> QueryStrokeByPattern(const std::wstring& pattern, bool isLike, int limit = 100) const;
     std::vector<StructureRow> QueryStructureBySpell(int64_t spell) const;
     std::vector<std::wstring> LookupRomanizationsForWord(const std::wstring& word) const;
+    VariantLookup CreateVariantLookup(CharacterStandard standard) const;
+    std::optional<uint32_t> QueryVariantTarget(CharacterStandard standard, uint32_t source) const;
 
     static std::wstring DefaultDatabasePath();
 
