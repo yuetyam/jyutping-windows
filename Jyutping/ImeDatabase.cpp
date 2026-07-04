@@ -608,10 +608,10 @@ std::wstring ImeDatabase::DefaultDatabasePath()
     if (length == 0 || length >= ARRAYSIZE(modulePath))
     {
         Global::Log(L"ImeDatabase failed to resolve module path");
-        return TEXTSERVICE_SQLITE_DIC;
+        return TEXTSERVICE_SQLITE_DATA;
     }
 
-    return DirectoryFromPath(std::wstring(modulePath, length)) + TEXTSERVICE_SQLITE_DIC;
+    return DirectoryFromPath(std::wstring(modulePath, length)) + TEXTSERVICE_SQLITE_DATA;
 }
 
 bool ImeDatabase::Prepare(_In_z_ PCWSTR sql, _Outptr_result_maybenull_ sqlite3_stmt** statement) const

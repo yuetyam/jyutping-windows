@@ -7,16 +7,16 @@
 
 #define TEXTSERVICE_MODEL        L"Apartment"
 #define TEXTSERVICE_LANGID       MAKELANGID(LANG_CHINESE, SUBLANG_CHINESE_HONGKONG)
-#define TEXTSERVICE_ICON_INDEX   -IDIS_Jyutping
-#define TEXTSERVICE_SQLITE_DIC L"Resources\\ime.sqlite3"
+#define TEXTSERVICE_ICON_INDEX   -IDIS_IME
+#define TEXTSERVICE_SQLITE_DATA  L"Resources\\ime.sqlite3"
 
-#define INPUT_METHOD_MODE_CANTONESE_ICON_INDEX IDI_INPUT_METHOD_MODE_CANTONESE
-#define INPUT_METHOD_MODE_ABC_ICON_INDEX       IDI_INPUT_METHOD_MODE_ABC
+#define INPUT_MODE_CANTONESE_ICON_INDEX  IDI_INPUT_MODE_CANTONESE
+#define INPUT_MODE_ABC_ICON_INDEX        IDI_INPUT_MODE_ABC
 
-#define CANDIDATE_FONT_NAMES L"Shanggu Sans", L"LXGW XiHei CL", L"Source Han Sans K", L"Noto Sans CJK KR", L"IBM Plex Sans TC", L"Microsoft JhengHei UI"
-#define CANDIDATE_FONT_SIZE 16
-#define NUMBER_LABEL_FONT_NAME L"Consolas"
-#define NUMBER_LABEL_FONT_SIZE 13
+#define CANDIDATE_FONT_NAMES     L"Shanggu Sans", L"Sarasa Gothic CL", L"IBM Plex Sans TC", L"LXGW XiHei CL", L"Microsoft JhengHei UI", L"MiSans L3"
+#define CANDIDATE_FONT_SIZE      16
+#define NUMBER_LABEL_FONT_NAME   L"Consolas"
+#define NUMBER_LABEL_FONT_SIZE   13
 
 //---------------------------------------------------------------------
 // defined Candidated Window

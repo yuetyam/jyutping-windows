@@ -142,18 +142,18 @@ extern const WCHAR StringDelimiter  = L'\"';
 //---------------------------------------------------------------------
 // defined item in setting file table [PreservedKey] section
 //---------------------------------------------------------------------
-extern const WCHAR InputMethodModeDescription[] = L"Input method mode (Cantonese/ABC, Shift)";
-extern const int InputMethodModeCantoneseIcoIndex = INPUT_METHOD_MODE_CANTONESE_ICON_INDEX;
-extern const int InputMethodModeABCIcoIndex = INPUT_METHOD_MODE_ABC_ICON_INDEX;
+extern const WCHAR InputMethodModeDescription[] = L"Input Mode (Cantonese/ABC, Shift)";
+extern const int InputMethodModeCantoneseIcoIndex = INPUT_MODE_CANTONESE_ICON_INDEX;
+extern const int InputMethodModeABCIcoIndex = INPUT_MODE_ABC_ICON_INDEX;
 
-extern const WCHAR CharacterFormDescription[] = L"Character form (Half-width/Full-width, Shift+Space)";
+extern const WCHAR CharacterFormDescription[] = L"Character Form (Half-width/Full-width, Shift+Space)";
 
-extern const WCHAR PunctuationFormDescription[] = L"Punctuation form (Cantonese/English, Ctrl+.)";
+extern const WCHAR PunctuationFormDescription[] = L"Punctuation Form (Cantonese/English, Ctrl+.)";
 
 //---------------------------------------------------------------------
 // defined item in setting file table [LanguageBar] section
 //---------------------------------------------------------------------
-extern const WCHAR LangbarInputMethodModeDescription[] = L"Input method mode";
+extern const WCHAR LangbarInputMethodModeDescription[] = L"Input Mode";
 
 //---------------------------------------------------------------------
 // windows class / titile / atom
