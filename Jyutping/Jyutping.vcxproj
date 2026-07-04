@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\ime.sqlite3" />
+    <None Include="Resources\ime.sqlite3" Condition="Exists('Resources\ime.sqlite3')" />
     <None Include="Resources\abc.ico" />
     <None Include="Resources\zh.ico" />
     <None Include="Resources\ime.ico" />
@@ -277,7 +277,7 @@
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Target Name="CopyImeDatabase" AfterTargets="Build">
+  <Target Name="CopyImeDatabase" AfterTargets="Build" Condition="Exists('$(ProjectDir)Resources\ime.sqlite3')">
     <MakeDir Directories="$(TargetDir)Resources" />
     <Copy SourceFiles="$(ProjectDir)Resources\ime.sqlite3" DestinationFiles="$(TargetDir)Resources\ime.sqlite3" SkipUnchangedFiles="true" />
   </Target>

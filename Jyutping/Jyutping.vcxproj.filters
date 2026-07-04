@@ -21,7 +21,7 @@
     <None Include="Jyutping.def">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="Resources\ime.sqlite3">
+    <None Include="Resources\ime.sqlite3" Condition="Exists('Resources\ime.sqlite3')">
       <Filter>Resources</Filter>
     </None>
     <None Include="Resources\ime.ico">
