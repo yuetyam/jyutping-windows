@@ -48,6 +48,76 @@ BOOL IsStrokeMethod(Ime::ReverseLookupMethod method)
     return method == Ime::ReverseLookupMethod::Stroke;
 }
 
+BOOL IsNoModifier()
+{
+    return Global::CheckModifiers(Global::ModifiersValue, 0);
+}
+
+BOOL IsShiftOnlyModifier()
+{
+    return Global::CheckModifiers(Global::ModifiersValue, TF_MOD_SHIFT);
+}
+
+BOOL SetKeystrokeState(_Out_opt_ _KEYSTROKE_STATE *pKeyState, KEYSTROKE_CATEGORY category, KEYSTROKE_FUNCTION function)
+{
+    if (pKeyState)
+    {
+        pKeyState->Category = category;
+        pKeyState->Function = function;
+    }
+    return TRUE;
+}
+
+BOOL TrySetCandidateNavigationKey(UINT uCode, KEYSTROKE_CATEGORY category, _Out_opt_ _KEYSTROKE_STATE *pKeyState)
+{
+    switch (uCode)
+    {
+    case VK_TAB:
+        if (IsNoModifier())
+        {
+            return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_DOWN);
+        }
+        if (IsShiftOnlyModifier())
+        {
+            return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_UP);
+        }
+        return FALSE;
+
+    case VK_UP:
+        return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_UP);
+    case VK_DOWN:
+        return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_DOWN);
+    case VK_LEFT:
+        return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_PAGE_UP);
+    case VK_RIGHT:
+        return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_PAGE_DOWN);
+    case VK_PRIOR:
+        return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_PAGE_UP);
+    case VK_NEXT:
+        return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_PAGE_DOWN);
+    case VK_HOME:
+        return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_PAGE_TOP);
+    case VK_END:
+        return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_PAGE_BOTTOM);
+    case VK_OEM_MINUS:
+    case VK_OEM_4:
+        if (IsNoModifier())
+        {
+            return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_PAGE_UP);
+        }
+        return FALSE;
+    case VK_OEM_PLUS:
+    case VK_OEM_6:
+        if (IsNoModifier())
+        {
+            return SetKeystrokeState(pKeyState, category, FUNCTION_MOVE_PAGE_DOWN);
+        }
+        return FALSE;
+    }
+
+    return FALSE;
+}
+
 } // namespace
 
 //+---------------------------------------------------------------------------
@@ -1800,6 +1870,12 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
 
     if (candidateMode == CANDIDATE_ORIGINAL || candidateMode == CANDIDATE_PHRASE || candidateMode == CANDIDATE_WITH_NEXT_COMPOSITION)
     {
+        KEYSTROKE_CATEGORY category = (candidateMode == CANDIDATE_PHRASE) ? CATEGORY_PHRASE : CATEGORY_CANDIDATE;
+        if (TrySetCandidateNavigationKey(uCode, category, pKeyState))
+        {
+            return TRUE;
+        }
+
         BOOL isRetCode = TRUE;
         if (IsVirtualKeyKeystrokeCandidate(uCode, pKeyState, candidateMode, &isRetCode, &_KeystrokeCandidate))
         {
@@ -1824,6 +1900,11 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
     // CANDIDATE_INCREMENTAL should process Keystroke.Candidate virtual keys.
     else if (candidateMode == CANDIDATE_INCREMENTAL)
     {
+        if (TrySetCandidateNavigationKey(uCode, CATEGORY_CANDIDATE, pKeyState))
+        {
+            return TRUE;
+        }
+
         BOOL isRetCode = TRUE;
         if (IsVirtualKeyKeystrokeCandidate(uCode, pKeyState, candidateMode, &isRetCode, &_KeystrokeCandidate))
         {
@@ -1867,32 +1948,11 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
         {
             switch (uCode)
             {
-                // VK_LEFT, VK_RIGHT - set *pIsEaten = FALSE for application could move caret left or right.
-                // and for CUAS, invoke _HandleCompositionCancel() edit session due to ignore CUAS default key handler for send out terminate composition
-            case VK_LEFT:
-            case VK_RIGHT:
-                {
-                    if (pKeyState)
-                    {
-                        pKeyState->Category = CATEGORY_INVOKE_COMPOSITION_EDIT_SESSION;
-                        pKeyState->Function = FUNCTION_CANCEL;
-                    }
-                }
-                return FALSE;
-
             case VK_RETURN: if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_FINALIZE_TEXTSTORE; } return TRUE;
             case VK_ESCAPE: if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_CANCEL; } return TRUE;
 
                 // VK_BACK - remove one char from reading string.
             case VK_BACK:   if (pKeyState) { pKeyState->Category = CATEGORY_COMPOSING; pKeyState->Function = FUNCTION_BACKSPACE; } return TRUE;
-
-            case VK_UP:     if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_UP; } return TRUE;
-            case VK_DOWN:   if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_DOWN; } return TRUE;
-            case VK_PRIOR:  if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_PAGE_UP; } return TRUE;
-            case VK_NEXT:   if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_PAGE_DOWN; } return TRUE;
-
-            case VK_HOME:   if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_PAGE_TOP; } return TRUE;
-            case VK_END:    if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_PAGE_BOTTOM; } return TRUE;
 
             case VK_SPACE:
                 {
@@ -1913,12 +1973,6 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
     {
         switch (uCode)
         {
-        case VK_UP:     if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_UP; } return TRUE;
-        case VK_DOWN:   if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_DOWN; } return TRUE;
-        case VK_PRIOR:  if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_PAGE_UP; } return TRUE;
-        case VK_NEXT:   if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_PAGE_DOWN; } return TRUE;
-        case VK_HOME:   if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_PAGE_TOP; } return TRUE;
-        case VK_END:    if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_MOVE_PAGE_BOTTOM; } return TRUE;
         case VK_RETURN: if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_FINALIZE_CANDIDATELIST; } return TRUE;
         case VK_SPACE:  if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_CONVERT; } return TRUE;
         case VK_BACK:   if (pKeyState) { pKeyState->Category = CATEGORY_CANDIDATE; pKeyState->Function = FUNCTION_CANCEL; } return TRUE;
@@ -1959,12 +2013,6 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
     {
         switch (uCode)
         {
-        case VK_UP:     if (pKeyState) { pKeyState->Category = CATEGORY_PHRASE; pKeyState->Function = FUNCTION_MOVE_UP; } return TRUE;
-        case VK_DOWN:   if (pKeyState) { pKeyState->Category = CATEGORY_PHRASE; pKeyState->Function = FUNCTION_MOVE_DOWN; } return TRUE;
-        case VK_PRIOR:  if (pKeyState) { pKeyState->Category = CATEGORY_PHRASE; pKeyState->Function = FUNCTION_MOVE_PAGE_UP; } return TRUE;
-        case VK_NEXT:   if (pKeyState) { pKeyState->Category = CATEGORY_PHRASE; pKeyState->Function = FUNCTION_MOVE_PAGE_DOWN; } return TRUE;
-        case VK_HOME:   if (pKeyState) { pKeyState->Category = CATEGORY_PHRASE; pKeyState->Function = FUNCTION_MOVE_PAGE_TOP; } return TRUE;
-        case VK_END:    if (pKeyState) { pKeyState->Category = CATEGORY_PHRASE; pKeyState->Function = FUNCTION_MOVE_PAGE_BOTTOM; } return TRUE;
         case VK_RETURN: if (pKeyState) { pKeyState->Category = CATEGORY_PHRASE; pKeyState->Function = FUNCTION_FINALIZE_CANDIDATELIST; } return TRUE;
         case VK_SPACE:  if (pKeyState) { pKeyState->Category = CATEGORY_PHRASE; pKeyState->Function = FUNCTION_CONVERT; } return TRUE;
         case VK_ESCAPE: if (pKeyState) { pKeyState->Category = CATEGORY_PHRASE; pKeyState->Function = FUNCTION_CANCEL; } return TRUE;

@@ -1263,24 +1263,99 @@ BOOL CCandidateWindow::_SetSelectionInPage(int nPos)
 
 //+---------------------------------------------------------------------------
 //
+// _GetPageBounds
+//
+//----------------------------------------------------------------------------
+
+HRESULT CCandidateWindow::_GetPageBounds(_In_ UINT page, _Out_ UINT* pStart, _Out_ UINT* pEnd)
+{
+    if (pStart == nullptr || pEnd == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    *pStart = 0;
+    *pEnd = 0;
+
+    UINT candidateCount = _candidateList.Count();
+    if (candidateCount == 0 || _pageStartIndices.Count() == 0 || page >= _pageStartIndices.Count())
+    {
+        return E_FAIL;
+    }
+
+    UINT start = *_pageStartIndices.GetAt(page);
+    if (start >= candidateCount)
+    {
+        return E_FAIL;
+    }
+
+    UINT end = candidateCount - 1;
+    if (page + 1 < _pageStartIndices.Count())
+    {
+        UINT nextStart = *_pageStartIndices.GetAt(page + 1);
+        if (nextStart <= start)
+        {
+            return E_FAIL;
+        }
+        if (nextStart < candidateCount)
+        {
+            end = nextStart - 1;
+        }
+    }
+
+    if (end < start)
+    {
+        return E_FAIL;
+    }
+
+    *pStart = start;
+    *pEnd = end;
+    return S_OK;
+}
+
+//+---------------------------------------------------------------------------
+//
 // _MoveSelection
 //
 //----------------------------------------------------------------------------
 
 BOOL CCandidateWindow::_MoveSelection(_In_ int offSet, _In_ BOOL isNotify)
 {
-    if (_currentSelection + offSet >= _candidateList.Count())
+    if (offSet == 0)
+    {
+        return TRUE;
+    }
+
+    if (_candidateList.Count() == 0)
     {
         return FALSE;
     }
 
-    _currentSelection += offSet;
+    UINT currentPage = 0;
+    if (FAILED(_GetCurrentPage(&currentPage)))
+    {
+        return FALSE;
+    }
+
+    INT_PTR selectedIndex = static_cast<INT_PTR>(_currentSelection) + offSet;
+    if (selectedIndex < 0 || selectedIndex >= static_cast<INT_PTR>(_candidateList.Count()))
+    {
+        return FALSE;
+    }
+
+    _currentSelection = static_cast<UINT>(selectedIndex);
 
     _skipEmptyPageAdjustment = TRUE;
 
     if (_pVScrollBarWnd && isNotify)
     {
         _pVScrollBarWnd->_ShiftLine(offSet, isNotify);
+    }
+
+    UINT newPage = 0;
+    if (SUCCEEDED(_GetCurrentPage(&newPage)) && newPage != currentPage)
+    {
+        _ResizeWindow();
     }
 
     return TRUE;
@@ -1296,7 +1371,11 @@ BOOL CCandidateWindow::_SetSelection(_In_ int selectedIndex, _In_ BOOL isNotify)
 {
     if (selectedIndex == -1)
     {
-        selectedIndex = _candidateList.Count() - 1;
+        if (_candidateList.Count() == 0)
+        {
+            return FALSE;
+        }
+        selectedIndex = static_cast<int>(_candidateList.Count() - 1);
     }
 
     if (selectedIndex < 0)
@@ -1312,14 +1391,14 @@ BOOL CCandidateWindow::_SetSelection(_In_ int selectedIndex, _In_ BOOL isNotify)
 
     _currentSelection = static_cast<UINT>(selectedIndex);
 
-    BOOL ret = _AdjustPageIndexForSelection();
-
     if (_pVScrollBarWnd && isNotify)
     {
         _pVScrollBarWnd->_ShiftPosition(selectedIndex, isNotify);
     }
 
-    return ret;
+    _ResizeWindow();
+
+    return TRUE;
 }
 
 //+---------------------------------------------------------------------------
@@ -1345,35 +1424,49 @@ BOOL CCandidateWindow::_MovePage(_In_ int offSet, _In_ BOOL isNotify)
         return TRUE;
     }
 
-    int currentPage = 0;
-    int selectionOffset = 0;
-    int newPage = 0;
+    if (_candidateList.Count() == 0)
+    {
+        return FALSE;
+    }
 
+    UINT currentPage = 0;
     if (FAILED(_GetCurrentPage(&currentPage)))
     {
         return FALSE;
     }
 
-    newPage = currentPage + offSet;
-    if ((newPage < 0) || (newPage >= static_cast<int>(_pageStartIndices.Count())))
+    INT_PTR targetPage = static_cast<INT_PTR>(currentPage) + offSet;
+    if (targetPage < 0 || targetPage >= static_cast<INT_PTR>(_pageStartIndices.Count()))
     {
         return FALSE;
     }
 
-    // If current selection is at the top of the page AND
-    // we are on the "default" page border, then we don't
-    // want adjustment to eliminate empty entries.
-    //
-    // We do this for keeping behavior inline with downlevel.
-    if (_currentSelection % _pIndexRange->Count() == 0 &&
-        _currentSelection == *_pageStartIndices.GetAt(currentPage))
+    UINT currentStart = 0;
+    UINT currentEnd = 0;
+    if (FAILED(_GetPageBounds(currentPage, &currentStart, &currentEnd)))
     {
-        _skipEmptyPageAdjustment = TRUE;
+        return FALSE;
+    }
+    if (_currentSelection < currentStart || _currentSelection > currentEnd)
+    {
+        return FALSE;
     }
 
-    selectionOffset = _currentSelection - *_pageStartIndices.GetAt(currentPage);
-    _currentSelection = *_pageStartIndices.GetAt(newPage) + selectionOffset;
-    _currentSelection = _candidateList.Count() > _currentSelection ? _currentSelection : _candidateList.Count() - 1;
+    UINT targetStart = 0;
+    UINT targetEnd = 0;
+    if (FAILED(_GetPageBounds(static_cast<UINT>(targetPage), &targetStart, &targetEnd)))
+    {
+        return FALSE;
+    }
+
+    UINT selectionOffset = (_currentSelection > currentStart) ? (_currentSelection - currentStart) : 0;
+    UINT selectedIndex = targetStart + selectionOffset;
+    if (selectedIndex > targetEnd)
+    {
+        selectedIndex = targetEnd;
+    }
+
+    _currentSelection = selectedIndex;
 
     // adjust scrollbar position
     if (_pVScrollBarWnd && isNotify)

@@ -27,6 +27,22 @@ __inline UINT VKeyFromVKPacketAndWchar(UINT vk, WCHAR wch)
         {
             vkRet = VK_SPACE;
         }
+        else if (wch == L'-')
+        {
+            vkRet = VK_OEM_MINUS;
+        }
+        else if (wch == L'=')
+        {
+            vkRet = VK_OEM_PLUS;
+        }
+        else if (wch == L'[')
+        {
+            vkRet = VK_OEM_4;
+        }
+        else if (wch == L']')
+        {
+            vkRet = VK_OEM_6;
+        }
         else if (wch == THIRDPARTY_NEXTPAGE)
         {
             vkRet = VK_NEXT;

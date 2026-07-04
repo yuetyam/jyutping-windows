@@ -912,7 +912,13 @@ void CCandidateListUIPresenter::SetPageIndexWithScrollInfo(_In_ CJyutpingArray<C
         return;
     }
 
-    UINT bufferSize = pCandidateList->Count() / candCntInPage + 1;
+    UINT candidateCount = pCandidateList->Count();
+    if (candidateCount == 0)
+    {
+        return;
+    }
+
+    UINT bufferSize = (candidateCount + candCntInPage - 1) / candCntInPage;
     UINT* puPageIndex = new (std::nothrow) UINT[ bufferSize ];
     if (puPageIndex != nullptr)
     {
@@ -1023,7 +1029,8 @@ BOOL CCandidateListUIPresenter::_MoveSelection(_In_ int offSet)
         }
         else
         {
-            _updatedFlags = TF_CLUIE_SELECTION;
+            _updatedFlags = TF_CLUIE_SELECTION |
+                TF_CLUIE_CURRENTPAGE;
             _UpdateUIElement();
         }
     }
@@ -1295,11 +1302,13 @@ void CCandidateListUIPresenter::AdviseUIChangedByArrowKey(_In_ KEYSTROKE_FUNCTIO
             break;
         }
     case FUNCTION_MOVE_PAGE_UP:
+    case FUNCTION_MOVE_LEFT:
         {
             _MovePage(MOVEUP_ONE);
             break;
         }
     case FUNCTION_MOVE_PAGE_DOWN:
+    case FUNCTION_MOVE_RIGHT:
         {
             _MovePage(MOVEDOWN_ONE);
             break;
