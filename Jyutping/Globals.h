@@ -104,9 +104,15 @@ void UninitDirectWrite();
 
 extern CRITICAL_SECTION CS;
 extern IDWriteFactory2* pDWriteFactory;
-extern IDWriteFontFallback* pDWriteFontFallback;
+extern IDWriteFontFallback* pDWriteCandidateFontFallback;
+extern IDWriteFontFallback* pDWriteNumberLabelFontFallback;
+extern IDWriteFontFallback* pDWriteCommentFontFallback;
 extern const LPCWSTR candidateFontNames[];
 extern const size_t candidateFontNamesCount;
+extern const LPCWSTR numberLabelFontNames[];
+extern const size_t numberLabelFontNamesCount;
+extern const LPCWSTR commentFontNames[];
+extern const size_t commentFontNamesCount;
 
 extern const CLSID JyutpingCLSID;
 extern const CLSID JyutpingGuidProfile;

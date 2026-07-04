@@ -100,7 +100,8 @@ private:
 
     // DirectWrite and Direct2D resources
     ComPtr<IDWriteTextFormat1> _pDWriteTextFormat;      // Text format for candidate strings
-    ComPtr<IDWriteTextFormat> _pDWriteNumberFormat;     // Text format for number labels
+    ComPtr<IDWriteTextFormat1> _pDWriteNumberFormat;    // Text format for number labels
+    ComPtr<IDWriteTextFormat1> _pDWriteCommentFormat;   // Text format for candidate comments
     ComPtr<ID2D1DCRenderTarget> _pDirect2DRenderTarget; // Direct2D render target
 
     // Window dimensions

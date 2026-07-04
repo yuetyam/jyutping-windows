@@ -8,6 +8,59 @@
 
 constexpr auto limitedMaxSpace = 2000.0f;
 
+static HRESULT CreateRoleTextFormat(
+    _In_ FLOAT fontSize,
+    _In_reads_(fontNamesCount) const LPCWSTR* fontNames,
+    _In_ size_t fontNamesCount,
+    _In_opt_ IDWriteFontFallback* fontFallback,
+    _COM_Outptr_ IDWriteTextFormat1** textFormat)
+{
+    if (Global::pDWriteFactory == nullptr || textFormat == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    *textFormat = nullptr;
+
+    if (fontNames == nullptr || fontNamesCount == 0)
+    {
+        return E_INVALIDARG;
+    }
+
+    ComPtr<IDWriteTextFormat> baseTextFormat;
+    HRESULT hr = Global::pDWriteFactory->CreateTextFormat(
+        fontNames[0],
+        nullptr,
+        DWRITE_FONT_WEIGHT_NORMAL,
+        DWRITE_FONT_STYLE_NORMAL,
+        DWRITE_FONT_STRETCH_NORMAL,
+        fontSize,
+        L"",
+        &baseTextFormat
+    );
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    ComPtr<IDWriteTextFormat1> textFormat1;
+    hr = baseTextFormat.As(&textFormat1);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (fontFallback)
+    {
+        textFormat1->SetFontFallback(fontFallback);
+    }
+    textFormat1->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
+
+    *textFormat = textFormat1.Detach();
+
+    return S_OK;
+}
+
 // SetWindowCompositionAttribute definitions
 enum ACCENT_STATE {
     ACCENT_DISABLED = 0,
@@ -270,7 +323,7 @@ void CCandidateWindow::_ResizeWindow()
                 rowWidth += metrics.width;
 
                 // Measure Comment (if present)
-                if (pItem->_ItemComment.GetLength() > 0)
+                if (pItem->_ItemComment.GetLength() > 0 && _pDWriteCommentFormat)
                 {
                     rowWidth += scaledCommentSpacing;
 
@@ -278,7 +331,7 @@ void CCandidateWindow::_ResizeWindow()
                     HRESULT hrComment = Global::pDWriteFactory->CreateTextLayout(
                         pItem->_ItemComment.Get(),
                         (UINT32)pItem->_ItemComment.GetLength(),
-                        _pDWriteNumberFormat.Get(),
+                        _pDWriteCommentFormat.Get(),
                         limitedMaxSpace,
                         limitedMaxSpace,
                         &pCommentLayout
@@ -398,70 +451,59 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
             // Scale font sizes
             float candidateFontSize = (float)CANDIDATE_FONT_SIZE * scale;
             float numberFontSize = (float)NUMBER_LABEL_FONT_SIZE * scale;
+            float commentFontSize = (float)COMMENT_FONT_SIZE * scale;
 
             // Initialize DirectWrite
             if (Global::pDWriteFactory)
             {
-                ComPtr<IDWriteTextFormat> pTextFormat;
-                HRESULT hr = Global::pDWriteFactory->CreateTextFormat(
-                    L"Segoe UI",
-                    nullptr,
-                    DWRITE_FONT_WEIGHT_NORMAL,
-                    DWRITE_FONT_STYLE_NORMAL,
-                    DWRITE_FONT_STRETCH_NORMAL,
+                CreateRoleTextFormat(
                     candidateFontSize,
-                    L"", // Locale
-                    &pTextFormat
+                    Global::candidateFontNames,
+                    Global::candidateFontNamesCount,
+                    Global::pDWriteCandidateFontFallback,
+                    _pDWriteTextFormat.ReleaseAndGetAddressOf()
                 );
-
-                if (SUCCEEDED(hr))
-                {
-                    hr = pTextFormat.As(&_pDWriteTextFormat);
-                }
-
-                if (SUCCEEDED(hr) && Global::pDWriteFontFallback)
-                {
-                    _pDWriteTextFormat->SetFontFallback(Global::pDWriteFontFallback);
-                    _pDWriteTextFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-                }
-
-                // Initialize Number Format
-                Global::pDWriteFactory->CreateTextFormat(
-                    NUMBER_LABEL_FONT_NAME,
-                    nullptr,
-                    DWRITE_FONT_WEIGHT_NORMAL,
-                    DWRITE_FONT_STYLE_NORMAL,
-                    DWRITE_FONT_STRETCH_NORMAL,
+                CreateRoleTextFormat(
                     numberFontSize,
-                    L"", // Locale
-                    &_pDWriteNumberFormat
+                    Global::numberLabelFontNames,
+                    Global::numberLabelFontNamesCount,
+                    Global::pDWriteNumberLabelFontFallback,
+                    _pDWriteNumberFormat.ReleaseAndGetAddressOf()
                 );
+                CreateRoleTextFormat(
+                    commentFontSize,
+                    Global::commentFontNames,
+                    Global::commentFontNamesCount,
+                    Global::pDWriteCommentFontFallback,
+                    _pDWriteCommentFormat.ReleaseAndGetAddressOf()
+                );
+
+                // Measure metrics using DirectWrite
+                if (_pDWriteTextFormat)
+                {
+                    ComPtr<IDWriteTextLayout> pTextLayout;
+                    HRESULT hr = Global::pDWriteFactory->CreateTextLayout(L"A", 1, _pDWriteTextFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pTextLayout);
+                    if (SUCCEEDED(hr))
+                    {
+                        DWRITE_TEXT_METRICS dwriteMetrics;
+                        pTextLayout->GetMetrics(&dwriteMetrics);
+                        _candidateTextMetric.tmHeight = (LONG)ceil(dwriteMetrics.height);
+                        _candidateTextMetric.tmAveCharWidth = (LONG)ceil(dwriteMetrics.width);
+                        _candidateTextMetric.tmMaxCharWidth = _candidateTextMetric.tmAveCharWidth;
+                    }
+                }
 
                 if (_pDWriteNumberFormat)
                 {
-                    _pDWriteNumberFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-                }
-
-                // Measure metrics using DirectWrite
-                ComPtr<IDWriteTextLayout> pTextLayout;
-                hr = Global::pDWriteFactory->CreateTextLayout(L"A", 1, _pDWriteTextFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pTextLayout);
-                if (SUCCEEDED(hr))
-                {
-                    DWRITE_TEXT_METRICS dwriteMetrics;
-                    pTextLayout->GetMetrics(&dwriteMetrics);
-                    _candidateTextMetric.tmHeight = (LONG)ceil(dwriteMetrics.height);
-                    _candidateTextMetric.tmAveCharWidth = (LONG)ceil(dwriteMetrics.width);
-                    _candidateTextMetric.tmMaxCharWidth = _candidateTextMetric.tmAveCharWidth;
-                }
-
-                ComPtr<IDWriteTextLayout> pNumLayout;
-                hr = Global::pDWriteFactory->CreateTextLayout(L"0", 1, _pDWriteNumberFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pNumLayout);
-                if (SUCCEEDED(hr))
-                {
-                    DWRITE_TEXT_METRICS dwriteMetrics;
-                    pNumLayout->GetMetrics(&dwriteMetrics);
-                    _numberLabelTextMetric.tmHeight = (LONG)ceil(dwriteMetrics.height);
-                    _numberLabelTextMetric.tmAveCharWidth = (LONG)ceil(dwriteMetrics.width);
+                    ComPtr<IDWriteTextLayout> pNumLayout;
+                    HRESULT hr = Global::pDWriteFactory->CreateTextLayout(L"0", 1, _pDWriteNumberFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pNumLayout);
+                    if (SUCCEEDED(hr))
+                    {
+                        DWRITE_TEXT_METRICS dwriteMetrics;
+                        pNumLayout->GetMetrics(&dwriteMetrics);
+                        _numberLabelTextMetric.tmHeight = (LONG)ceil(dwriteMetrics.height);
+                        _numberLabelTextMetric.tmAveCharWidth = (LONG)ceil(dwriteMetrics.width);
+                    }
                 }
 
                 _rowHeight = (int)((float)CANDIDATE_ROW_HEIGHT * scale);
@@ -477,7 +519,7 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
                 ID2D1Factory* pD2DFactory = nullptr;
                 if (SUCCEEDED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pD2DFactory)))
                 {
-                    pD2DFactory->CreateDCRenderTarget(&props, &_pDirect2DRenderTarget);
+                    pD2DFactory->CreateDCRenderTarget(&props, _pDirect2DRenderTarget.ReleaseAndGetAddressOf());
                     pD2DFactory->Release();
                 }
             }
@@ -992,19 +1034,18 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
             }
         }
 
-        // Advance x position: after candidate + spacing
-        xPosition += candidateWidth + scaledCommentSpacing;
-
         // Draw Comment (if present)
         if (pItemList->_ItemComment.GetLength() > 0)
         {
-            if (_pDirect2DRenderTarget && _pDWriteNumberFormat && pTextBrush)
+            xPosition += candidateWidth + scaledCommentSpacing;
+
+            if (_pDirect2DRenderTarget && _pDWriteCommentFormat && pTextBrush)
             {
                 ComPtr<IDWriteTextLayout> pCommentLayout;
                 HRESULT hr = Global::pDWriteFactory->CreateTextLayout(
                     pItemList->_ItemComment.Get(),
                     (UINT32)pItemList->_ItemComment.GetLength(),
-                    _pDWriteNumberFormat.Get(),
+                    _pDWriteCommentFormat.Get(),
                     limitedMaxSpace,
                     static_cast<FLOAT>(cyLine),
                     &pCommentLayout

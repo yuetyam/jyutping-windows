@@ -13,10 +13,16 @@ LONG dllRefCount = -1;
 CRITICAL_SECTION CS;
 
 IDWriteFactory2* pDWriteFactory = nullptr;
-IDWriteFontFallback* pDWriteFontFallback = nullptr;
+IDWriteFontFallback* pDWriteCandidateFontFallback = nullptr;
+IDWriteFontFallback* pDWriteNumberLabelFontFallback = nullptr;
+IDWriteFontFallback* pDWriteCommentFontFallback = nullptr;
 
 const LPCWSTR candidateFontNames[] = { CANDIDATE_FONT_NAMES };
 const size_t candidateFontNamesCount = ARRAYSIZE(candidateFontNames);
+const LPCWSTR numberLabelFontNames[] = { NUMBER_LABEL_FONT_NAMES };
+const size_t numberLabelFontNamesCount = ARRAYSIZE(numberLabelFontNames);
+const LPCWSTR commentFontNames[] = { COMMENT_FONT_NAMES };
+const size_t commentFontNamesCount = ARRAYSIZE(commentFontNames);
 
 //---------------------------------------------------------------------
 // Jyutping CLSID
@@ -221,6 +227,55 @@ BOOL RegisterWindowClass()
     return TRUE;
 }
 
+static HRESULT CreateFontFallback(
+    _In_reads_(fontNamesCount) const LPCWSTR* fontNames,
+    _In_ size_t fontNamesCount,
+    _COM_Outptr_ IDWriteFontFallback** fontFallback)
+{
+    if (fontNames == nullptr || fontFallback == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    *fontFallback = nullptr;
+
+    if (pDWriteFactory == nullptr || fontNamesCount == 0)
+    {
+        return E_FAIL;
+    }
+
+    UINT fontNamesCountValue = 0;
+    HRESULT hr = SizeTToUInt(fontNamesCount, &fontNamesCountValue);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    ComPtr<IDWriteFontFallbackBuilder> pFallbackBuilder;
+    hr = pDWriteFactory->CreateFontFallbackBuilder(&pFallbackBuilder);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    DWRITE_UNICODE_RANGE fullRange = { 0x0000, 0x10FFFF };
+    hr = pFallbackBuilder->AddMapping(
+        &fullRange,
+        1,
+        (const WCHAR**)fontNames,
+        fontNamesCountValue,
+        nullptr,
+        nullptr,
+        nullptr
+    );
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    return pFallbackBuilder->CreateFontFallback(fontFallback);
+}
+
 BOOL InitDirectWrite()
 {
     if (pDWriteFactory) return TRUE;
@@ -228,36 +283,29 @@ BOOL InitDirectWrite()
     HRESULT hr = DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory2), reinterpret_cast<IUnknown**>(&pDWriteFactory));
     if (FAILED(hr)) return FALSE;
 
-    ComPtr<IDWriteFontFallbackBuilder> pFallbackBuilder;
-    hr = pDWriteFactory->CreateFontFallbackBuilder(&pFallbackBuilder);
-    if (SUCCEEDED(hr))
-    {
-        DWRITE_UNICODE_RANGE fullRange = { 0x0000, 0x10FFFF };
-        hr = pFallbackBuilder->AddMapping(
-            &fullRange,
-            1,
-            (const WCHAR**)candidateFontNames,
-            (UINT32)candidateFontNamesCount,
-            nullptr,
-            nullptr,
-            nullptr
-        );
-
-        if (SUCCEEDED(hr))
-        {
-            pFallbackBuilder->CreateFontFallback(&pDWriteFontFallback);
-        }
-    }
+    CreateFontFallback(candidateFontNames, candidateFontNamesCount, &pDWriteCandidateFontFallback);
+    CreateFontFallback(numberLabelFontNames, numberLabelFontNamesCount, &pDWriteNumberLabelFontFallback);
+    CreateFontFallback(commentFontNames, commentFontNamesCount, &pDWriteCommentFontFallback);
 
     return TRUE;
 }
 
 void UninitDirectWrite()
 {
-    if (pDWriteFontFallback)
+    if (pDWriteCommentFontFallback)
     {
-        pDWriteFontFallback->Release();
-        pDWriteFontFallback = nullptr;
+        pDWriteCommentFontFallback->Release();
+        pDWriteCommentFontFallback = nullptr;
+    }
+    if (pDWriteNumberLabelFontFallback)
+    {
+        pDWriteNumberLabelFontFallback->Release();
+        pDWriteNumberLabelFontFallback = nullptr;
+    }
+    if (pDWriteCandidateFontFallback)
+    {
+        pDWriteCandidateFontFallback->Release();
+        pDWriteCandidateFontFallback = nullptr;
     }
     if (pDWriteFactory)
     {
