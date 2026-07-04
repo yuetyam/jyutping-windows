@@ -13,12 +13,12 @@
 #define INPUT_MODE_CANTONESE_ICON_INDEX  IDI_INPUT_MODE_CANTONESE
 #define INPUT_MODE_ABC_ICON_INDEX        IDI_INPUT_MODE_ABC
 
-#define CANDIDATE_FONT_NAMES      L"Shanggu Sans", L"IBM Plex Sans TC", L"Microsoft JhengHei UI", L"Microsoft YaHei UI", L"MiSans L3"
-#define CANDIDATE_FONT_SIZE       16
-#define NUMBER_LABEL_FONT_NAMES   L"JetBrains Mono", L"Consolas", L"Segoe UI", L"Arial"
-#define NUMBER_LABEL_FONT_SIZE    13
-#define COMMENT_FONT_NAMES        L"JetBrains Mono", L"Consolas", L"Segoe UI", L"Arial", L"Microsoft JhengHei UI", L"Microsoft YaHei UI"
-#define COMMENT_FONT_SIZE         13
+#define CANDIDATE_FONT_NAMES     L"Shanggu Sans", L"IBM Plex Sans TC", L"Microsoft JhengHei UI", L"Microsoft YaHei UI", L"MiSans L3"
+#define CANDIDATE_FONT_SIZE      16
+#define NUMBER_LABEL_FONT_NAMES  L"Monaspace Neon", L"JetBrains Mono", L"Consolas", L"Segoe UI", L"Arial"
+#define NUMBER_LABEL_FONT_SIZE   13
+#define COMMENT_FONT_NAMES       L"Monaspace Neon", L"JetBrains Mono", L"Consolas", L"Segoe UI", L"Arial"
+#define COMMENT_FONT_SIZE        13
 
 //---------------------------------------------------------------------
 // defined Candidated Window
