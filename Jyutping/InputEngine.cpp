@@ -1,4 +1,5 @@
 #include "InputEngine.h"
+#include "CharacterStandard.h"
 
 #include <algorithm>
 
@@ -290,6 +291,11 @@ bool InputEngine::Prepare(_In_z_ PCWSTR databasePath)
 bool InputEngine::IsPrepared() const
 {
     return _database.IsOpen() && _segmenter.IsPrepared() && _pinyinSegmenter.IsPrepared();
+}
+
+std::wstring InputEngine::ConvertText(std::wstring_view text, CharacterStandard standard) const
+{
+    return Ime::ConvertText(_database, text, standard);
 }
 
 std::vector<Lexicon> InputEngine::Suggest(std::wstring_view input, bool deepSearch) const

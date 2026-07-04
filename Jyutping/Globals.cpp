@@ -67,6 +67,38 @@ extern const GUID JyutpingGuidPunctuationFormPreserveKey = {
     { 0xa3, 0xdf, 0x59, 0xf7, 0x8a, 0x2, 0x86, 0x2d }
 };
 
+// {0475268D-82DA-4BBB-9038-E9FEFB4ED077}
+extern const GUID JyutpingGuidTraditionalCharacterVariantPreserveKey = {
+    0x0475268d,
+    0x82da,
+    0x4bbb,
+    { 0x90, 0x38, 0xe9, 0xfe, 0xfb, 0x4e, 0xd0, 0x77 }
+};
+
+// {F3B1F904-E07C-4E79-8BA3-039E80013160}
+extern const GUID JyutpingGuidHongKongCharacterVariantPreserveKey = {
+    0xf3b1f904,
+    0xe07c,
+    0x4e79,
+    { 0x8b, 0xa3, 0x03, 0x9e, 0x80, 0x01, 0x31, 0x60 }
+};
+
+// {C59C2038-FA4A-463D-8775-3303EA96FE3A}
+extern const GUID JyutpingGuidTaiwanCharacterVariantPreserveKey = {
+    0xc59c2038,
+    0xfa4a,
+    0x463d,
+    { 0x87, 0x75, 0x33, 0x03, 0xea, 0x96, 0xfe, 0x3a }
+};
+
+// {33E79976-A5DA-478F-88E1-C2C5937E00D3}
+extern const GUID JyutpingGuidSimplifiedCharacterVariantPreserveKey = {
+    0x33e79976,
+    0xa5da,
+    0x478f,
+    { 0x88, 0xe1, 0xc2, 0xc5, 0x93, 0x7e, 0x00, 0xd3 }
+};
+
 //---------------------------------------------------------------------
 // Compartments
 //---------------------------------------------------------------------
@@ -149,6 +181,11 @@ extern const int InputMethodModeABCIcoIndex = INPUT_MODE_ABC_ICON_INDEX;
 extern const WCHAR CharacterFormDescription[] = L"Character Form (Half-width/Full-width, Shift+Space)";
 
 extern const WCHAR PunctuationFormDescription[] = L"Punctuation Form (Cantonese/English, Ctrl+.)";
+
+extern const WCHAR TraditionalCharacterVariantDescription[] = L"Character Variant (Traditional, Ctrl+Shift+1)";
+extern const WCHAR HongKongCharacterVariantDescription[] = L"Character Variant (HongKong, Ctrl+Shift+2)";
+extern const WCHAR TaiwanCharacterVariantDescription[] = L"Character Variant (Taiwan, Ctrl+Shift+3)";
+extern const WCHAR SimplifiedCharacterVariantDescription[] = L"Character Variant (Simplified, Ctrl+Shift+4)";
 
 //---------------------------------------------------------------------
 // defined item in setting file table [LanguageBar] section

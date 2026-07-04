@@ -1,5 +1,6 @@
 #include "Private.h"
 #include "Settings.h"
+#include "CharacterStandard.h"
 #include "RegKey.h"
 
 namespace {
@@ -9,6 +10,7 @@ constexpr PCWSTR VersionValueName = L"Version";
 constexpr PCWSTR InputMethodModeValueName = L"InputMethodMode";
 constexpr PCWSTR CharacterFormValueName = L"CharacterForm";
 constexpr PCWSTR PunctuationFormValueName = L"PunctuationForm";
+constexpr PCWSTR CharacterVariantValueName = L"CharacterVariant";
 constexpr DWORD CurrentSettingsVersion = 1;
 
 bool IsValidInputMethodMode(DWORD value)
@@ -27,6 +29,14 @@ bool IsValidPunctuationForm(DWORD value)
 {
     return value == static_cast<DWORD>(PunctuationForm::Cantonese) ||
         value == static_cast<DWORD>(PunctuationForm::English);
+}
+
+bool IsValidCharacterVariant(DWORD value)
+{
+    return value == static_cast<DWORD>(CharacterVariant::Traditional) ||
+        value == static_cast<DWORD>(CharacterVariant::HongKong) ||
+        value == static_cast<DWORD>(CharacterVariant::Taiwan) ||
+        value == static_cast<DWORD>(CharacterVariant::Simplified);
 }
 
 } // namespace
@@ -59,6 +69,12 @@ ImeSettings SettingsStore::Load() const
         settings.punctuationForm = static_cast<PunctuationForm>(punctuationForm);
     }
 
+    DWORD characterVariant = 0;
+    if (ReadDWORD(CharacterVariantValueName, characterVariant) && IsValidCharacterVariant(characterVariant))
+    {
+        settings.characterVariant = static_cast<CharacterVariant>(characterVariant);
+    }
+
     return settings;
 }
 
@@ -85,7 +101,12 @@ bool SettingsStore::Save(const ImeSettings& settings) const
         return false;
     }
 
-    return key.SetDWORDValue(PunctuationFormValueName, static_cast<DWORD>(settings.punctuationForm)) == ERROR_SUCCESS;
+    if (key.SetDWORDValue(PunctuationFormValueName, static_cast<DWORD>(settings.punctuationForm)) != ERROR_SUCCESS)
+    {
+        return false;
+    }
+
+    return key.SetDWORDValue(CharacterVariantValueName, static_cast<DWORD>(settings.characterVariant)) == ERROR_SUCCESS;
 }
 
 bool SettingsStore::SaveInputMethodMode(InputMethodMode mode) const
@@ -106,6 +127,13 @@ bool SettingsStore::SavePunctuationForm(PunctuationForm form) const
 {
     ImeSettings settings = Load();
     settings.punctuationForm = form;
+    return Save(settings);
+}
+
+bool SettingsStore::SaveCharacterVariant(CharacterVariant variant) const
+{
+    ImeSettings settings = Load();
+    settings.characterVariant = variant;
     return Save(settings);
 }
 
@@ -159,4 +187,25 @@ PunctuationForm PunctuationFormFromCantonesePunctuation(BOOL isCantonesePunctuat
 BOOL CantonesePunctuationFromPunctuationForm(PunctuationForm form)
 {
     return form == PunctuationForm::Cantonese ? TRUE : FALSE;
+}
+
+CharacterVariant CharacterVariantFromRawValue(DWORD value)
+{
+    return IsValidCharacterVariant(value) ? static_cast<CharacterVariant>(value) : CharacterVariant::Traditional;
+}
+
+CharacterStandard CharacterStandardFromCharacterVariant(CharacterVariant variant)
+{
+    switch (variant)
+    {
+    case CharacterVariant::HongKong:
+        return CharacterStandard::HongKong;
+    case CharacterVariant::Taiwan:
+        return CharacterStandard::Taiwan;
+    case CharacterVariant::Simplified:
+        return CharacterStandard::Mutilated;
+    case CharacterVariant::Traditional:
+    default:
+        return CharacterStandard::Preset;
+    }
 }

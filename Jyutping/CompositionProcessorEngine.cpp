@@ -643,9 +643,33 @@ void CCompositionProcessorEngine::SetupPreserved(_In_ ITfThreadMgr *pThreadMgr, 
     preservedKeyPunctuationForm.uModifiers = TF_MOD_CONTROL;
     SetPreservedKey(Global::JyutpingGuidPunctuationFormPreserveKey, preservedKeyPunctuationForm, Global::PunctuationFormDescription, &_PreservedKey_PunctuationForm);
 
+    TF_PRESERVEDKEY preservedKeyTraditionalCharacterVariant;
+    preservedKeyTraditionalCharacterVariant.uVKey = L'1';
+    preservedKeyTraditionalCharacterVariant.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
+    SetPreservedKey(Global::JyutpingGuidTraditionalCharacterVariantPreserveKey, preservedKeyTraditionalCharacterVariant, Global::TraditionalCharacterVariantDescription, &_PreservedKey_CharacterVariantTraditional);
+
+    TF_PRESERVEDKEY preservedKeyHongKongCharacterVariant;
+    preservedKeyHongKongCharacterVariant.uVKey = L'2';
+    preservedKeyHongKongCharacterVariant.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
+    SetPreservedKey(Global::JyutpingGuidHongKongCharacterVariantPreserveKey, preservedKeyHongKongCharacterVariant, Global::HongKongCharacterVariantDescription, &_PreservedKey_CharacterVariantHongKong);
+
+    TF_PRESERVEDKEY preservedKeyTaiwanCharacterVariant;
+    preservedKeyTaiwanCharacterVariant.uVKey = L'3';
+    preservedKeyTaiwanCharacterVariant.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
+    SetPreservedKey(Global::JyutpingGuidTaiwanCharacterVariantPreserveKey, preservedKeyTaiwanCharacterVariant, Global::TaiwanCharacterVariantDescription, &_PreservedKey_CharacterVariantTaiwan);
+
+    TF_PRESERVEDKEY preservedKeySimplifiedCharacterVariant;
+    preservedKeySimplifiedCharacterVariant.uVKey = L'4';
+    preservedKeySimplifiedCharacterVariant.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
+    SetPreservedKey(Global::JyutpingGuidSimplifiedCharacterVariantPreserveKey, preservedKeySimplifiedCharacterVariant, Global::SimplifiedCharacterVariantDescription, &_PreservedKey_CharacterVariantSimplified);
+
     InitPreservedKey(&_PreservedKey_InputMethodMode, pThreadMgr, tfClientId);
     InitPreservedKey(&_PreservedKey_CharacterForm, pThreadMgr, tfClientId);
     InitPreservedKey(&_PreservedKey_PunctuationForm, pThreadMgr, tfClientId);
+    InitPreservedKey(&_PreservedKey_CharacterVariantTraditional, pThreadMgr, tfClientId);
+    InitPreservedKey(&_PreservedKey_CharacterVariantHongKong, pThreadMgr, tfClientId);
+    InitPreservedKey(&_PreservedKey_CharacterVariantTaiwan, pThreadMgr, tfClientId);
+    InitPreservedKey(&_PreservedKey_CharacterVariantSimplified, pThreadMgr, tfClientId);
 
     return;
 }
@@ -678,7 +702,7 @@ void CCompositionProcessorEngine::SetPreservedKey(const CLSID clsid, TF_PRESERVE
         return;
     }
 
-    StringCchCopy((LPWSTR)pXPreservedKey->Description, srgKeystrokeBufLen, pwszDescription);
+    StringCchCopy((LPWSTR)pXPreservedKey->Description, srgKeystrokeBufLen + 1, pwszDescription);
 
     return;
 }
@@ -753,6 +777,11 @@ BOOL CCompositionProcessorEngine::CheckShiftKeyOnly(_In_ CJyutpingArray<TF_PRESE
 
 void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsEaten, _In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId)
 {
+    if (pIsEaten == nullptr)
+    {
+        return;
+    }
+
     if (IsEqualGUID(rguid, _PreservedKey_InputMethodMode.Guid))
     {
         if (!CheckShiftKeyOnly(&_PreservedKey_InputMethodMode.TSFPreservedKeyTable))
@@ -841,11 +870,42 @@ void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsE
         _settingsStore.SavePunctuationForm(form);
         *pIsEaten = TRUE;
     }
+    else if (IsEqualGUID(rguid, _PreservedKey_CharacterVariantTraditional.Guid))
+    {
+        _settings.characterVariant = CharacterVariant::Traditional;
+        _settingsStore.SaveCharacterVariant(_settings.characterVariant);
+        *pIsEaten = TRUE;
+    }
+    else if (IsEqualGUID(rguid, _PreservedKey_CharacterVariantHongKong.Guid))
+    {
+        _settings.characterVariant = CharacterVariant::HongKong;
+        _settingsStore.SaveCharacterVariant(_settings.characterVariant);
+        *pIsEaten = TRUE;
+    }
+    else if (IsEqualGUID(rguid, _PreservedKey_CharacterVariantTaiwan.Guid))
+    {
+        _settings.characterVariant = CharacterVariant::Taiwan;
+        _settingsStore.SaveCharacterVariant(_settings.characterVariant);
+        *pIsEaten = TRUE;
+    }
+    else if (IsEqualGUID(rguid, _PreservedKey_CharacterVariantSimplified.Guid))
+    {
+        _settings.characterVariant = CharacterVariant::Simplified;
+        _settingsStore.SaveCharacterVariant(_settings.characterVariant);
+        *pIsEaten = TRUE;
+    }
     else
     {
         *pIsEaten = FALSE;
     }
-    *pIsEaten = TRUE;
+}
+
+BOOL CCompositionProcessorEngine::IsCharacterVariantPreservedKey(REFGUID rguid) const
+{
+    return IsEqualGUID(rguid, _PreservedKey_CharacterVariantTraditional.Guid) ||
+        IsEqualGUID(rguid, _PreservedKey_CharacterVariantHongKong.Guid) ||
+        IsEqualGUID(rguid, _PreservedKey_CharacterVariantTaiwan.Guid) ||
+        IsEqualGUID(rguid, _PreservedKey_CharacterVariantSimplified.Guid);
 }
 
 //+---------------------------------------------------------------------------
@@ -1079,6 +1139,16 @@ const std::vector<Ime::Lexicon>& CCompositionProcessorEngine::GetInputSuggestion
     return _cachedSuggestions;
 }
 
+CharacterStandard CCompositionProcessorEngine::CurrentCharacterStandard() const
+{
+    return CharacterStandardFromCharacterVariant(_settings.characterVariant);
+}
+
+std::wstring CCompositionProcessorEngine::DisplayTextForCandidate(const Ime::Lexicon& suggestion) const
+{
+    return _inputEngine.ConvertText(suggestion.text, CurrentCharacterStandard());
+}
+
 void CCompositionProcessorEngine::AppendInputEngineCandidates(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList)
 {
     if (pCandidateList == nullptr)
@@ -1109,7 +1179,7 @@ void CCompositionProcessorEngine::AppendInputEngineCandidates(_Inout_ CJyutpingA
             return;
         }
 
-        _candidateItemTextStorage.push_back(suggestion.text);
+        _candidateItemTextStorage.push_back(DisplayTextForCandidate(suggestion));
         _candidateItemCommentStorage.push_back(suggestion.romanization);
 
         const std::wstring& text = _candidateItemTextStorage.back();

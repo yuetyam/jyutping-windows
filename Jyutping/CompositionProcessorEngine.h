@@ -49,6 +49,7 @@ public:
 
     // Preserved key handler
     void OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsEaten, _In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
+    BOOL IsCharacterVariantPreservedKey(REFGUID rguid) const;
 
     // Punctuation
     BOOL IsPunctuation(WCHAR wch);
@@ -109,6 +110,8 @@ private:
     std::wstring ReverseLookupReadingText(const std::vector<Ime::Lexicon>& suggestions) const;
     BOOL IsReverseLookupInputKey(UINT uCode) const;
     const std::vector<Ime::Lexicon>& GetInputSuggestions();
+    CharacterStandard CurrentCharacterStandard() const;
+    std::wstring DisplayTextForCandidate(const Ime::Lexicon& suggestion) const;
     void AppendInputEngineCandidates(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
 
 private:
@@ -155,6 +158,10 @@ private:
     XPreservedKey _PreservedKey_InputMethodMode;
     XPreservedKey _PreservedKey_CharacterForm;
     XPreservedKey _PreservedKey_PunctuationForm;
+    XPreservedKey _PreservedKey_CharacterVariantTraditional;
+    XPreservedKey _PreservedKey_CharacterVariantHongKong;
+    XPreservedKey _PreservedKey_CharacterVariantTaiwan;
+    XPreservedKey _PreservedKey_CharacterVariantSimplified;
 
     // Punctuation data
     CJyutpingArray<CPunctuationPair> _PunctuationPair;

@@ -113,6 +113,10 @@ extern const CLSID JyutpingGuidProfile;
 extern const CLSID JyutpingGuidInputMethodModePreserveKey;
 extern const CLSID JyutpingGuidCharacterFormPreserveKey;
 extern const CLSID JyutpingGuidPunctuationFormPreserveKey;
+extern const CLSID JyutpingGuidTraditionalCharacterVariantPreserveKey;
+extern const CLSID JyutpingGuidHongKongCharacterVariantPreserveKey;
+extern const CLSID JyutpingGuidTaiwanCharacterVariantPreserveKey;
+extern const CLSID JyutpingGuidSimplifiedCharacterVariantPreserveKey;
 
 LRESULT CALLBACK ThreadKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
 BOOL CheckModifiers(UINT uModCurrent, UINT uMod);
@@ -147,6 +151,11 @@ extern const int InputMethodModeABCIcoIndex;
 extern const WCHAR CharacterFormDescription[];
 
 extern const WCHAR PunctuationFormDescription[];
+
+extern const WCHAR TraditionalCharacterVariantDescription[];
+extern const WCHAR HongKongCharacterVariantDescription[];
+extern const WCHAR TaiwanCharacterVariantDescription[];
+extern const WCHAR SimplifiedCharacterVariantDescription[];
 
 extern const WCHAR LangbarInputMethodModeDescription[];
 

@@ -11,6 +11,8 @@
 #include <string_view>
 #include <vector>
 
+enum class CharacterStandard : int;
+
 namespace Ime {
 
 enum class ReverseLookupMethod
@@ -36,6 +38,7 @@ public:
     std::vector<Lexicon> CangjieReverseLookup(std::wstring_view input, CangjieVariant variant = CangjieVariant::Cangjie5) const;
     std::vector<Lexicon> CangjieReverseLookup(const std::vector<VirtualInputKey>& keys, CangjieVariant variant = CangjieVariant::Cangjie5) const;
     Segmentation Segment(const std::vector<VirtualInputKey>& keys) const;
+    std::wstring ConvertText(std::wstring_view text, CharacterStandard standard) const;
 
 private:
     std::vector<Lexicon> Dispatch(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation, bool deepSearch) const;
