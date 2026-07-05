@@ -516,14 +516,34 @@ void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStri
 {
     if (pReadingStrings->Count() == 0 && _keystrokeBuffer.GetLength())
     {
+        std::wstring currentInputText = CurrentInputText();
         const std::vector<Ime::Lexicon>& suggestions = GetInputSuggestions();
         if (!suggestions.empty())
         {
-            _readingStringStorage = IsReverseLookupBuffer() ? ReverseLookupReadingText(suggestions) : suggestions.front().mark;
+            BOOL isReverseLookupBuffer = IsReverseLookupBuffer();
+            size_t inputLength = currentInputText.length();
+            size_t matchedInputCount = suggestions.front().inputCount;
+            if (isReverseLookupBuffer && inputLength > 0)
+            {
+                matchedInputCount = (std::min)(matchedInputCount, inputLength - 1) + 1;
+            }
+
+            if (matchedInputCount < inputLength)
+            {
+                _readingStringStorage = currentInputText;
+            }
+            else
+            {
+                _readingStringStorage = isReverseLookupBuffer ? ReverseLookupReadingText(suggestions) : suggestions.front().mark;
+                if (_readingStringStorage.empty())
+                {
+                    _readingStringStorage = currentInputText;
+                }
+            }
         }
         else
         {
-            _readingStringStorage = CurrentInputText();
+            _readingStringStorage = currentInputText;
         }
 
         CStringRange* pNewString = nullptr;
