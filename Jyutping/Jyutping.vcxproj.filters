@@ -33,6 +33,18 @@
     <None Include="Resources\abc.ico">
       <Filter>Resources</Filter>
     </None>
+    <None Include="Resources\Strings.en-US.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Strings.zh-CN.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Strings.zh-HK.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Strings.zh-TW.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="BaseWindow.h">
@@ -153,6 +165,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Settings.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Localization.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -320,6 +335,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Settings.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Localization.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -189,8 +189,8 @@ extern const WCHAR CharacterFormDescription[] = L"Character Form (Half-width/Ful
 extern const WCHAR PunctuationFormDescription[] = L"Punctuation Form (Cantonese/English, Ctrl+.)";
 
 extern const WCHAR TraditionalCharacterVariantDescription[] = L"Traditional Characters (Ctrl+Shift+1)";
-extern const WCHAR HongKongCharacterVariantDescription[] = L"Traditional Characters, HK (Ctrl+Shift+1)";
-extern const WCHAR TaiwanCharacterVariantDescription[] = L"Traditional Characters, TW (Ctrl+Shift+1)";
+extern const WCHAR HongKongCharacterVariantDescription[] = L"Traditional Characters, HK (Ctrl+Shift+2)";
+extern const WCHAR TaiwanCharacterVariantDescription[] = L"Traditional Characters, TW (Ctrl+Shift+3)";
 extern const WCHAR SimplifiedCharacterVariantDescription[] = L"Simplified Characters (Ctrl+Shift+4)";
 
 //---------------------------------------------------------------------

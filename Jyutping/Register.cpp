@@ -1,11 +1,13 @@
 #include "Private.h"
 #include "Globals.h"
+#include "Localization.h"
+#include "resource.h"
 
 static const WCHAR RegInfo_Prefix_CLSID[] = L"CLSID\\";
 static const WCHAR RegInfo_Key_InProSvr32[] = L"InProcServer32";
 static const WCHAR RegInfo_Key_ThreadModel[] = L"ThreadingModel";
 
-static const WCHAR TEXTSERVICE_DESC[] = L"Jyutping";
+static const WCHAR TextServiceDescriptionFallback[] = L"Jyutping";
 
 static const GUID SupportCategories[] = {
     GUID_TFCAT_TIP_KEYBOARD,
@@ -41,8 +43,9 @@ BOOL RegisterProfiles()
     cchA = cchA >= MAX_PATH ? (MAX_PATH - 1) : cchA;
     achIconFile[cchA] = '\0';
 
+    std::wstring textServiceDescription = Localization::LoadStringOrFallback(IDS_TEXTSERVICE_DESC, TextServiceDescriptionFallback);
     size_t lenOfDesc = 0;
-    hr = StringCchLength(TEXTSERVICE_DESC, STRSAFE_MAX_CCH, &lenOfDesc);
+    hr = StringCchLength(textServiceDescription.c_str(), STRSAFE_MAX_CCH, &lenOfDesc);
     if (hr != S_OK)
     {
         pITfInputProcessorProfileMgr->Release();
@@ -51,7 +54,7 @@ BOOL RegisterProfiles()
     hr = pITfInputProcessorProfileMgr->RegisterProfile(Global::JyutpingCLSID,
         TEXTSERVICE_LANGID,
         Global::JyutpingGuidProfile,
-        TEXTSERVICE_DESC,
+        textServiceDescription.c_str(),
         static_cast<ULONG>(lenOfDesc),
         achIconFile,
         cchA,
@@ -197,9 +200,16 @@ BOOL RegisterServer()
 
     memcpy(achIMEKey, RegInfo_Prefix_CLSID, sizeof(RegInfo_Prefix_CLSID) - sizeof(WCHAR));
 
+    std::wstring textServiceDescription = Localization::LoadStringOrFallback(IDS_TEXTSERVICE_DESC, TextServiceDescriptionFallback);
+    size_t textServiceDescriptionLength = 0;
+    if (StringCchLength(textServiceDescription.c_str(), STRSAFE_MAX_CCH, &textServiceDescriptionLength) != S_OK)
+    {
+        return FALSE;
+    }
+
     if (RegCreateKeyEx(HKEY_CLASSES_ROOT, achIMEKey, 0, NULL, REG_OPTION_NON_VOLATILE, KEY_WRITE, NULL, &regKeyHandle, &copiedStringLen) == ERROR_SUCCESS)
     {
-        if (RegSetValueEx(regKeyHandle, NULL, 0, REG_SZ, (const BYTE *)TEXTSERVICE_DESC, (_countof(TEXTSERVICE_DESC))*sizeof(WCHAR)) != ERROR_SUCCESS)
+        if (RegSetValueEx(regKeyHandle, NULL, 0, REG_SZ, (const BYTE *)textServiceDescription.c_str(), (static_cast<DWORD>(textServiceDescriptionLength) + 1) * sizeof(WCHAR)) != ERROR_SUCCESS)
         {
             RegCloseKey(regKeyHandle);
             return FALSE;

@@ -23,6 +23,10 @@
     <None Include="Resources\abc.ico" />
     <None Include="Resources\zh.ico" />
     <None Include="Resources\ime.ico" />
+    <None Include="Resources\Strings.en-US.rc2" />
+    <None Include="Resources\Strings.zh-CN.rc2" />
+    <None Include="Resources\Strings.zh-HK.rc2" />
+    <None Include="Resources\Strings.zh-TW.rc2" />
     <None Include="Jyutping.def" />
   </ItemGroup>
   <ItemGroup>
@@ -38,6 +42,7 @@
     <ClInclude Include="KeyStateCategory.h" />
     <ClInclude Include="JyutpingBaseStructure.h" />
     <ClInclude Include="JyutpingStructureArray.h" />
+    <ClInclude Include="Localization.h" />
     <ClInclude Include="PinyinSegmenter.h" />
     <ClInclude Include="SearchCandidateProvider.h" />
     <ClInclude Include="Segmenter.h" />
@@ -107,6 +112,7 @@
     <ClCompile Include="KeyHandler.cpp" />
     <ClCompile Include="KeyHandlerEditSession.cpp" />
     <ClCompile Include="LanguageBar.cpp" />
+    <ClCompile Include="Localization.cpp" />
     <ClCompile Include="Logger.cpp" />
     <ClCompile Include="Register.cpp" />
     <ClCompile Include="RegKey.cpp" />

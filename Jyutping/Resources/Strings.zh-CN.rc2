@@ -1,0 +1,22 @@
+/////////////////////////////////////////////////////////////////////////////
+// Chinese (Simplified, China) localized resources
+
+LANGUAGE LANG_CHINESE, SUBLANG_CHINESE_SIMPLIFIED
+#pragma code_page(65001)
+
+STRINGTABLE
+BEGIN
+    IDIS_IME                              "粤拼输入法"
+    IDS_DEFAULT_FONT                      "Microsoft YaHei UI"
+    IDS_TEXTSERVICE_DESC                  "粤拼"
+    IDS_INPUT_MODE_DESCRIPTION            "输入模式 (粤语/ABC, Shift)"
+    IDS_CHARACTER_FORM_DESCRIPTION        "字符宽度 (半宽/全宽, Shift+Space)"
+    IDS_PUNCTUATION_FORM_DESCRIPTION      "标点符号 (中文/英文, Ctrl+.)"
+    IDS_CHARACTER_VARIANT_TRADITIONAL     "傳統漢字 (Ctrl+Shift+1)"
+    IDS_CHARACTER_VARIANT_HONG_KONG       "傳統漢字·香港 (Ctrl+Shift+2)"
+    IDS_CHARACTER_VARIANT_TAIWAN          "傳統漢字·臺灣 (Ctrl+Shift+3)"
+    IDS_CHARACTER_VARIANT_SIMPLIFIED      "简化字 (Ctrl+Shift+4)"
+    IDS_LANGBAR_INPUT_METHOD_MODE         "输入模式"
+    IDS_FILE_DESCRIPTION                  "粤拼输入法"
+    IDS_PRODUCT_NAME                      "粤拼"
+END

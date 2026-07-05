@@ -5,7 +5,9 @@
 #include "Globals.h"
 #include "Compartment.h"
 #include "LanguageBar.h"
+#include "Localization.h"
 #include "RegKey.h"
+#include "resource.h"
 #include "Settings.h"
 
 #include <algorithm>
@@ -763,40 +765,48 @@ void CCompositionProcessorEngine::SetKeystrokeTable(_Inout_ CJyutpingArray<_KEYS
 
 void CCompositionProcessorEngine::SetupPreserved(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId)
 {
+    std::wstring inputMethodModeDescription = Localization::LoadStringOrFallback(IDS_INPUT_MODE_DESCRIPTION, Global::InputMethodModeDescription);
+    std::wstring characterFormDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_FORM_DESCRIPTION, Global::CharacterFormDescription);
+    std::wstring punctuationFormDescription = Localization::LoadStringOrFallback(IDS_PUNCTUATION_FORM_DESCRIPTION, Global::PunctuationFormDescription);
+    std::wstring traditionalCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_VARIANT_TRADITIONAL, Global::TraditionalCharacterVariantDescription);
+    std::wstring hongKongCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_VARIANT_HONG_KONG, Global::HongKongCharacterVariantDescription);
+    std::wstring taiwanCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_VARIANT_TAIWAN, Global::TaiwanCharacterVariantDescription);
+    std::wstring simplifiedCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_VARIANT_SIMPLIFIED, Global::SimplifiedCharacterVariantDescription);
+
     TF_PRESERVEDKEY preservedKeyInputMethodMode;
     preservedKeyInputMethodMode.uVKey = VK_SHIFT;
     preservedKeyInputMethodMode.uModifiers = _TF_MOD_ON_KEYUP_SHIFT_ONLY;
-    SetPreservedKey(Global::JyutpingGuidInputMethodModePreserveKey, preservedKeyInputMethodMode, Global::InputMethodModeDescription, &_PreservedKey_InputMethodMode);
+    SetPreservedKey(Global::JyutpingGuidInputMethodModePreserveKey, preservedKeyInputMethodMode, inputMethodModeDescription.c_str(), &_PreservedKey_InputMethodMode);
 
     TF_PRESERVEDKEY preservedKeyCharacterForm;
     preservedKeyCharacterForm.uVKey = VK_SPACE;
     preservedKeyCharacterForm.uModifiers = TF_MOD_SHIFT;
-    SetPreservedKey(Global::JyutpingGuidCharacterFormPreserveKey, preservedKeyCharacterForm, Global::CharacterFormDescription, &_PreservedKey_CharacterForm);
+    SetPreservedKey(Global::JyutpingGuidCharacterFormPreserveKey, preservedKeyCharacterForm, characterFormDescription.c_str(), &_PreservedKey_CharacterForm);
 
     TF_PRESERVEDKEY preservedKeyPunctuationForm;
     preservedKeyPunctuationForm.uVKey = VK_OEM_PERIOD;
     preservedKeyPunctuationForm.uModifiers = TF_MOD_CONTROL;
-    SetPreservedKey(Global::JyutpingGuidPunctuationFormPreserveKey, preservedKeyPunctuationForm, Global::PunctuationFormDescription, &_PreservedKey_PunctuationForm);
+    SetPreservedKey(Global::JyutpingGuidPunctuationFormPreserveKey, preservedKeyPunctuationForm, punctuationFormDescription.c_str(), &_PreservedKey_PunctuationForm);
 
     TF_PRESERVEDKEY preservedKeyTraditionalCharacterVariant;
     preservedKeyTraditionalCharacterVariant.uVKey = L'1';
     preservedKeyTraditionalCharacterVariant.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
-    SetPreservedKey(Global::JyutpingGuidTraditionalCharacterVariantPreserveKey, preservedKeyTraditionalCharacterVariant, Global::TraditionalCharacterVariantDescription, &_PreservedKey_CharacterVariantTraditional);
+    SetPreservedKey(Global::JyutpingGuidTraditionalCharacterVariantPreserveKey, preservedKeyTraditionalCharacterVariant, traditionalCharacterVariantDescription.c_str(), &_PreservedKey_CharacterVariantTraditional);
 
     TF_PRESERVEDKEY preservedKeyHongKongCharacterVariant;
     preservedKeyHongKongCharacterVariant.uVKey = L'2';
     preservedKeyHongKongCharacterVariant.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
-    SetPreservedKey(Global::JyutpingGuidHongKongCharacterVariantPreserveKey, preservedKeyHongKongCharacterVariant, Global::HongKongCharacterVariantDescription, &_PreservedKey_CharacterVariantHongKong);
+    SetPreservedKey(Global::JyutpingGuidHongKongCharacterVariantPreserveKey, preservedKeyHongKongCharacterVariant, hongKongCharacterVariantDescription.c_str(), &_PreservedKey_CharacterVariantHongKong);
 
     TF_PRESERVEDKEY preservedKeyTaiwanCharacterVariant;
     preservedKeyTaiwanCharacterVariant.uVKey = L'3';
     preservedKeyTaiwanCharacterVariant.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
-    SetPreservedKey(Global::JyutpingGuidTaiwanCharacterVariantPreserveKey, preservedKeyTaiwanCharacterVariant, Global::TaiwanCharacterVariantDescription, &_PreservedKey_CharacterVariantTaiwan);
+    SetPreservedKey(Global::JyutpingGuidTaiwanCharacterVariantPreserveKey, preservedKeyTaiwanCharacterVariant, taiwanCharacterVariantDescription.c_str(), &_PreservedKey_CharacterVariantTaiwan);
 
     TF_PRESERVEDKEY preservedKeySimplifiedCharacterVariant;
     preservedKeySimplifiedCharacterVariant.uVKey = L'4';
     preservedKeySimplifiedCharacterVariant.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
-    SetPreservedKey(Global::JyutpingGuidSimplifiedCharacterVariantPreserveKey, preservedKeySimplifiedCharacterVariant, Global::SimplifiedCharacterVariantDescription, &_PreservedKey_CharacterVariantSimplified);
+    SetPreservedKey(Global::JyutpingGuidSimplifiedCharacterVariantPreserveKey, preservedKeySimplifiedCharacterVariant, simplifiedCharacterVariantDescription.c_str(), &_PreservedKey_CharacterVariantSimplified);
 
     InitPreservedKey(&_PreservedKey_InputMethodMode, pThreadMgr, tfClientId);
     InitPreservedKey(&_PreservedKey_CharacterForm, pThreadMgr, tfClientId);
@@ -1065,7 +1075,9 @@ void CCompositionProcessorEngine::SetupConfiguration()
 void CCompositionProcessorEngine::SetupLanguageBar(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId, BOOL isSecureMode)
 {
     DWORD dwEnable = 1;
-    CreateLanguageBarButton(dwEnable, GUID_LBI_INPUTMODE, Global::LangbarInputMethodModeDescription, Global::InputMethodModeDescription, Global::InputMethodModeCantoneseIcoIndex, Global::InputMethodModeABCIcoIndex, &_pLanguageBar_InputMethodMode, isSecureMode);
+    std::wstring inputMethodModeDescription = Localization::LoadStringOrFallback(IDS_INPUT_MODE_DESCRIPTION, Global::InputMethodModeDescription);
+    std::wstring langbarInputMethodModeDescription = Localization::LoadStringOrFallback(IDS_LANGBAR_INPUT_METHOD_MODE, Global::LangbarInputMethodModeDescription);
+    CreateLanguageBarButton(dwEnable, GUID_LBI_INPUTMODE, langbarInputMethodModeDescription.c_str(), inputMethodModeDescription.c_str(), Global::InputMethodModeCantoneseIcoIndex, Global::InputMethodModeABCIcoIndex, &_pLanguageBar_InputMethodMode, isSecureMode);
 
     InitLanguageBar(_pLanguageBar_InputMethodMode, pThreadMgr, tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
 

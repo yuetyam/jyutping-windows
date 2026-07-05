@@ -1,0 +1,22 @@
+/////////////////////////////////////////////////////////////////////////////
+// English (United States) localized resources
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+
+STRINGTABLE
+BEGIN
+    IDIS_IME                              "Jyutping Input Method"
+    IDS_DEFAULT_FONT                      "Microsoft JhengHei UI"
+    IDS_TEXTSERVICE_DESC                  "Jyutping"
+    IDS_INPUT_MODE_DESCRIPTION            "Input Mode (Cantonese/ABC, Shift)"
+    IDS_CHARACTER_FORM_DESCRIPTION        "Character Form (Half-width/Full-width, Shift+Space)"
+    IDS_PUNCTUATION_FORM_DESCRIPTION      "Punctuation Form (Cantonese/English, Ctrl+.)"
+    IDS_CHARACTER_VARIANT_TRADITIONAL     "Traditional Characters (Ctrl+Shift+1)"
+    IDS_CHARACTER_VARIANT_HONG_KONG       "Traditional Characters, HK (Ctrl+Shift+2)"
+    IDS_CHARACTER_VARIANT_TAIWAN          "Traditional Characters, TW (Ctrl+Shift+3)"
+    IDS_CHARACTER_VARIANT_SIMPLIFIED      "Simplified Characters (Ctrl+Shift+4)"
+    IDS_LANGBAR_INPUT_METHOD_MODE         "Input Mode"
+    IDS_FILE_DESCRIPTION                  "Jyutping Input Method"
+    IDS_PRODUCT_NAME                      "Jyutping"
+END
