@@ -4,6 +4,8 @@
 
 #define idTimer_UIObject 39772
 
+static constexpr LONG CandidateWindowTextExtentGap = 8;
+
 //+---------------------------------------------------------------------------
 //
 // CBaseWindow::ctor
@@ -353,11 +355,11 @@ void CBaseWindow::CalcFitPointAroundTextExtent(_In_ const RECT *prcTextExtent, _
 
     // set rcTargetWindow[0] which rectangle attached on bottom side of text extent
     rcTargetWindow[0] = *prcWindow;
-    OffsetRect(&rcTargetWindow[0], prcTextExtent->left, prcTextExtent->bottom);
+    OffsetRect(&rcTargetWindow[0], prcTextExtent->left, prcTextExtent->bottom + CandidateWindowTextExtentGap);
 
     // set rcTargetWindow[1] which rectangle attached on top side of text extent
     rcTargetWindow[1] = *prcWindow;
-    OffsetRect(&rcTargetWindow[1], prcTextExtent->left, prcTextExtent->top - (prcWindow->bottom - prcWindow->top));
+    OffsetRect(&rcTargetWindow[1], prcTextExtent->left, prcTextExtent->top - (prcWindow->bottom - prcWindow->top) - CandidateWindowTextExtentGap);
 
     //
     // check target rectangle fit in workarea
