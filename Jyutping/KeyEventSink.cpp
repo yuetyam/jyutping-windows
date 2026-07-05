@@ -67,9 +67,9 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
 
     *pCodeOut = codeIn;
 
-    BOOL isOpen = FALSE;
+    BOOL isCantoneseMode = FALSE;
     CCompartment CompartmentKeyboardOpen(_pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
-    CompartmentKeyboardOpen._GetCompartmentBOOL(isOpen);
+    CompartmentKeyboardOpen._GetCompartmentBOOL(isCantoneseMode);
 
     BOOL isFullWidth = FALSE;
     CCompartment CompartmentCharacterForm(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
@@ -111,8 +111,8 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
         }
     }
 
-    // if the keyboard is closed, we don't eat keys, with the exception of the touch keyboard specials keys
-    if (!isOpen && !isFullWidth && !isCantonesePunctuation)
+    // In ABC mode, don't eat keys, with the exception of touch keyboard special keys.
+    if (!isCantoneseMode)
     {
         return isTouchKeyboardSpecialKeys;
     }
@@ -128,7 +128,7 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     CCompositionProcessorEngine *pCompositionProcessorEngine;
     pCompositionProcessorEngine = _pCompositionProcessorEngine;
 
-    if (isOpen)
+    if (isCantoneseMode)
     {
         //
         // The candidate or phrase list handles the keys through ITfKeyEventSink.
