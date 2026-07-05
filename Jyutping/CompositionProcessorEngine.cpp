@@ -58,6 +58,11 @@ BOOL IsShiftOnlyModifier()
     return Global::CheckModifiers(Global::ModifiersValue, TF_MOD_SHIFT);
 }
 
+BOOL IsControlShiftModifier()
+{
+    return Global::CheckModifiers(Global::ModifiersValue, TF_MOD_CONTROL | TF_MOD_SHIFT);
+}
+
 BOOL SetKeystrokeState(_Out_opt_ _KEYSTROKE_STATE *pKeyState, KEYSTROKE_CATEGORY category, KEYSTROKE_FUNCTION function)
 {
     if (pKeyState)
@@ -66,6 +71,15 @@ BOOL SetKeystrokeState(_Out_opt_ _KEYSTROKE_STATE *pKeyState, KEYSTROKE_CATEGORY
         pKeyState->Function = function;
     }
     return TRUE;
+}
+
+BOOL TrySetCandidateForgetKey(UINT uCode, _Out_opt_ _KEYSTROKE_STATE *pKeyState)
+{
+    if ((uCode == VK_BACK || uCode == VK_DELETE) && IsControlShiftModifier())
+    {
+        return SetKeystrokeState(pKeyState, CATEGORY_CANDIDATE, FUNCTION_FORGET_CANDIDATE);
+    }
+    return FALSE;
 }
 
 BOOL TrySetCandidateNavigationKey(UINT uCode, KEYSTROKE_CATEGORY category, _Out_opt_ _KEYSTROKE_STATE *pKeyState)
@@ -413,6 +427,7 @@ void CCompositionProcessorEngine::PurgeVirtualKey()
         delete [] _keystrokeBuffer.Get();
         _keystrokeBuffer.Set(NULL, 0);
     }
+    ClearSelectedCandidateMemory();
 }
 
 WCHAR CCompositionProcessorEngine::GetVirtualKey(DWORD_PTR dwIndex)
@@ -533,6 +548,56 @@ void CCompositionProcessorEngine::GetCandidateList(_Inout_ CJyutpingArray<CCandi
     }
 
     AppendInputEngineCandidates(pCandidateList);
+}
+
+void CCompositionProcessorEngine::AppendSelectedCandidateForMemory(UINT candidateIndex)
+{
+    std::optional<Ime::Lexicon> lexicon = CandidateAt(candidateIndex);
+    if (!lexicon || lexicon->IsNotCantonese())
+    {
+        _selectedMemorySequence.clear();
+        return;
+    }
+
+    _selectedMemorySequence.push_back(*lexicon);
+}
+
+void CCompositionProcessorEngine::CommitSelectedCandidateForMemory(UINT candidateIndex)
+{
+    std::optional<Ime::Lexicon> lexicon = CandidateAt(candidateIndex);
+    if (!lexicon || lexicon->IsNotCantonese())
+    {
+        _selectedMemorySequence.clear();
+        return;
+    }
+
+    _selectedMemorySequence.push_back(*lexicon);
+    std::optional<Ime::Lexicon> joined = Ime::JoinLexicons(_selectedMemorySequence);
+    if (joined)
+    {
+        _inputEngine.Remember(*joined);
+    }
+    _selectedMemorySequence.clear();
+}
+
+BOOL CCompositionProcessorEngine::ForgetCandidateFromMemory(UINT candidateIndex)
+{
+    std::optional<Ime::Lexicon> lexicon = CandidateAt(candidateIndex);
+    if (!lexicon || lexicon->IsNotCantonese())
+    {
+        return FALSE;
+    }
+
+    BOOL result = _inputEngine.Forget(*lexicon) ? TRUE : FALSE;
+    _cachedInputText.clear();
+    _cachedReverseLookupMethod = Ime::ReverseLookupMethod::None;
+    _cachedSuggestions.clear();
+    return result;
+}
+
+void CCompositionProcessorEngine::ClearSelectedCandidateMemory()
+{
+    _selectedMemorySequence.clear();
 }
 
 //+---------------------------------------------------------------------------
@@ -1209,6 +1274,21 @@ const std::vector<Ime::Lexicon>& CCompositionProcessorEngine::GetInputSuggestion
     return _cachedSuggestions;
 }
 
+std::optional<Ime::Lexicon> CCompositionProcessorEngine::CandidateAt(UINT candidateIndex) const
+{
+    if (IsReverseLookupBuffer())
+    {
+        return std::nullopt;
+    }
+
+    size_t index = static_cast<size_t>(candidateIndex);
+    if (index >= _cachedSuggestions.size())
+    {
+        return std::nullopt;
+    }
+    return _cachedSuggestions[index];
+}
+
 CharacterStandard CCompositionProcessorEngine::CurrentCharacterStandard() const
 {
     return CharacterStandardFromCharacterVariant(_settings.characterVariant);
@@ -1871,6 +1951,11 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
     if (candidateMode == CANDIDATE_ORIGINAL || candidateMode == CANDIDATE_PHRASE || candidateMode == CANDIDATE_WITH_NEXT_COMPOSITION)
     {
         KEYSTROKE_CATEGORY category = (candidateMode == CANDIDATE_PHRASE) ? CATEGORY_PHRASE : CATEGORY_CANDIDATE;
+        if (candidateMode != CANDIDATE_PHRASE && TrySetCandidateForgetKey(uCode, pKeyState))
+        {
+            return TRUE;
+        }
+
         if (TrySetCandidateNavigationKey(uCode, category, pKeyState))
         {
             return TRUE;
@@ -1900,6 +1985,11 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
     // CANDIDATE_INCREMENTAL should process Keystroke.Candidate virtual keys.
     else if (candidateMode == CANDIDATE_INCREMENTAL)
     {
+        if (TrySetCandidateForgetKey(uCode, pKeyState))
+        {
+            return TRUE;
+        }
+
         if (TrySetCandidateNavigationKey(uCode, CATEGORY_CANDIDATE, pKeyState))
         {
             return TRUE;

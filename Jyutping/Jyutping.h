@@ -114,6 +114,7 @@ public:
     HRESULT _HandleCandidateConvert(TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _HandleCandidateArrowKey(TfEditCookie ec, _In_ ITfContext *pContext, _In_ KEYSTROKE_FUNCTION keyFunction);
     HRESULT _HandleCandidateSelectByNumber(TfEditCookie ec, _In_ ITfContext *pContext, _In_ UINT uCode);
+    HRESULT _HandleCandidateForget(TfEditCookie ec, _In_ ITfContext *pContext);
 
     // key event handlers for phrase object.
     HRESULT _HandlePhraseFinalize(TfEditCookie ec, _In_ ITfContext *pContext);
@@ -136,7 +137,13 @@ private:
     HRESULT _HandleCompositionInputWorker(_In_ CCompositionProcessorEngine *pCompositionProcessorEngine, TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _CreateAndStartCandidate(_In_ CCompositionProcessorEngine *pCompositionProcessorEngine, TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _HandleCandidateWorker(TfEditCookie ec, _In_ ITfContext *pContext);
-    HRESULT _HandleIncrementalCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pContext, _In_ CStringRange *pCandidateString, const std::wstring& tailInput);
+    HRESULT _HandleIncrementalCandidateFinalize(
+        TfEditCookie ec,
+        _In_ ITfContext *pContext,
+        _In_ CStringRange *pCandidateString,
+        const std::wstring& tailInput,
+        UINT candidateIndex,
+        BOOL hasCandidateIndex);
 
     void _StartComposition(_In_ ITfContext *pContext);
     void _EndComposition(_In_opt_ ITfContext *pContext);

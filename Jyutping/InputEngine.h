@@ -2,6 +2,7 @@
 
 #include "stdafx.h"
 #include "ImeDatabase.h"
+#include "InputMemory.h"
 #include "ImeTypes.h"
 #include "PinyinSegmenter.h"
 #include "Segmenter.h"
@@ -39,8 +40,12 @@ public:
     std::vector<Lexicon> CangjieReverseLookup(const std::vector<VirtualInputKey>& keys, CangjieVariant variant = CangjieVariant::Cangjie5) const;
     Segmentation Segment(const std::vector<VirtualInputKey>& keys) const;
     std::wstring ConvertText(std::wstring_view text, CharacterStandard standard) const;
+    bool Remember(const Lexicon& lexicon);
+    bool Forget(const Lexicon& lexicon);
+    bool DeleteAllMemory();
 
 private:
+    std::vector<Lexicon> SuggestFromLexicon(const std::vector<VirtualInputKey>& keys) const;
     std::vector<Lexicon> Dispatch(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation) const;
     std::vector<Lexicon> Search(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation, std::optional<int> limit) const;
     std::vector<Lexicon> Query(size_t inputLength, const Segmentation& segmentation, std::optional<int> limit) const;
@@ -59,6 +64,7 @@ private:
     Lexicon Modify(const Lexicon& item, const std::vector<VirtualInputKey>& keys, const std::wstring& text, size_t inputLength) const;
 
     ImeDatabase _database;
+    InputMemory _inputMemory;
     Segmenter _segmenter;
     PinyinSegmenter _pinyinSegmenter;
 };

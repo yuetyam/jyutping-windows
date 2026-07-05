@@ -9,6 +9,7 @@
 #include "Settings.h"
 #include "VirtualInputKey.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -46,6 +47,10 @@ public:
 
     void GetReadingStrings(_Inout_ CJyutpingArray<CStringRange> *pReadingStrings);
     void GetCandidateList(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
+    void AppendSelectedCandidateForMemory(UINT candidateIndex);
+    void CommitSelectedCandidateForMemory(UINT candidateIndex);
+    BOOL ForgetCandidateFromMemory(UINT candidateIndex);
+    void ClearSelectedCandidateMemory();
 
     // Preserved key handler
     void OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsEaten, _In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
@@ -110,6 +115,7 @@ private:
     std::wstring ReverseLookupReadingText(const std::vector<Ime::Lexicon>& suggestions) const;
     BOOL IsReverseLookupInputKey(UINT uCode) const;
     const std::vector<Ime::Lexicon>& GetInputSuggestions();
+    std::optional<Ime::Lexicon> CandidateAt(UINT candidateIndex) const;
     CharacterStandard CurrentCharacterStandard() const;
     std::wstring DisplayTextForCandidate(const Ime::Lexicon& suggestion) const;
     void AppendInputEngineCandidates(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
@@ -192,6 +198,7 @@ private:
     std::wstring _cachedInputText;
     Ime::ReverseLookupMethod _cachedReverseLookupMethod;
     std::vector<Ime::Lexicon> _cachedSuggestions;
+    std::vector<Ime::Lexicon> _selectedMemorySequence;
     std::vector<std::wstring> _candidateItemTextStorage;
     std::vector<std::wstring> _candidateItemCommentStorage;
     std::wstring _readingStringStorage;

@@ -87,6 +87,9 @@ protected:
     // HandleKeySelectByNumber
     virtual HRESULT HandleKeySelectByNumber(KeyHandlerEditSessionDTO dto);
 
+    // HandleKeyForgetCandidate
+    virtual HRESULT HandleKeyForgetCandidate(KeyHandlerEditSessionDTO dto);
+
 protected:
     CJyutping* _pTextService;
 };
@@ -154,6 +157,9 @@ protected:
 
     //_HandleCandidateSelectByNumber
     HRESULT HandleKeySelectByNumber(KeyHandlerEditSessionDTO dto);
+
+    // _HandleCandidateForget
+    HRESULT HandleKeyForgetCandidate(KeyHandlerEditSessionDTO dto);
 };
 
 class CKeyStatePhrase : public CKeyStateCategory
@@ -217,4 +223,7 @@ protected:
 
     //_HandleNullCandidateSelectByNumber
     HRESULT HandleKeySelectByNumber(KeyHandlerEditSessionDTO dto) { return __super::HandleKeySelectByNumber(dto); };
+
+    // _HandleNullForgetCandidate
+    HRESULT HandleKeyForgetCandidate(KeyHandlerEditSessionDTO dto) { return __super::HandleKeyForgetCandidate(dto); };
 };

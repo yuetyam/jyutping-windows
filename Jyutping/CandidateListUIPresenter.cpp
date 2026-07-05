@@ -28,6 +28,8 @@ HRESULT CJyutping::_HandleCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pC
     const WCHAR* pCandidateString = nullptr;
     CStringRange candidateString;
     DWORD_PTR candidateInputCount = 0;
+    UINT candidateIndex = 0;
+    BOOL hasCandidateIndex = FALSE;
 
     if (nullptr == _pCandidateListUIPresenter)
     {
@@ -36,6 +38,7 @@ HRESULT CJyutping::_HandleCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pC
 
     candidateLen = _pCandidateListUIPresenter->_GetSelectedCandidateString(&pCandidateString);
     candidateInputCount = _pCandidateListUIPresenter->_GetSelectedCandidateInputCount();
+    hasCandidateIndex = _pCandidateListUIPresenter->_GetSelectedCandidateIndex(&candidateIndex);
 
     candidateString.Set(pCandidateString, candidateLen);
 
@@ -46,7 +49,7 @@ HRESULT CJyutping::_HandleCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pC
             std::wstring tailInput = _pCompositionProcessorEngine->GetCandidateTailInputText(candidateInputCount);
             if (!tailInput.empty())
             {
-                return _HandleIncrementalCandidateFinalize(ec, pContext, &candidateString, tailInput);
+                return _HandleIncrementalCandidateFinalize(ec, pContext, &candidateString, tailInput, candidateIndex, hasCandidateIndex);
             }
         }
 
@@ -55,6 +58,11 @@ HRESULT CJyutping::_HandleCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pC
         if (FAILED(hr))
         {
             return hr;
+        }
+
+        if (hasCandidateIndex && _pCompositionProcessorEngine != nullptr)
+        {
+            _pCompositionProcessorEngine->CommitSelectedCandidateForMemory(candidateIndex);
         }
     }
 
@@ -65,12 +73,23 @@ NoPresenter:
     return hr;
 }
 
-HRESULT CJyutping::_HandleIncrementalCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pContext, _In_ CStringRange *pCandidateString, const std::wstring& tailInput)
+HRESULT CJyutping::_HandleIncrementalCandidateFinalize(
+    TfEditCookie ec,
+    _In_ ITfContext *pContext,
+    _In_ CStringRange *pCandidateString,
+    const std::wstring& tailInput,
+    UINT candidateIndex,
+    BOOL hasCandidateIndex)
 {
     HRESULT hr = _AddComposingAndChar(ec, pContext, pCandidateString);
     if (FAILED(hr))
     {
         return hr;
+    }
+
+    if (hasCandidateIndex && _pCompositionProcessorEngine != nullptr)
+    {
+        _pCompositionProcessorEngine->AppendSelectedCandidateForMemory(candidateIndex);
     }
 
     if (_pCandidateListUIPresenter)
@@ -85,6 +104,10 @@ HRESULT CJyutping::_HandleIncrementalCandidateFinalize(TfEditCookie ec, _In_ ITf
 
     if (_pCompositionProcessorEngine == nullptr || !_pCompositionProcessorEngine->SetRawInputText(tailInput))
     {
+        if (_pCompositionProcessorEngine != nullptr)
+        {
+            _pCompositionProcessorEngine->ClearSelectedCandidateMemory();
+        }
         return hr;
     }
 
@@ -273,6 +296,33 @@ HRESULT CJyutping::_HandleCandidateSelectByNumber(TfEditCookie ec, _In_ ITfConte
     }
 
     return S_FALSE;
+}
+
+//+---------------------------------------------------------------------------
+//
+// _HandleCandidateForget
+//
+//----------------------------------------------------------------------------
+
+HRESULT CJyutping::_HandleCandidateForget(TfEditCookie ec, _In_ ITfContext *pContext)
+{
+    if (_pCandidateListUIPresenter == nullptr || _pCompositionProcessorEngine == nullptr)
+    {
+        return S_FALSE;
+    }
+
+    UINT candidateIndex = 0;
+    if (!_pCandidateListUIPresenter->_GetSelectedCandidateIndex(&candidateIndex))
+    {
+        return S_FALSE;
+    }
+
+    if (!_pCompositionProcessorEngine->ForgetCandidateFromMemory(candidateIndex))
+    {
+        return S_FALSE;
+    }
+
+    return _HandleCompositionInputWorker(_pCompositionProcessorEngine, ec, pContext);
 }
 
 //+---------------------------------------------------------------------------
@@ -1005,6 +1055,23 @@ DWORD_PTR CCandidateListUIPresenter::_GetSelectedCandidateInputCount()
     }
 
     return _pCandidateWnd->_GetSelectedCandidateInputCount();
+}
+
+BOOL CCandidateListUIPresenter::_GetSelectedCandidateIndex(_Out_ UINT *pCandidateIndex)
+{
+    if (pCandidateIndex == nullptr)
+    {
+        return FALSE;
+    }
+
+    *pCandidateIndex = 0;
+    if (_pCandidateWnd == nullptr)
+    {
+        return FALSE;
+    }
+
+    *pCandidateIndex = _pCandidateWnd->_GetSelection();
+    return TRUE;
 }
 
 //+---------------------------------------------------------------------------

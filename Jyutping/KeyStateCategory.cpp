@@ -116,6 +116,9 @@ HRESULT CKeyStateCategory::KeyStateHandler(KEYSTROKE_FUNCTION function, KeyHandl
     case FUNCTION_SELECT_BY_NUMBER:
         return HandleKeySelectByNumber(dto);
 
+    case FUNCTION_FORGET_CANDIDATE:
+        return HandleKeyForgetCandidate(dto);
+
     }
     return E_INVALIDARG;
 }
@@ -204,6 +207,12 @@ HRESULT CKeyStateCategory::HandleKeyPunctuation(KeyHandlerEditSessionDTO dto)
 HRESULT CKeyStateCategory::HandleKeySelectByNumber(KeyHandlerEditSessionDTO dto)
 {
 	dto;
+    return E_NOTIMPL;
+}
+
+HRESULT CKeyStateCategory::HandleKeyForgetCandidate(KeyHandlerEditSessionDTO dto)
+{
+    dto;
     return E_NOTIMPL;
 }
 
@@ -317,6 +326,11 @@ HRESULT CKeyStateCandidate::HandleKeyArrow(KeyHandlerEditSessionDTO dto)
 HRESULT CKeyStateCandidate::HandleKeySelectByNumber(KeyHandlerEditSessionDTO dto)
 {
     return _pTextService->_HandleCandidateSelectByNumber(dto.ec, dto.pContext, dto.code);
+}
+
+HRESULT CKeyStateCandidate::HandleKeyForgetCandidate(KeyHandlerEditSessionDTO dto)
+{
+    return _pTextService->_HandleCandidateForget(dto.ec, dto.pContext);
 }
 
 /*

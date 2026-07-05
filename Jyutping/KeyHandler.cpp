@@ -266,6 +266,8 @@ HRESULT CJyutping::_HandleCompositionFinalize(TfEditCookie ec, _In_ ITfContext *
         // Finalize selected candidate string from CCandidateListUIPresenter
         DWORD_PTR candidateLen = 0;
         const WCHAR *pCandidateString = nullptr;
+        UINT candidateIndex = 0;
+        BOOL hasCandidateIndex = _pCandidateListUIPresenter->_GetSelectedCandidateIndex(&candidateIndex);
 
         candidateLen = _pCandidateListUIPresenter->_GetSelectedCandidateString(&pCandidateString);
 
@@ -279,6 +281,11 @@ HRESULT CJyutping::_HandleCompositionFinalize(TfEditCookie ec, _In_ ITfContext *
             if (FAILED(hr))
             {
                 return hr;
+            }
+
+            if (hasCandidateIndex && _pCompositionProcessorEngine != nullptr)
+            {
+                _pCompositionProcessorEngine->CommitSelectedCandidateForMemory(candidateIndex);
             }
         }
     }
@@ -547,6 +554,8 @@ HRESULT CJyutping::_HandleCompositionPunctuation(TfEditCookie ec, _In_ ITfContex
     {
         DWORD_PTR candidateLen = 0;
         const WCHAR* pCandidateString = nullptr;
+        UINT candidateIndex = 0;
+        BOOL hasCandidateIndex = _pCandidateListUIPresenter->_GetSelectedCandidateIndex(&candidateIndex);
 
         candidateLen = _pCandidateListUIPresenter->_GetSelectedCandidateString(&pCandidateString);
 
@@ -555,7 +564,11 @@ HRESULT CJyutping::_HandleCompositionPunctuation(TfEditCookie ec, _In_ ITfContex
 
         if (candidateLen)
         {
-            _AddComposingAndChar(ec, pContext, &candidateString);
+            HRESULT candidateHr = _AddComposingAndChar(ec, pContext, &candidateString);
+            if (SUCCEEDED(candidateHr) && hasCandidateIndex && _pCompositionProcessorEngine != nullptr)
+            {
+                _pCompositionProcessorEngine->CommitSelectedCandidateForMemory(candidateIndex);
+            }
         }
     }
     //

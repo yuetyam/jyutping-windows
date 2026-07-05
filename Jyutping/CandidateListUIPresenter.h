@@ -72,6 +72,7 @@ public:
 
     DWORD_PTR _GetSelectedCandidateString(_Outptr_result_maybenull_ const WCHAR **ppwchCandidateString);
     DWORD_PTR _GetSelectedCandidateInputCount();
+    BOOL _GetSelectedCandidateIndex(_Out_ UINT *pCandidateIndex);
     BOOL _SetSelectionInPage(int nPos) { return (_pCandidateWnd != nullptr) ? _pCandidateWnd->_SetSelectionInPage(nPos) : FALSE; }
 
     BOOL _MoveSelection(_In_ int offSet);

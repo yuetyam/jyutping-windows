@@ -170,6 +170,55 @@ std::vector<Ime::Lexicon> First(std::vector<Ime::Lexicon> items, size_t count)
     return items;
 }
 
+std::vector<Ime::Lexicon> MergeMemorySuggestions(
+    const std::vector<Ime::Lexicon>& memory,
+    const std::vector<Ime::Lexicon>& queried)
+{
+    if (memory.empty())
+    {
+        return queried;
+    }
+
+    std::vector<Ime::Lexicon> idealMemory;
+    std::vector<Ime::Lexicon> notIdealMemory;
+    for (const Ime::Lexicon& item : memory)
+    {
+        if (item.IsIdealInputMemory())
+        {
+            idealMemory.push_back(item);
+        }
+        else if (item.IsNotIdealInputMemory())
+        {
+            notIdealMemory.push_back(item);
+        }
+    }
+
+    std::vector<Ime::Lexicon> chained;
+    chained.reserve(queried.size() + notIdealMemory.size());
+    for (const Ime::Lexicon& item : queried)
+    {
+        if (idealMemory.empty() || !item.IsCompound())
+        {
+            chained.push_back(item);
+        }
+    }
+
+    for (auto iterator = notIdealMemory.rbegin(); iterator != notIdealMemory.rend(); ++iterator)
+    {
+        auto insertPosition = std::find_if(chained.begin(), chained.end(), [&iterator](const Ime::Lexicon& item)
+        {
+            return item.inputCount <= iterator->inputCount;
+        });
+        chained.insert(insertPosition, *iterator);
+    }
+
+    std::vector<Ime::Lexicon> result;
+    Append(result, First(idealMemory, 3));
+    Append(result, idealMemory);
+    Append(result, chained);
+    return Distinct(result);
+}
+
 std::vector<Ime::Lexicon> SortedByInputCount(std::vector<Ime::Lexicon> items)
 {
     std::stable_sort(items.begin(), items.end(), [](const Ime::Lexicon& left, const Ime::Lexicon& right)
@@ -272,6 +321,7 @@ bool InputEngine::Prepare()
     {
         return false;
     }
+    _inputMemory.Prepare();
     return _segmenter.Prepare(_database) && _pinyinSegmenter.Prepare(_database);
 }
 
@@ -285,6 +335,7 @@ bool InputEngine::Prepare(_In_z_ PCWSTR databasePath)
     {
         return false;
     }
+    _inputMemory.Prepare();
     return _segmenter.Prepare(_database) && _pinyinSegmenter.Prepare(_database);
 }
 
@@ -304,6 +355,19 @@ std::vector<Lexicon> InputEngine::Suggest(std::wstring_view input) const
 }
 
 std::vector<Lexicon> InputEngine::Suggest(const std::vector<VirtualInputKey>& keys) const
+{
+    std::vector<Lexicon> queried = SuggestFromLexicon(keys);
+    if (!_inputMemory.IsPrepared() || keys.empty() || !IsPrepared())
+    {
+        return queried;
+    }
+
+    Segmentation segmentation = _segmenter.Segment(keys);
+    std::vector<Lexicon> memory = _inputMemory.Suggest(keys, segmentation, _segmenter);
+    return MergeMemorySuggestions(memory, queried);
+}
+
+std::vector<Lexicon> InputEngine::SuggestFromLexicon(const std::vector<VirtualInputKey>& keys) const
 {
     if (!IsPrepared())
     {
@@ -335,6 +399,21 @@ std::vector<Lexicon> InputEngine::Suggest(const std::vector<VirtualInputKey>& ke
     default:
         return Dispatch(keys, _segmenter.Segment(keys));
     }
+}
+
+bool InputEngine::Remember(const Lexicon& lexicon)
+{
+    return _inputMemory.Handle(lexicon);
+}
+
+bool InputEngine::Forget(const Lexicon& lexicon)
+{
+    return _inputMemory.Forget(lexicon);
+}
+
+bool InputEngine::DeleteAllMemory()
+{
+    return _inputMemory.DeleteAll();
 }
 
 Segmentation InputEngine::Segment(const std::vector<VirtualInputKey>& keys) const

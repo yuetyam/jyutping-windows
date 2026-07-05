@@ -48,6 +48,7 @@
     <ClInclude Include="GetTextExtentEditSession.h" />
     <ClInclude Include="Globals.h" />
     <ClInclude Include="InputEngine.h" />
+    <ClInclude Include="InputMemory.h" />
     <ClInclude Include="ImeDatabase.h" />
     <ClInclude Include="ImeTypes.h" />
     <ClInclude Include="KeyHandlerEditSession.h" />
@@ -95,6 +96,7 @@
     <ClCompile Include="Globals.cpp" />
     <ClCompile Include="InputEngineCangjie.cpp" />
     <ClCompile Include="InputEngine.cpp" />
+    <ClCompile Include="InputMemory.cpp" />
     <ClCompile Include="InputEnginePinyin.cpp" />
     <ClCompile Include="InputEngineReverseLookup.cpp" />
     <ClCompile Include="InputEngineStroke.cpp" />
