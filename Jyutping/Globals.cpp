@@ -4,6 +4,7 @@
 #include "BaseWindow.h"
 #include "define.h"
 #include "JyutpingBaseStructure.h"
+#include <dwmapi.h>
 
 namespace Global {
 HINSTANCE dllInstanceHandle;
@@ -616,6 +617,14 @@ COLORREF GetNumberLabelColor()
 
 COLORREF GetHighlightedBackColor()
 {
+    DWORD accentColor = 0;
+    BOOL isOpaqueBlend = FALSE;
+    HRESULT hr = DwmGetColorizationColor(&accentColor, &isOpaqueBlend);
+    if (SUCCEEDED(hr))
+    {
+        return RGB((accentColor >> 16) & 0xFF, (accentColor >> 8) & 0xFF, accentColor & 0xFF);
+    }
+
     return RGB(0x21, 0x96, 0xF3);
 }
 

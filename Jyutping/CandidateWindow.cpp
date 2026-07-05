@@ -681,6 +681,10 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
         _InvalidateRect();
         return 0;
     }
+
+    case WM_DWMCOLORIZATIONCOLORCHANGED:
+        _InvalidateRect();
+        return 0;
     }
 
     return DefWindowProc(wndHandle, uMsg, wParam, lParam);
