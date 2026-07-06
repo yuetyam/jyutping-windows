@@ -296,8 +296,7 @@
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="CopyImeDatabase" AfterTargets="Build" Condition="Exists('$(ProjectDir)Resources\ime.sqlite3')">
-    <MakeDir Directories="$(TargetDir)Resources" />
-    <Copy SourceFiles="$(ProjectDir)Resources\ime.sqlite3" DestinationFiles="$(TargetDir)Resources\ime.sqlite3" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(ProjectDir)Resources\ime.sqlite3" DestinationFiles="$(TargetDir)ime.sqlite3" SkipUnchangedFiles="true" />
   </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
