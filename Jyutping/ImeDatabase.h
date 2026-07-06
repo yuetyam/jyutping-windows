@@ -117,6 +117,7 @@ public:
     std::vector<ShapeRow> QueryStrokeBySpell(int64_t spell) const;
     std::vector<ShapeRow> QueryStrokeByPattern(const std::wstring& pattern, bool isLike, int limit = 100) const;
     std::vector<StructureRow> QueryStructureBySpell(int64_t spell) const;
+    std::vector<std::wstring> QueryTextMarksBySpell(int64_t spell) const;
     std::vector<std::wstring> LookupRomanizationsForWord(const std::wstring& word) const;
     VariantLookup CreateVariantLookup(CharacterStandard standard) const;
     std::optional<uint32_t> QueryVariantTarget(CharacterStandard standard, uint32_t source) const;

@@ -128,6 +128,7 @@ private:
     std::optional<Ime::Lexicon> CandidateAt(UINT candidateIndex) const;
     CharacterStandard CurrentCharacterStandard() const;
     std::wstring DisplayTextForCandidate(const Ime::Lexicon& suggestion) const;
+    std::wstring CommentTextForCandidate(const Ime::Lexicon& suggestion) const;
     void AppendInputEngineCandidates(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
 
 private:

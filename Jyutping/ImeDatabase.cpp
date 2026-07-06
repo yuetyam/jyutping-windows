@@ -360,6 +360,7 @@ bool ImeDatabase::VerifySchema() const
         L"SELECT rowid, word, complex FROM stroke_table WHERE spell = ? ORDER BY rowid LIMIT 0;",
         L"SELECT rowid, word, complex FROM stroke_table WHERE stroke GLOB ? ORDER BY complex ASC, rowid ASC LIMIT 0;",
         L"SELECT word, romanization FROM structure_table WHERE spell = ? LIMIT 0;",
+        L"SELECT mark FROM mark_table WHERE spell = ? LIMIT 0;",
         L"SELECT target FROM variant_old WHERE source = ? LIMIT 0;",
         L"SELECT target FROM variant_hk WHERE source = ? LIMIT 0;",
         L"SELECT target FROM variant_tw WHERE source = ? LIMIT 0;",
@@ -657,6 +658,32 @@ std::vector<ImeDatabase::StructureRow> ImeDatabase::QueryStructureBySpell(int64_
         LogError(L"query structure by spell", result);
     }
     return rows;
+}
+
+std::vector<std::wstring> ImeDatabase::QueryTextMarksBySpell(int64_t spell) const
+{
+    static constexpr WCHAR sql[] = L"SELECT mark FROM mark_table WHERE spell = ? ORDER BY rowid;";
+
+    Statement statement;
+    if (!Prepare(sql, statement.Out()))
+    {
+        return std::vector<std::wstring>();
+    }
+
+    sqlite3_bind_int64(statement.Get(), 1, spell);
+
+    std::vector<std::wstring> marks;
+    int result = SQLITE_OK;
+    while ((result = sqlite3_step(statement.Get())) == SQLITE_ROW)
+    {
+        marks.push_back(ColumnText(statement.Get(), 0));
+    }
+
+    if (result != SQLITE_DONE)
+    {
+        LogError(L"query text marks by spell", result);
+    }
+    return marks;
 }
 
 std::vector<std::wstring> ImeDatabase::LookupRomanizationsForWord(const std::wstring& word) const

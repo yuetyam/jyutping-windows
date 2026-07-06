@@ -172,13 +172,9 @@ std::vector<Ime::Lexicon> First(std::vector<Ime::Lexicon> items, size_t count)
 
 std::vector<Ime::Lexicon> MergeMemorySuggestions(
     const std::vector<Ime::Lexicon>& memory,
+    const std::vector<Ime::Lexicon>& textMarks,
     const std::vector<Ime::Lexicon>& queried)
 {
-    if (memory.empty())
-    {
-        return queried;
-    }
-
     std::vector<Ime::Lexicon> idealMemory;
     std::vector<Ime::Lexicon> notIdealMemory;
     for (const Ime::Lexicon& item : memory)
@@ -214,6 +210,7 @@ std::vector<Ime::Lexicon> MergeMemorySuggestions(
 
     std::vector<Ime::Lexicon> result;
     Append(result, First(idealMemory, 3));
+    Append(result, textMarks);
     Append(result, idealMemory);
     Append(result, chained);
     return Distinct(result);
@@ -357,14 +354,44 @@ std::vector<Lexicon> InputEngine::Suggest(std::wstring_view input) const
 std::vector<Lexicon> InputEngine::Suggest(const std::vector<VirtualInputKey>& keys) const
 {
     std::vector<Lexicon> queried = SuggestFromLexicon(keys);
-    if (!_inputMemory.IsPrepared() || keys.empty() || !IsPrepared())
+    if (keys.empty() || !IsPrepared())
     {
         return queried;
     }
 
+    std::vector<Lexicon> textMarks = SearchTextMarks(keys);
+    if (!_inputMemory.IsPrepared())
+    {
+        return MergeMemorySuggestions(std::vector<Lexicon>(), textMarks, queried);
+    }
+
     Segmentation segmentation = _segmenter.Segment(keys);
     std::vector<Lexicon> memory = _inputMemory.Suggest(keys, segmentation, _segmenter);
-    return MergeMemorySuggestions(memory, queried);
+    return MergeMemorySuggestions(memory, textMarks, queried);
+}
+
+std::vector<Lexicon> InputEngine::SearchTextMarks(std::wstring_view input) const
+{
+    return SearchTextMarks(InputKeysFromText(input));
+}
+
+std::vector<Lexicon> InputEngine::SearchTextMarks(const std::vector<VirtualInputKey>& keys) const
+{
+    if (!IsPrepared() || keys.empty())
+    {
+        return std::vector<Lexicon>();
+    }
+
+    std::wstring text = TextFromKeys(keys);
+    std::vector<std::wstring> marks = _database.QueryTextMarksBySpell(HashCode(text));
+
+    std::vector<Lexicon> result;
+    result.reserve(marks.size());
+    for (const std::wstring& mark : marks)
+    {
+        result.push_back(Lexicon::PlainText(text, mark));
+    }
+    return result;
 }
 
 std::vector<Lexicon> InputEngine::SuggestFromLexicon(const std::vector<VirtualInputKey>& keys) const

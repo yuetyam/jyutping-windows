@@ -34,6 +34,8 @@ public:
 
     std::vector<Lexicon> Suggest(std::wstring_view input) const;
     std::vector<Lexicon> Suggest(const std::vector<VirtualInputKey>& keys) const;
+    std::vector<Lexicon> SearchTextMarks(std::wstring_view input) const;
+    std::vector<Lexicon> SearchTextMarks(const std::vector<VirtualInputKey>& keys) const;
     std::vector<Lexicon> ReverseLookup(ReverseLookupMethod method, std::wstring_view input) const;
     std::vector<Lexicon> ReverseLookup(ReverseLookupMethod method, const std::vector<VirtualInputKey>& keys) const;
     std::vector<Lexicon> CangjieReverseLookup(std::wstring_view input, CangjieVariant variant = CangjieVariant::Cangjie5) const;

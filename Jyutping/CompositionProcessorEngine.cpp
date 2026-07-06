@@ -134,6 +134,20 @@ BOOL TrySetCandidateNavigationKey(UINT uCode, KEYSTROKE_CATEGORY category, _Out_
     return FALSE;
 }
 
+std::vector<Ime::Lexicon> DistinctLexicons(const std::vector<Ime::Lexicon>& items)
+{
+    std::vector<Ime::Lexicon> result;
+    result.reserve(items.size());
+    for (const Ime::Lexicon& item : items)
+    {
+        if (std::find(result.begin(), result.end(), item) == result.end())
+        {
+            result.push_back(item);
+        }
+    }
+    return result;
+}
+
 } // namespace
 
 //+---------------------------------------------------------------------------
@@ -1252,6 +1266,10 @@ std::wstring CCompositionProcessorEngine::ReverseLookupReadingText(const std::ve
     {
         return CurrentInputText();
     }
+    if (suggestions.front().IsNotCantonese())
+    {
+        return CurrentInputText();
+    }
 
     if (method == Ime::ReverseLookupMethod::Pinyin)
     {
@@ -1310,14 +1328,6 @@ const std::vector<Ime::Lexicon>& CCompositionProcessorEngine::GetInputSuggestion
         reverseLookupQueryKeys = std::vector<VirtualInputKey>(inputKeys.begin() + 1, inputKeys.end());
     }
 
-    if (reverseLookupMethod != Ime::ReverseLookupMethod::None && reverseLookupQueryKeys.empty())
-    {
-        _cachedInputText = inputText;
-        _cachedReverseLookupMethod = reverseLookupMethod;
-        _cachedSuggestions.clear();
-        return _cachedSuggestions;
-    }
-
     if (inputText != _cachedInputText || reverseLookupMethod != _cachedReverseLookupMethod)
     {
         _cachedInputText = inputText;
@@ -1328,7 +1338,13 @@ const std::vector<Ime::Lexicon>& CCompositionProcessorEngine::GetInputSuggestion
         }
         else
         {
-            _cachedSuggestions = _inputEngine.ReverseLookup(reverseLookupMethod, reverseLookupQueryKeys);
+            _cachedSuggestions = _inputEngine.SearchTextMarks(inputKeys);
+            if (!reverseLookupQueryKeys.empty())
+            {
+                std::vector<Ime::Lexicon> lookupSuggestions = _inputEngine.ReverseLookup(reverseLookupMethod, reverseLookupQueryKeys);
+                _cachedSuggestions.insert(_cachedSuggestions.end(), lookupSuggestions.begin(), lookupSuggestions.end());
+            }
+            _cachedSuggestions = DistinctLexicons(_cachedSuggestions);
         }
     }
     return _cachedSuggestions;
@@ -1356,7 +1372,20 @@ CharacterStandard CCompositionProcessorEngine::CurrentCharacterStandard() const
 
 std::wstring CCompositionProcessorEngine::DisplayTextForCandidate(const Ime::Lexicon& suggestion) const
 {
-    return _inputEngine.ConvertText(suggestion.text, CurrentCharacterStandard());
+    if (suggestion.IsCantonese())
+    {
+        return _inputEngine.ConvertText(suggestion.text, CurrentCharacterStandard());
+    }
+    return suggestion.text;
+}
+
+std::wstring CCompositionProcessorEngine::CommentTextForCandidate(const Ime::Lexicon& suggestion) const
+{
+    if (suggestion.IsCantonese())
+    {
+        return suggestion.romanization;
+    }
+    return std::wstring();
 }
 
 void CCompositionProcessorEngine::AppendInputEngineCandidates(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList)
@@ -1390,7 +1419,7 @@ void CCompositionProcessorEngine::AppendInputEngineCandidates(_Inout_ CJyutpingA
         }
 
         _candidateItemTextStorage.push_back(DisplayTextForCandidate(suggestion));
-        _candidateItemCommentStorage.push_back(suggestion.romanization);
+        _candidateItemCommentStorage.push_back(CommentTextForCandidate(suggestion));
 
         const std::wstring& text = _candidateItemTextStorage.back();
         const std::wstring& comment = _candidateItemCommentStorage.back();
