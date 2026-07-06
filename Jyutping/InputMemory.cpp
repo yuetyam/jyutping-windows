@@ -118,39 +118,9 @@ void LogSqliteError(sqlite3* database, _In_z_ PCWSTR operation, int result)
     Global::Log(L"InputMemory %s failed (%d): %s", operation, result, message);
 }
 
-std::wstring LocalAppDataPath()
-{
-    DWORD size = GetEnvironmentVariableW(L"LOCALAPPDATA", nullptr, 0);
-    if (size == 0)
-    {
-        return std::wstring();
-    }
-
-    std::wstring path(size, L'\0');
-    DWORD copied = GetEnvironmentVariableW(L"LOCALAPPDATA", path.data(), size);
-    if (copied == 0 || copied >= size)
-    {
-        return std::wstring();
-    }
-
-    path.resize(copied);
-    return path;
-}
-
 std::wstring InputMemoryDirectory()
 {
-    std::wstring path = LocalAppDataPath();
-    if (path.empty())
-    {
-        return std::wstring();
-    }
-
-    if (path.back() != L'\\' && path.back() != L'/')
-    {
-        path.push_back(L'\\');
-    }
-    path.append(L"Jyutping");
-    return path;
+    return Global::UserDataDirectory();
 }
 
 std::wstring InputMemoryDatabasePath()
@@ -976,7 +946,7 @@ bool InputMemory::Prepare()
     std::wstring directory = InputMemoryDirectory();
     if (directory.empty())
     {
-        Global::Log(L"InputMemory prepare failed: LOCALAPPDATA is unavailable");
+        Global::Log(L"InputMemory prepare failed: app data directory is unavailable");
         return false;
     }
 
@@ -987,6 +957,8 @@ bool InputMemory::Prepare()
     }
 
     std::wstring databasePath = InputMemoryDatabasePath();
+    Global::Log(L"InputMemory prepare start: path=%s", databasePath.c_str());
+
     std::string path = WideToUtf8(databasePath.c_str());
     if (path.empty())
     {
@@ -1024,6 +996,7 @@ bool InputMemory::Prepare()
     }
 
     _isPrepared = true;
+    Global::Log(L"InputMemory prepare success: path=%s", databasePath.c_str());
     return true;
 }
 
@@ -1036,6 +1009,7 @@ void InputMemory::Close()
 {
     if (_database != nullptr)
     {
+        Global::Log(L"InputMemory close");
         sqlite3_close_v2(_database);
         _database = nullptr;
     }
@@ -1087,7 +1061,9 @@ bool InputMemory::Forget(const Lexicon& lexicon)
 
 bool InputMemory::DeleteAll()
 {
-    return IsPrepared() && Execute(L"DELETE FROM core_memory;");
+    bool result = IsPrepared() && Execute(L"DELETE FROM core_memory;");
+    Global::Log(L"InputMemory delete all: result=%d", result);
+    return result;
 }
 
 std::vector<Lexicon> InputMemory::Suggest(

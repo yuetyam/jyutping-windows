@@ -1,5 +1,6 @@
 #include "InputEngine.h"
 #include "CharacterStandard.h"
+#include "Logger.h"
 
 #include <algorithm>
 
@@ -375,30 +376,72 @@ namespace Ime {
 
 bool InputEngine::Prepare()
 {
+    Global::Log(L"InputEngine prepare start");
     if (!_database.Open())
     {
+        Global::Log(L"InputEngine prepare failed: unable to open database");
         return false;
     }
     if (!_database.VerifySchema())
     {
+        Global::Log(L"InputEngine prepare failed: database schema verification failed");
         return false;
     }
-    _inputMemory.Prepare();
-    return _segmenter.Prepare(_database) && _pinyinSegmenter.Prepare(_database);
+
+    bool isMemoryReady = _inputMemory.Prepare();
+    if (!isMemoryReady)
+    {
+        Global::Log(L"InputEngine prepare: input memory is unavailable; continuing without memory suggestions");
+    }
+
+    if (!_segmenter.Prepare(_database))
+    {
+        Global::Log(L"InputEngine prepare failed: Jyutping segmenter failed");
+        return false;
+    }
+    if (!_pinyinSegmenter.Prepare(_database))
+    {
+        Global::Log(L"InputEngine prepare failed: Pinyin segmenter failed");
+        return false;
+    }
+
+    Global::Log(L"InputEngine prepare success: database=%s memory=%d", _database.Path().c_str(), isMemoryReady);
+    return true;
 }
 
 bool InputEngine::Prepare(_In_z_ PCWSTR databasePath)
 {
+    Global::Log(L"InputEngine prepare start: database=%s", databasePath ? databasePath : L"");
     if (!_database.Open(databasePath))
     {
+        Global::Log(L"InputEngine prepare failed: unable to open database");
         return false;
     }
     if (!_database.VerifySchema())
     {
+        Global::Log(L"InputEngine prepare failed: database schema verification failed");
         return false;
     }
-    _inputMemory.Prepare();
-    return _segmenter.Prepare(_database) && _pinyinSegmenter.Prepare(_database);
+
+    bool isMemoryReady = _inputMemory.Prepare();
+    if (!isMemoryReady)
+    {
+        Global::Log(L"InputEngine prepare: input memory is unavailable; continuing without memory suggestions");
+    }
+
+    if (!_segmenter.Prepare(_database))
+    {
+        Global::Log(L"InputEngine prepare failed: Jyutping segmenter failed");
+        return false;
+    }
+    if (!_pinyinSegmenter.Prepare(_database))
+    {
+        Global::Log(L"InputEngine prepare failed: Pinyin segmenter failed");
+        return false;
+    }
+
+    Global::Log(L"InputEngine prepare success: database=%s memory=%d", _database.Path().c_str(), isMemoryReady);
+    return true;
 }
 
 bool InputEngine::IsPrepared() const
@@ -534,7 +577,9 @@ bool InputEngine::Forget(const Lexicon& lexicon)
 
 bool InputEngine::DeleteAllMemory()
 {
-    return _inputMemory.DeleteAll();
+    bool result = _inputMemory.DeleteAll();
+    Global::Log(L"InputEngine delete all memory: result=%d", result);
+    return result;
 }
 
 Segmentation InputEngine::Segment(const std::vector<VirtualInputKey>& keys) const

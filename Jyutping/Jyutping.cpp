@@ -212,7 +212,13 @@ STDAPI_(ULONG) CJyutping::Release()
 
 STDAPI CJyutping::ActivateEx(ITfThreadMgr *pThreadMgr, TfClientId tfClientId, DWORD dwFlags)
 {
-    Global::Log(L"ActivateEx start");
+    Global::Log(L"ActivateEx start: clientId=%lu flags=0x%08X", tfClientId, dwFlags);
+    if (pThreadMgr == nullptr)
+    {
+        Global::Log(L"ActivateEx failed: thread manager is null");
+        return E_INVALIDARG;
+    }
+
     _pThreadMgr = pThreadMgr;
     _pThreadMgr->AddRef();
 
@@ -227,10 +233,15 @@ STDAPI CJyutping::ActivateEx(ITfThreadMgr *pThreadMgr, TfClientId tfClientId, DW
     }
 
     ITfDocumentMgr* pDocMgrFocus = nullptr;
-    if (SUCCEEDED(_pThreadMgr->GetFocus(&pDocMgrFocus)) && (pDocMgrFocus != nullptr))
+    HRESULT hrFocus = _pThreadMgr->GetFocus(&pDocMgrFocus);
+    if (SUCCEEDED(hrFocus) && (pDocMgrFocus != nullptr))
     {
         _InitTextEditSink(pDocMgrFocus);
         pDocMgrFocus->Release();
+    }
+    else
+    {
+        Global::Log(L"ActivateEx: focused document manager unavailable: hr=0x%08X", static_cast<unsigned int>(hrFocus));
     }
 
     if (!_InitKeyEventSink())
@@ -275,7 +286,10 @@ STDAPI CJyutping::ActivateEx(ITfThreadMgr *pThreadMgr, TfClientId tfClientId, DW
         return E_FAIL;
     }
 
-    Global::InitDirectWrite();
+    if (!Global::InitDirectWrite())
+    {
+        Global::Log(L"ActivateEx: InitDirectWrite failed");
+    }
 
     Global::Log(L"ActivateEx success");
     return S_OK;
@@ -350,6 +364,7 @@ STDAPI CJyutping::Deactivate()
 
     Global::UninitDirectWrite();
 
+    Global::Log(L"Deactivate success");
     return S_OK;
 }
 

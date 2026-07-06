@@ -320,6 +320,8 @@ bool ImeDatabase::Open(_In_z_ PCWSTR databasePath)
         return false;
     }
 
+    Global::Log(L"ImeDatabase open start: path=%s", databasePath);
+
     std::string path = WideToUtf8(databasePath);
     if (path.empty())
     {
@@ -337,6 +339,7 @@ bool ImeDatabase::Open(_In_z_ PCWSTR databasePath)
     }
 
     _path = databasePath;
+    Global::Log(L"ImeDatabase open success: path=%s", _path.c_str());
     return true;
 }
 
@@ -362,6 +365,8 @@ const std::wstring& ImeDatabase::Path() const
 
 bool ImeDatabase::VerifySchema() const
 {
+    Global::Log(L"ImeDatabase schema verification start");
+
     static constexpr PCWSTR statements[] =
     {
         L"SELECT rowid, word, romanization FROM core_lexicon WHERE spell = ? AND anchors = ? LIMIT 0;",
@@ -393,14 +398,18 @@ bool ImeDatabase::VerifySchema() const
         L"SELECT target FROM variant_sim WHERE source = ? LIMIT 0;"
     };
 
-    for (PCWSTR sql : statements)
+    for (size_t index = 0; index < ARRAYSIZE(statements); index++)
     {
         Statement statement;
-        if (!Prepare(sql, statement.Out()))
+        if (!Prepare(statements[index], statement.Out()))
         {
+            Global::Log(
+                L"ImeDatabase schema verification failed: statementIndex=%llu",
+                static_cast<unsigned long long>(index));
             return false;
         }
     }
+    Global::Log(L"ImeDatabase schema verification success");
     return true;
 }
 

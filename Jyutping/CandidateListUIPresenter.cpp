@@ -4,6 +4,7 @@
 #include "CandidateListUIPresenter.h"
 #include "CompositionProcessorEngine.h"
 #include "JyutpingBaseStructure.h"
+#include "Logger.h"
 
 //////////////////////////////////////////////////////////////////////
 //
@@ -862,17 +863,24 @@ HRESULT CCandidateListUIPresenter::_StartCandidateList(TfClientId tfClientId, _I
 {
     pDocumentMgr;tfClientId;
 
-    if (FAILED(_StartLayout(pContextDocument, ec, pRangeComposition)))
+    HRESULT hr = _StartLayout(pContextDocument, ec, pRangeComposition);
+    if (FAILED(hr))
     {
+        Global::Log(L"CandidateListUIPresenter start failed: _StartLayout hr=0x%08X", static_cast<unsigned int>(hr));
         _EndCandidateList();
         return E_FAIL;
     }
 
-    BeginUIElement();
-
-    HRESULT hr = MakeCandidateWindow(pContextDocument);
+    hr = BeginUIElement();
     if (FAILED(hr))
     {
+        Global::Log(L"CandidateListUIPresenter start: BeginUIElement hr=0x%08X", static_cast<unsigned int>(hr));
+    }
+
+    hr = MakeCandidateWindow(pContextDocument);
+    if (FAILED(hr))
+    {
+        Global::Log(L"CandidateListUIPresenter start failed: MakeCandidateWindow hr=0x%08X", static_cast<unsigned int>(hr));
         _EndCandidateList();
         return hr;
     }
@@ -1400,6 +1408,7 @@ HRESULT CCandidateListUIPresenter::BeginUIElement()
     ITfThreadMgr* pThreadMgr = _pTextService->_GetThreadMgr();
     if (nullptr ==pThreadMgr)
     {
+        Global::Log(L"CandidateListUIPresenter BeginUIElement failed: thread manager is null");
         return E_FAIL;
     }
 
@@ -1407,8 +1416,16 @@ HRESULT CCandidateListUIPresenter::BeginUIElement()
     HRESULT hr = pThreadMgr->QueryInterface(IID_ITfUIElementMgr, (void **)&pUIElementMgr);
     if (hr == S_OK)
     {
-        pUIElementMgr->BeginUIElement(this, &_isShowMode, &_uiElementId);
+        hr = pUIElementMgr->BeginUIElement(this, &_isShowMode, &_uiElementId);
+        if (FAILED(hr))
+        {
+            Global::Log(L"CandidateListUIPresenter BeginUIElement failed: hr=0x%08X", static_cast<unsigned int>(hr));
+        }
         pUIElementMgr->Release();
+    }
+    else
+    {
+        Global::Log(L"CandidateListUIPresenter BeginUIElement failed: QueryInterface hr=0x%08X", static_cast<unsigned int>(hr));
     }
 
     return hr;
@@ -1444,6 +1461,7 @@ HRESULT CCandidateListUIPresenter::MakeCandidateWindow(_In_ ITfContext *pContext
     _pCandidateWnd = new (std::nothrow) CCandidateWindow(_CandWndCallback, this, _pIndexRange, _pTextService->_IsStoreAppMode());
     if (_pCandidateWnd == nullptr)
     {
+        Global::Log(L"CandidateListUIPresenter MakeCandidateWindow failed: unable to allocate candidate window");
         return E_OUTOFMEMORY;
     }
 
@@ -1456,6 +1474,7 @@ HRESULT CCandidateListUIPresenter::MakeCandidateWindow(_In_ ITfContext *pContext
 
     if (!_pCandidateWnd->_Create(_atom, parentWndHandle))
     {
+        Global::Log(L"CandidateListUIPresenter MakeCandidateWindow failed: _Create lastError=%lu", GetLastError());
         return E_OUTOFMEMORY;
     }
 

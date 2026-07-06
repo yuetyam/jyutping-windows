@@ -15,26 +15,27 @@ BOOL WINAPI DllMain(HINSTANCE hInstance, DWORD dwReason, LPVOID pvReserved)
     switch (dwReason)
     {
     case DLL_PROCESS_ATTACH:
-        Global::StartLog();
-        Global::Log(L"DLL_PROCESS_ATTACH");
-
         Global::dllInstanceHandle = hInstance;
+
+        Global::StartLog();
+        Global::Log(L"DLL_PROCESS_ATTACH: hInstance=%p", hInstance);
 
         if (!InitializeCriticalSectionAndSpinCount(&Global::CS, 0))
         {
-             Global::Log(L"InitializeCriticalSectionAndSpinCount failed");
+            Global::Log(L"InitializeCriticalSectionAndSpinCount failed");
             return FALSE;
         }
 
-        if (!Global::RegisterWindowClass()) {
-             Global::Log(L"RegisterWindowClass failed");
+        if (!Global::RegisterWindowClass())
+        {
+            Global::Log(L"RegisterWindowClass failed");
             return FALSE;
         }
 
         break;
 
     case DLL_PROCESS_DETACH:
-        Global::Log(L"DLL_PROCESS_DETACH");
+        Global::Log(L"DLL_PROCESS_DETACH: processTerminating=%d", pvReserved != nullptr);
 
         DeleteCriticalSection(&Global::CS);
 

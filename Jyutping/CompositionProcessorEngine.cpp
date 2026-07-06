@@ -3,6 +3,7 @@
 #include "CompositionProcessorEngine.h"
 #include "TfInputProcessorProfile.h"
 #include "Globals.h"
+#include "Logger.h"
 #include "Compartment.h"
 #include "LanguageBar.h"
 #include "Localization.h"
@@ -165,20 +166,36 @@ BOOL CJyutping::_AddTextProcessorEngine()
     // Get default profile.
     CTfInputProcessorProfile profile;
 
-    if (FAILED(profile.CreateInstance()))
+    HRESULT hr = profile.CreateInstance();
+    if (FAILED(hr))
     {
+        Global::Log(L"_AddTextProcessorEngine failed: profile.CreateInstance hr=0x%08X", static_cast<unsigned int>(hr));
         return FALSE;
     }
 
-    if (FAILED(profile.GetCurrentLanguage(&langid)))
+    hr = profile.GetCurrentLanguage(&langid);
+    if (FAILED(hr))
     {
+        Global::Log(L"_AddTextProcessorEngine failed: GetCurrentLanguage hr=0x%08X", static_cast<unsigned int>(hr));
         return FALSE;
     }
 
-    if (FAILED(profile.GetDefaultLanguageProfile(langid, GUID_TFCAT_TIP_KEYBOARD, &clsid, &guidProfile)))
+    hr = profile.GetDefaultLanguageProfile(langid, GUID_TFCAT_TIP_KEYBOARD, &clsid, &guidProfile);
+    if (FAILED(hr))
     {
+        Global::Log(
+            L"_AddTextProcessorEngine failed: GetDefaultLanguageProfile langid=0x%04X hr=0x%08X",
+            langid,
+            static_cast<unsigned int>(hr));
         return FALSE;
     }
+
+    Global::Log(
+        L"_AddTextProcessorEngine start: langid=0x%04X clientId=%lu secure=%d comLess=%d",
+        langid,
+        _GetClientId(),
+        _IsSecureMode(),
+        _IsComLess());
 
     // Is this already added?
     if (_pCompositionProcessorEngine != nullptr)
@@ -189,6 +206,7 @@ BOOL CJyutping::_AddTextProcessorEngine()
         guidLanguageProfile = _pCompositionProcessorEngine->GetLanguageProfile(&langidProfile);
         if ((langid == langidProfile) && IsEqualGUID(guidProfile, guidLanguageProfile))
         {
+            Global::Log(L"_AddTextProcessorEngine: existing engine matches current language profile");
             return TRUE;
         }
     }
@@ -200,15 +218,18 @@ BOOL CJyutping::_AddTextProcessorEngine()
     }
     if (!_pCompositionProcessorEngine)
     {
+        Global::Log(L"_AddTextProcessorEngine failed: unable to allocate composition processor engine");
         return FALSE;
     }
 
     // setup composition processor engine
     if (FALSE == _pCompositionProcessorEngine->SetupLanguageProfile(langid, guidProfile, _GetThreadMgr(), _GetClientId(), _IsSecureMode(), _IsComLess()))
     {
+        Global::Log(L"_AddTextProcessorEngine failed: SetupLanguageProfile returned false");
         return FALSE;
     }
 
+    Global::Log(L"_AddTextProcessorEngine success");
     return TRUE;
 }
 
@@ -314,8 +335,16 @@ CCompositionProcessorEngine::~CCompositionProcessorEngine()
 
 BOOL CCompositionProcessorEngine::SetupLanguageProfile(LANGID langid, REFGUID guidLanguageProfile, _In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId, BOOL isSecureMode, BOOL isComLessMode)
 {
+    Global::Log(
+        L"CompositionProcessorEngine setup start: langid=0x%04X clientId=%lu secure=%d comLess=%d",
+        langid,
+        tfClientId,
+        isSecureMode,
+        isComLessMode);
+
     if ((tfClientId == 0) && (pThreadMgr == nullptr))
     {
+        Global::Log(L"CompositionProcessorEngine setup failed: client id and thread manager are both empty");
         return FALSE;
     }
 
@@ -335,7 +364,9 @@ BOOL CCompositionProcessorEngine::SetupLanguageProfile(LANGID langid, REFGUID gu
     _isApplyingSettings = FALSE;
     SetupKeystroke();
     SetupConfiguration();
-    SetupInputEngine();
+    BOOL isInputEngineReady = SetupInputEngine();
+
+    Global::Log(L"CompositionProcessorEngine setup success: inputEngineReady=%d", isInputEngineReady);
 
     return TRUE;
 }
@@ -1210,12 +1241,16 @@ BOOL CCompositionProcessorEngine::InitLanguageBar(_In_ CLangBarItemButton *pLang
 
 BOOL CCompositionProcessorEngine::SetupInputEngine()
 {
+    Global::Log(L"CompositionProcessorEngine input engine setup start");
     _isInputEngineReady = _inputEngine.Prepare() ? TRUE : FALSE;
     if (!_isInputEngineReady)
     {
+        Global::Log(L"CompositionProcessorEngine input engine setup failed");
         _cachedInputText.clear();
         _cachedSuggestions.clear();
+        return _isInputEngineReady;
     }
+    Global::Log(L"CompositionProcessorEngine input engine setup success");
     return _isInputEngineReady;
 }
 

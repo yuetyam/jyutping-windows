@@ -253,10 +253,13 @@ STDAPI DllCanUnloadNow(void)
 
 STDAPI DllUnregisterServer(void)
 {
+    Global::Log(L"DllUnregisterServer start");
+
     UnregisterProfiles();
     UnregisterCategories();
     UnregisterServer();
 
+    Global::Log(L"DllUnregisterServer success");
     return S_OK;
 }
 
@@ -278,4 +281,3 @@ STDAPI DllRegisterServer(void)
     Global::Log(L"DllRegisterServer success");
     return S_OK;
 }
-

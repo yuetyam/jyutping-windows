@@ -55,10 +55,10 @@ Reverse lookup follows the same TSF composition and candidate UI path, but `CCom
 Runtime logging is written to:
 
 ```text
-%LOCALAPPDATA%\Jyutping\Jyutping.log
+%LOCALAPPDATA%\Jyutping\Logs\Jyutping.log
 ```
 
-If that path is unavailable, logging falls back to the temp path.
+If that path is unavailable, logging falls back to the temp path under `Jyutping\Logs`.
 
 ## Coding
 Check the root `.editorconfig` for code style and formatting.
