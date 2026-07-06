@@ -7,6 +7,7 @@
 #pragma comment(lib, "dwmapi.lib")
 
 constexpr auto limitedMaxSpace = 2000.0f;
+constexpr D2D1_DRAW_TEXT_OPTIONS textDrawOptions = D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT;
 
 static HRESULT CreateRoleTextFormat(
     _In_ FLOAT fontSize,
@@ -1004,7 +1005,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                 numberWidth = numberMetrics.width;
 
                 D2D1_POINT_2F numberPosition = D2D1::Point2F(xPosition, static_cast<FLOAT>(rc.top));
-                _pDirect2DRenderTarget->DrawTextLayout(numberPosition, pNumLayout.Get(), pTextBrush.Get());
+                _pDirect2DRenderTarget->DrawTextLayout(numberPosition, pNumLayout.Get(), pTextBrush.Get(), textDrawOptions);
             }
         }
 
@@ -1034,7 +1035,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                 candidateWidth = candidateMetrics.width;
 
                 D2D1_POINT_2F candidatePosition = D2D1::Point2F(xPosition, static_cast<FLOAT>(rc.top));
-                _pDirect2DRenderTarget->DrawTextLayout(candidatePosition, pTextLayout.Get(), pTextBrush.Get());
+                _pDirect2DRenderTarget->DrawTextLayout(candidatePosition, pTextLayout.Get(), pTextBrush.Get(), textDrawOptions);
             }
         }
 
@@ -1058,7 +1059,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                 if (SUCCEEDED(hr))
                 {
                     D2D1_POINT_2F commentPosition = D2D1::Point2F(xPosition, static_cast<FLOAT>(rc.top));
-                    _pDirect2DRenderTarget->DrawTextLayout(commentPosition, pCommentLayout.Get(), pTextBrush.Get());
+                    _pDirect2DRenderTarget->DrawTextLayout(commentPosition, pCommentLayout.Get(), pTextBrush.Get(), textDrawOptions);
                 }
             }
         }
