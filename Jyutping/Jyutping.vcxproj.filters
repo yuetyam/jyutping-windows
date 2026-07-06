@@ -27,7 +27,16 @@
     <None Include="Resources\ime.ico">
       <Filter>Resources</Filter>
     </None>
+    <None Include="Resources\ime-alt.ico">
+      <Filter>Resources</Filter>
+    </None>
+    <None Include="Resources\zh-alt.ico">
+      <Filter>Resources</Filter>
+    </None>
     <None Include="Resources\zh.ico">
+      <Filter>Resources</Filter>
+    </None>
+    <None Include="Resources\abc-alt.ico">
       <Filter>Resources</Filter>
     </None>
     <None Include="Resources\abc.ico">

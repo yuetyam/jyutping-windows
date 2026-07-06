@@ -7,7 +7,15 @@ class CLangBarItemButton : public ITfLangBarItemButton,
     public ITfSource
 {
 public:
-    CLangBarItemButton(REFGUID guidLangBar, LPCWSTR description, LPCWSTR tooltip, DWORD onIconIndex, DWORD offIconIndex, BOOL isSecureMode);
+    CLangBarItemButton(
+        REFGUID guidLangBar,
+        LPCWSTR description,
+        LPCWSTR tooltip,
+        DWORD onIconIndex,
+        DWORD offIconIndex,
+        DWORD onDarkIconIndex,
+        DWORD offDarkIconIndex,
+        BOOL isSecureMode);
     ~CLangBarItemButton();
 
     // IUnknown
@@ -51,6 +59,8 @@ private:
     LPCWSTR _pTooltipText;
     DWORD _onIconIndex;
     DWORD _offIconIndex;
+    DWORD _onDarkIconIndex;
+    DWORD _offDarkIconIndex;
 
     BOOL _isAddedToLanguageBar;
     BOOL _isSecureMode;

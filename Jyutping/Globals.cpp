@@ -178,12 +178,17 @@ extern const WCHAR UnicodeByteOrderMark = 0xFEFF;
 extern const WCHAR KeywordDelimiter = L'=';
 extern const WCHAR StringDelimiter  = L'\"';
 
+extern const int TextServiceIcoIndex = TEXTSERVICE_ICON_INDEX;
+extern const int TextServiceAltIcoIndex = TEXTSERVICE_ALT_ICON_INDEX;
+
 //---------------------------------------------------------------------
 // defined item in setting file table [PreservedKey] section
 //---------------------------------------------------------------------
 extern const WCHAR InputMethodModeDescription[] = L"Input Mode (Cantonese/ABC, Shift)";
 extern const int InputMethodModeCantoneseIcoIndex = INPUT_MODE_CANTONESE_ICON_INDEX;
+extern const int InputMethodModeCantoneseAltIcoIndex = INPUT_MODE_CANTONESE_ALT_ICON_INDEX;
 extern const int InputMethodModeABCIcoIndex = INPUT_MODE_ABC_ICON_INDEX;
+extern const int InputMethodModeABCAltIcoIndex = INPUT_MODE_ABC_ALT_ICON_INDEX;
 
 extern const WCHAR CharacterFormDescription[] = L"Character Form (Half-width/Full-width, Shift+Space)";
 

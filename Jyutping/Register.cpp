@@ -51,6 +51,11 @@ BOOL RegisterProfiles()
         pITfInputProcessorProfileMgr->Release();
         return FALSE;
     }
+    Global::UpdateSystemTheme();
+    UINT iconIndex = static_cast<UINT>(Global::GetSystemTheme() == Global::DARK_MODE
+        ? Global::TextServiceAltIcoIndex
+        : Global::TextServiceIcoIndex);
+
     hr = pITfInputProcessorProfileMgr->RegisterProfile(Global::JyutpingCLSID,
         TEXTSERVICE_LANGID,
         Global::JyutpingGuidProfile,
@@ -58,7 +63,7 @@ BOOL RegisterProfiles()
         static_cast<ULONG>(lenOfDesc),
         achIconFile,
         cchA,
-        (UINT)TEXTSERVICE_ICON_INDEX, NULL, 0, TRUE, 0);
+        iconIndex, NULL, 0, TRUE, 0);
 
     BOOL result = (hr == S_OK);
     pITfInputProcessorProfileMgr->Release();

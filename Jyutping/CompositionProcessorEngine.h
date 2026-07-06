@@ -90,7 +90,17 @@ private:
     void SetupLanguageBar(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId, BOOL isSecureMode);
     void SetKeystrokeTable(_Inout_ CJyutpingArray<_KEYSTROKE> *pKeystroke);
     void SetupPunctuationPair();
-    void CreateLanguageBarButton(DWORD dwEnable, GUID guidLangBar, _In_z_ LPCWSTR pwszDescriptionValue, _In_z_ LPCWSTR pwszTooltipValue, DWORD dwOnIconIndex, DWORD dwOffIconIndex, _Outptr_result_maybenull_ CLangBarItemButton **ppLangBarItemButton, BOOL isSecureMode);
+    void CreateLanguageBarButton(
+        DWORD dwEnable,
+        GUID guidLangBar,
+        _In_z_ LPCWSTR pwszDescriptionValue,
+        _In_z_ LPCWSTR pwszTooltipValue,
+        DWORD dwOnIconIndex,
+        DWORD dwOffIconIndex,
+        DWORD dwOnDarkIconIndex,
+        DWORD dwOffDarkIconIndex,
+        _Outptr_result_maybenull_ CLangBarItemButton **ppLangBarItemButton,
+        BOOL isSecureMode);
     void SetInitialCandidateListRange();
 	void InitializeJyutpingCompartment(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
 

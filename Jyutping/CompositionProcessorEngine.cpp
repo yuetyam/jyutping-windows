@@ -1097,7 +1097,17 @@ void CCompositionProcessorEngine::SetupLanguageBar(_In_ ITfThreadMgr *pThreadMgr
     DWORD dwEnable = 1;
     std::wstring inputMethodModeDescription = Localization::LoadStringOrFallback(IDS_INPUT_MODE_DESCRIPTION, Global::InputMethodModeDescription);
     std::wstring langbarInputMethodModeDescription = Localization::LoadStringOrFallback(IDS_LANGBAR_INPUT_METHOD_MODE, Global::LangbarInputMethodModeDescription);
-    CreateLanguageBarButton(dwEnable, GUID_LBI_INPUTMODE, langbarInputMethodModeDescription.c_str(), inputMethodModeDescription.c_str(), Global::InputMethodModeCantoneseIcoIndex, Global::InputMethodModeABCIcoIndex, &_pLanguageBar_InputMethodMode, isSecureMode);
+    CreateLanguageBarButton(
+        dwEnable,
+        GUID_LBI_INPUTMODE,
+        langbarInputMethodModeDescription.c_str(),
+        inputMethodModeDescription.c_str(),
+        Global::InputMethodModeCantoneseIcoIndex,
+        Global::InputMethodModeABCIcoIndex,
+        Global::InputMethodModeCantoneseAltIcoIndex,
+        Global::InputMethodModeABCAltIcoIndex,
+        &_pLanguageBar_InputMethodMode,
+        isSecureMode);
 
     InitLanguageBar(_pLanguageBar_InputMethodMode, pThreadMgr, tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
 
@@ -1133,13 +1143,31 @@ void CCompositionProcessorEngine::SetupLanguageBar(_In_ ITfThreadMgr *pThreadMgr
 //
 //----------------------------------------------------------------------------
 
-void CCompositionProcessorEngine::CreateLanguageBarButton(DWORD dwEnable, GUID guidLangBar, _In_z_ LPCWSTR pwszDescriptionValue, _In_z_ LPCWSTR pwszTooltipValue, DWORD dwOnIconIndex, DWORD dwOffIconIndex, _Outptr_result_maybenull_ CLangBarItemButton **ppLangBarItemButton, BOOL isSecureMode)
+void CCompositionProcessorEngine::CreateLanguageBarButton(
+    DWORD dwEnable,
+    GUID guidLangBar,
+    _In_z_ LPCWSTR pwszDescriptionValue,
+    _In_z_ LPCWSTR pwszTooltipValue,
+    DWORD dwOnIconIndex,
+    DWORD dwOffIconIndex,
+    DWORD dwOnDarkIconIndex,
+    DWORD dwOffDarkIconIndex,
+    _Outptr_result_maybenull_ CLangBarItemButton **ppLangBarItemButton,
+    BOOL isSecureMode)
 {
 	dwEnable;
 
     if (ppLangBarItemButton)
     {
-        *ppLangBarItemButton = new (std::nothrow) CLangBarItemButton(guidLangBar, pwszDescriptionValue, pwszTooltipValue, dwOnIconIndex, dwOffIconIndex, isSecureMode);
+        *ppLangBarItemButton = new (std::nothrow) CLangBarItemButton(
+            guidLangBar,
+            pwszDescriptionValue,
+            pwszTooltipValue,
+            dwOnIconIndex,
+            dwOffIconIndex,
+            dwOnDarkIconIndex,
+            dwOffDarkIconIndex,
+            isSecureMode);
     }
 
     return;

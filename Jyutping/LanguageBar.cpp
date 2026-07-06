@@ -73,7 +73,15 @@ VOID CCompositionProcessorEngine::SetLanguageBarStatus(DWORD status, BOOL isSet)
 //
 //----------------------------------------------------------------------------
 
-CLangBarItemButton::CLangBarItemButton(REFGUID guidLangBar, LPCWSTR description, LPCWSTR tooltip, DWORD onIconIndex, DWORD offIconIndex, BOOL isSecureMode)
+CLangBarItemButton::CLangBarItemButton(
+    REFGUID guidLangBar,
+    LPCWSTR description,
+    LPCWSTR tooltip,
+    DWORD onIconIndex,
+    DWORD offIconIndex,
+    DWORD onDarkIconIndex,
+    DWORD offDarkIconIndex,
+    BOOL isSecureMode)
 {
     DWORD bufLen = 0;
 
@@ -92,6 +100,8 @@ CLangBarItemButton::CLangBarItemButton(REFGUID guidLangBar, LPCWSTR description,
     // Initialize ICON index and file name.
     _onIconIndex = onIconIndex;
     _offIconIndex = offIconIndex;
+    _onDarkIconIndex = onDarkIconIndex;
+    _offDarkIconIndex = offDarkIconIndex;
 
     // Initialize compartment.
     _pCompartment = nullptr;
@@ -422,18 +432,23 @@ STDAPI CLangBarItemButton::GetIcon(_Out_ HICON *phIcon)
     // We'll rely on the system-wide SM_CXICON for now as is, but we could improve this
     // if we had a reference window.
     // For now, let's at least make sure it's loaded with the correct size.
+    Global::UpdateSystemTheme();
+    BOOL isDarkTheme = (Global::GetSystemTheme() == Global::DARK_MODE);
+
     if (isOn && !(status & TF_LBI_STATUS_DISABLED))
     {
         if (Global::dllInstanceHandle)
         {
-            *phIcon = reinterpret_cast<HICON>(LoadImage(Global::dllInstanceHandle, MAKEINTRESOURCE(_onIconIndex), IMAGE_ICON, cx, cy, LR_DEFAULTCOLOR));
+            DWORD iconIndex = isDarkTheme ? _onDarkIconIndex : _onIconIndex;
+            *phIcon = reinterpret_cast<HICON>(LoadImage(Global::dllInstanceHandle, MAKEINTRESOURCE(iconIndex), IMAGE_ICON, cx, cy, LR_DEFAULTCOLOR));
         }
     }
     else
     {
         if (Global::dllInstanceHandle)
         {
-            *phIcon = reinterpret_cast<HICON>(LoadImage(Global::dllInstanceHandle, MAKEINTRESOURCE(_offIconIndex), IMAGE_ICON, cx, cy, LR_DEFAULTCOLOR));
+            DWORD iconIndex = isDarkTheme ? _offDarkIconIndex : _offIconIndex;
+            *phIcon = reinterpret_cast<HICON>(LoadImage(Global::dllInstanceHandle, MAKEINTRESOURCE(iconIndex), IMAGE_ICON, cx, cy, LR_DEFAULTCOLOR));
         }
     }
 

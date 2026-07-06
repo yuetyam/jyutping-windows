@@ -9,9 +9,12 @@
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
-IDIS_IME                  ICON  "Resources\\ime.ico"
-IDI_INPUT_MODE_CANTONESE  ICON  "Resources\\zh.ico"
-IDI_INPUT_MODE_ABC        ICON  "Resources\\abc.ico"
+IDIS_IME                      ICON  "Resources\\ime.ico"
+IDIS_IME_ALT                  ICON  "Resources\\ime-alt.ico"
+IDI_INPUT_MODE_CANTONESE      ICON  "Resources\\zh.ico"
+IDI_INPUT_MODE_CANTONESE_ALT  ICON  "Resources\\zh-alt.ico"
+IDI_INPUT_MODE_ABC            ICON  "Resources\\abc.ico"
+IDI_INPUT_MODE_ABC_ALT        ICON  "Resources\\abc-alt.ico"
 
 /////////////////////////////////////////////////////////////////////////////
 //

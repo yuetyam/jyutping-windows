@@ -17,10 +17,13 @@
 #define SUBLANG_CHINESE_HONGKONG          0x03
 #endif
 #define IDIS_IME                          12
+#define IDIS_IME_ALT                      14
 #define IDS_DEFAULT_FONT                  13
 #define IDS_TEXTSERVICE_DESC              20
 #define IDI_INPUT_MODE_CANTONESE          21
+#define IDI_INPUT_MODE_CANTONESE_ALT      23
 #define IDI_INPUT_MODE_ABC                22
+#define IDI_INPUT_MODE_ABC_ALT            24
 #define IDS_INPUT_MODE_DESCRIPTION        30
 #define IDS_CHARACTER_FORM_DESCRIPTION    31
 #define IDS_PUNCTUATION_FORM_DESCRIPTION  32

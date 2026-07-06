@@ -20,7 +20,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\ime.sqlite3" Condition="Exists('Resources\ime.sqlite3')" />
+    <None Include="Resources\abc-alt.ico" />
     <None Include="Resources\abc.ico" />
+    <None Include="Resources\ime-alt.ico" />
+    <None Include="Resources\zh-alt.ico" />
     <None Include="Resources\zh.ico" />
     <None Include="Resources\ime.ico" />
     <None Include="Resources\Strings.en-US.rc2" />
