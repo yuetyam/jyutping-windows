@@ -7,7 +7,7 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 STRINGTABLE
 BEGIN
     IDIS_IME                              "Jyutping Input Method"
-    IDS_DEFAULT_FONT                      "Microsoft JhengHei UI"
+    IDS_DEFAULT_FONT                      "Segoe UI"
     IDS_TEXTSERVICE_DESC                  "Jyutping"
     IDS_INPUT_MODE_DESCRIPTION            "Input Mode (Cantonese/ABC, Shift)"
     IDS_CHARACTER_FORM_DESCRIPTION        "Character Form (Half-width/Full-width, Shift+Space)"

@@ -13,11 +13,11 @@
 #define INPUT_MODE_CANTONESE_ICON_INDEX  IDI_INPUT_MODE_CANTONESE
 #define INPUT_MODE_ABC_ICON_INDEX        IDI_INPUT_MODE_ABC
 
-#define CANDIDATE_FONT_NAMES     L"Shanggu Sans", L"IBM Plex Sans TC", L"Microsoft JhengHei UI", L"Microsoft YaHei UI", L"MiSans L3"
+#define CANDIDATE_FONT_NAMES     L"Inter", L"Segoe UI", L"Shanggu Sans", L"IBM Plex Sans TC", L"Plangothic P1", L"Plangothic P2", L"Microsoft JhengHei UI", L"Microsoft YaHei UI", L"MiSans L3", L"Segoe UI Emoji", L"Segoe UI Symbol"
 #define CANDIDATE_FONT_SIZE      16
-#define NUMBER_LABEL_FONT_NAMES  L"Monaspace Neon", L"JetBrains Mono", L"Consolas", L"Segoe UI", L"Arial"
+#define NUMBER_LABEL_FONT_NAMES  L"Monaspace Neon", L"JetBrains Mono", L"Consolas"
 #define NUMBER_LABEL_FONT_SIZE   13
-#define COMMENT_FONT_NAMES       L"Monaspace Neon", L"JetBrains Mono", L"Consolas", L"Segoe UI", L"Arial"
+#define COMMENT_FONT_NAMES       L"Monaspace Neon", L"JetBrains Mono", L"Consolas", L"Shanggu Sans", L"Microsoft JhengHei UI", L"Microsoft YaHei UI"
 #define COMMENT_FONT_SIZE        13
 
 //---------------------------------------------------------------------
@@ -27,10 +27,10 @@
 #define CANDWND_BORDER_WIDTH            (1)
 
 // HStack-style row layout: LeftPadding | NumberLabel | Spacing | CandidateWord | Spacing | Comment | RightPadding
-#define CANDIDATE_ROW_PADDING_LEFT      (10.0f)  // Left padding of the row
-#define CANDIDATE_ROW_PADDING_RIGHT     (1.0f)   // Right padding of the row
-#define CANDIDATE_NUMBER_SPACING        (12.0f)  // Spacing between number and candidate word
-#define CANDIDATE_COMMENT_SPACING       (12.0f)  // Spacing between candidate word and comment
+#define CANDIDATE_ROW_PADDING_LEFT      (10.0f)  // Leading padding of the row
+#define CANDIDATE_ROW_PADDING_RIGHT     (1.0f)   // Trailing padding of the row
+#define CANDIDATE_NUMBER_SPACING        (12.0f)  // Spacing between label number and candidate word
+#define CANDIDATE_COMMENT_SPACING       (12.0f)  // Spacing between candidate word and candidate comment (romanization)
 
 //---------------------------------------------------------------------
 // defined modifier
