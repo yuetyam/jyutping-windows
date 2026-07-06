@@ -170,9 +170,63 @@ std::vector<Ime::Lexicon> First(std::vector<Ime::Lexicon> items, size_t count)
     return items;
 }
 
+bool ShouldMapEmojiSkinTone(int category)
+{
+    return category == 1 || category == 4;
+}
+
+std::vector<Ime::Lexicon> SymbolLexiconsFromRows(
+    const ImeDatabase& database,
+    const std::vector<ImeDatabase::SymbolRow>& rows,
+    const std::wstring& input)
+{
+    std::vector<Ime::Lexicon> result;
+    result.reserve(rows.size());
+    for (const ImeDatabase::SymbolRow& row : rows)
+    {
+        std::wstring codePoint = row.codePoint;
+        if (ShouldMapEmojiSkinTone(row.category))
+        {
+            if (std::optional<std::wstring> target = database.QueryEmojiSkinTarget(codePoint))
+            {
+                codePoint = *target;
+            }
+        }
+
+        std::optional<std::wstring> symbolText = Ime::SymbolTextFromCodePoints(codePoint);
+        if (!symbolText)
+        {
+            continue;
+        }
+
+        result.push_back(Ime::Lexicon::EmojiOrSymbol(
+            *symbolText,
+            row.cantonese,
+            row.romanization,
+            input,
+            row.category < 10));
+    }
+    return result;
+}
+
+std::vector<Ime::Lexicon> MatchSymbols(const ImeDatabase& database, std::wstring_view text, const std::wstring& input)
+{
+    std::wstring queryText(text);
+    return SymbolLexiconsFromRows(database, database.QuerySymbolsBySpell(Ime::HashCode(queryText)), input);
+}
+
+bool MatchesSymbolTarget(const Ime::Lexicon& item, const Ime::Lexicon& symbol)
+{
+    return item.IsCantonese() &&
+        symbol.attached &&
+        item.text == *symbol.attached &&
+        item.romanization == symbol.romanization;
+}
+
 std::vector<Ime::Lexicon> MergeMemorySuggestions(
     const std::vector<Ime::Lexicon>& memory,
     const std::vector<Ime::Lexicon>& textMarks,
+    const std::vector<Ime::Lexicon>& symbols,
     const std::vector<Ime::Lexicon>& queried)
 {
     std::vector<Ime::Lexicon> idealMemory;
@@ -213,6 +267,17 @@ std::vector<Ime::Lexicon> MergeMemorySuggestions(
     Append(result, textMarks);
     Append(result, idealMemory);
     Append(result, chained);
+    for (auto iterator = symbols.rbegin(); iterator != symbols.rend(); ++iterator)
+    {
+        auto insertPosition = std::find_if(result.begin(), result.end(), [&iterator](const Ime::Lexicon& item)
+        {
+            return MatchesSymbolTarget(item, *iterator);
+        });
+        if (insertPosition != result.end())
+        {
+            result.insert(insertPosition + 1, *iterator);
+        }
+    }
     return Distinct(result);
 }
 
@@ -360,14 +425,15 @@ std::vector<Lexicon> InputEngine::Suggest(const std::vector<VirtualInputKey>& ke
     }
 
     std::vector<Lexicon> textMarks = SearchTextMarks(keys);
+    Segmentation segmentation = _segmenter.Segment(keys);
+    std::vector<Lexicon> symbols = SearchSymbols(keys, segmentation);
     if (!_inputMemory.IsPrepared())
     {
-        return MergeMemorySuggestions(std::vector<Lexicon>(), textMarks, queried);
+        return MergeMemorySuggestions(std::vector<Lexicon>(), textMarks, symbols, queried);
     }
 
-    Segmentation segmentation = _segmenter.Segment(keys);
     std::vector<Lexicon> memory = _inputMemory.Suggest(keys, segmentation, _segmenter);
-    return MergeMemorySuggestions(memory, textMarks, queried);
+    return MergeMemorySuggestions(memory, textMarks, symbols, queried);
 }
 
 std::vector<Lexicon> InputEngine::SearchTextMarks(std::wstring_view input) const
@@ -392,6 +458,34 @@ std::vector<Lexicon> InputEngine::SearchTextMarks(const std::vector<VirtualInput
         result.push_back(Lexicon::PlainText(text, mark));
     }
     return result;
+}
+
+std::vector<Lexicon> InputEngine::SearchSymbols(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation) const
+{
+    if (!IsPrepared() || keys.empty())
+    {
+        return std::vector<Lexicon>();
+    }
+
+    std::vector<VirtualInputKey> syllableKeys = SyllableKeys(keys);
+    if (syllableKeys.empty())
+    {
+        return std::vector<Lexicon>();
+    }
+
+    size_t syllableLength = syllableKeys.size();
+    std::wstring text = TextFromKeys(syllableKeys);
+    std::wstring input = (syllableLength == keys.size()) ? text : TextFromKeys(keys);
+
+    std::vector<Lexicon> result = MatchSymbols(_database, text, input);
+    for (const Scheme& scheme : segmentation)
+    {
+        if (SchemeLength(scheme) == syllableLength)
+        {
+            Append(result, MatchSymbols(_database, SchemeOriginText(scheme), input));
+        }
+    }
+    return Distinct(result);
 }
 
 std::vector<Lexicon> InputEngine::SuggestFromLexicon(const std::vector<VirtualInputKey>& keys) const

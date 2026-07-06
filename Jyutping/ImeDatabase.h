@@ -82,6 +82,15 @@ public:
         std::wstring romanization;
     };
 
+    struct SymbolRow
+    {
+        int category = 0;
+        int unicodeVersion = 0;
+        std::wstring codePoint;
+        std::wstring cantonese;
+        std::wstring romanization;
+    };
+
     struct PinyinSyllableRow
     {
         int64_t code = 0;
@@ -118,6 +127,8 @@ public:
     std::vector<ShapeRow> QueryStrokeByPattern(const std::wstring& pattern, bool isLike, int limit = 100) const;
     std::vector<StructureRow> QueryStructureBySpell(int64_t spell) const;
     std::vector<std::wstring> QueryTextMarksBySpell(int64_t spell) const;
+    std::vector<SymbolRow> QuerySymbolsBySpell(int64_t spell) const;
+    std::optional<std::wstring> QueryEmojiSkinTarget(const std::wstring& source) const;
     std::vector<std::wstring> LookupRomanizationsForWord(const std::wstring& word) const;
     VariantLookup CreateVariantLookup(CharacterStandard standard) const;
     std::optional<uint32_t> QueryVariantTarget(CharacterStandard standard, uint32_t source) const;

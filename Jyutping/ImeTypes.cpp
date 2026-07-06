@@ -59,6 +59,65 @@ WCHAR UppercaseAscii(WCHAR character)
     return character;
 }
 
+std::optional<uint32_t> HexDigitValue(WCHAR character)
+{
+    if (L'0' <= character && character <= L'9')
+    {
+        return static_cast<uint32_t>(character - L'0');
+    }
+    if (L'a' <= character && character <= L'f')
+    {
+        return static_cast<uint32_t>(character - L'a' + 10);
+    }
+    if (L'A' <= character && character <= L'F')
+    {
+        return static_cast<uint32_t>(character - L'A' + 10);
+    }
+    return std::nullopt;
+}
+
+std::optional<uint32_t> CodePointFromHex(std::wstring_view text)
+{
+    if (text.empty())
+    {
+        return std::nullopt;
+    }
+
+    uint32_t value = 0;
+    for (WCHAR character : text)
+    {
+        std::optional<uint32_t> digit = HexDigitValue(character);
+        if (!digit)
+        {
+            return std::nullopt;
+        }
+        if (value > (0x10FFFF - *digit) / 16)
+        {
+            return std::nullopt;
+        }
+        value = value * 16 + *digit;
+    }
+
+    if (value > 0x10FFFF || (0xD800 <= value && value <= 0xDFFF))
+    {
+        return std::nullopt;
+    }
+    return value;
+}
+
+void AppendCodePoint(std::wstring& result, uint32_t codePoint)
+{
+    if (codePoint <= 0xFFFF)
+    {
+        result.push_back(static_cast<WCHAR>(codePoint));
+        return;
+    }
+
+    codePoint -= 0x10000;
+    result.push_back(static_cast<WCHAR>(0xD800 + (codePoint >> 10)));
+    result.push_back(static_cast<WCHAR>(0xDC00 + (codePoint & 0x3FF)));
+}
+
 } // namespace
 
 namespace Ime {
@@ -115,6 +174,17 @@ Lexicon Lexicon::PlainText(std::wstring input, std::wstring text)
     return Lexicon(LexiconType::Text, std::move(text), std::move(romanization), std::move(input));
 }
 
+Lexicon Lexicon::EmojiOrSymbol(
+    std::wstring text,
+    std::wstring cantonese,
+    std::wstring romanization,
+    std::wstring input,
+    bool isEmoji)
+{
+    LexiconType type = isEmoji ? LexiconType::Emoji : LexiconType::Symbol;
+    return Lexicon(type, std::move(text), std::move(romanization), std::move(input), std::nullopt, 0, std::move(cantonese));
+}
+
 bool Lexicon::IsCantonese() const
 {
     return type == LexiconType::Cantonese;
@@ -123,6 +193,11 @@ bool Lexicon::IsCantonese() const
 bool Lexicon::IsNotCantonese() const
 {
     return !IsCantonese();
+}
+
+bool Lexicon::IsEmojiOrSymbol() const
+{
+    return type == LexiconType::Emoji || type == LexiconType::Symbol;
 }
 
 bool Lexicon::IsCompound() const
@@ -425,6 +500,36 @@ std::optional<int64_t> AnchorsCodeFromText(std::wstring_view text)
         return std::nullopt;
     }
     return result;
+}
+
+std::optional<std::wstring> SymbolTextFromCodePoints(std::wstring_view codePoints)
+{
+    if (codePoints.empty() || codePoints.front() == L'.' || codePoints.back() == L'.')
+    {
+        return std::nullopt;
+    }
+
+    std::wstring result;
+    size_t start = 0;
+    while (start < codePoints.size())
+    {
+        size_t separator = codePoints.find(L'.', start);
+        size_t end = (separator == std::wstring_view::npos) ? codePoints.size() : separator;
+        std::optional<uint32_t> codePoint = CodePointFromHex(codePoints.substr(start, end - start));
+        if (!codePoint)
+        {
+            return std::nullopt;
+        }
+
+        AppendCodePoint(result, *codePoint);
+        if (separator == std::wstring_view::npos)
+        {
+            break;
+        }
+        start = separator + 1;
+    }
+
+    return result.empty() ? std::nullopt : std::optional<std::wstring>(result);
 }
 
 std::vector<VirtualInputKey> InputKeysFromCode(int64_t code)

@@ -68,9 +68,16 @@ struct Lexicon
         int64_t number = 0);
 
     static Lexicon PlainText(std::wstring input, std::wstring text);
+    static Lexicon EmojiOrSymbol(
+        std::wstring text,
+        std::wstring cantonese,
+        std::wstring romanization,
+        std::wstring input,
+        bool isEmoji);
 
     bool IsCantonese() const;
     bool IsNotCantonese() const;
+    bool IsEmojiOrSymbol() const;
     bool IsCompound() const;
     bool IsInputMemory() const;
     bool IsIdealInputMemory() const;
@@ -120,6 +127,7 @@ std::wstring LatinLetterOnly(std::wstring_view text);
 int64_t Radix100Combined(const std::vector<int>& codes);
 std::optional<int64_t> CharCodeFromText(std::wstring_view text);
 std::optional<int64_t> AnchorsCodeFromText(std::wstring_view text);
+std::optional<std::wstring> SymbolTextFromCodePoints(std::wstring_view codePoints);
 
 std::vector<VirtualInputKey> InputKeysFromCode(int64_t code);
 std::vector<VirtualInputKey> InputKeysFromText(std::wstring_view text);

@@ -147,6 +147,28 @@ std::vector<ImeDatabase::ShapeRow> ReadShapeRows(sqlite3_stmt* statement, const 
     return rows;
 }
 
+std::vector<ImeDatabase::SymbolRow> ReadSymbolRows(sqlite3_stmt* statement, const ImeDatabase* database, _In_z_ PCWSTR operation)
+{
+    std::vector<ImeDatabase::SymbolRow> rows;
+    int result = SQLITE_OK;
+    while ((result = sqlite3_step(statement)) == SQLITE_ROW)
+    {
+        rows.push_back({
+            sqlite3_column_int(statement, 0),
+            sqlite3_column_int(statement, 1),
+            ColumnText(statement, 2),
+            ColumnText(statement, 3),
+            ColumnText(statement, 4)
+        });
+    }
+
+    if (result != SQLITE_DONE)
+    {
+        database->LogError(operation, result);
+    }
+    return rows;
+}
+
 bool IsCangjieVariant(CangjieVariant variant)
 {
     return variant == CangjieVariant::Cangjie5 || variant == CangjieVariant::Cangjie3;
@@ -361,6 +383,8 @@ bool ImeDatabase::VerifySchema() const
         L"SELECT rowid, word, complex FROM stroke_table WHERE stroke GLOB ? ORDER BY complex ASC, rowid ASC LIMIT 0;",
         L"SELECT word, romanization FROM structure_table WHERE spell = ? LIMIT 0;",
         L"SELECT mark FROM mark_table WHERE spell = ? LIMIT 0;",
+        L"SELECT category, unicode_version, code_point, cantonese, romanization FROM symbol_table WHERE spell = ? LIMIT 0;",
+        L"SELECT target FROM emoji_skin_map WHERE source = ? LIMIT 0;",
         L"SELECT target FROM variant_old WHERE source = ? LIMIT 0;",
         L"SELECT target FROM variant_hk WHERE source = ? LIMIT 0;",
         L"SELECT target FROM variant_tw WHERE source = ? LIMIT 0;",
@@ -684,6 +708,47 @@ std::vector<std::wstring> ImeDatabase::QueryTextMarksBySpell(int64_t spell) cons
         LogError(L"query text marks by spell", result);
     }
     return marks;
+}
+
+std::vector<ImeDatabase::SymbolRow> ImeDatabase::QuerySymbolsBySpell(int64_t spell) const
+{
+    static constexpr WCHAR sql[] =
+        L"SELECT category, unicode_version, code_point, cantonese, romanization FROM symbol_table WHERE spell = ? ORDER BY rowid;";
+
+    Statement statement;
+    if (!Prepare(sql, statement.Out()))
+    {
+        return std::vector<SymbolRow>();
+    }
+
+    sqlite3_bind_int64(statement.Get(), 1, spell);
+
+    return ReadSymbolRows(statement.Get(), this, L"query symbols by spell");
+}
+
+std::optional<std::wstring> ImeDatabase::QueryEmojiSkinTarget(const std::wstring& source) const
+{
+    static constexpr WCHAR sql[] = L"SELECT target FROM emoji_skin_map WHERE source = ? LIMIT 1;";
+
+    Statement statement;
+    if (!Prepare(sql, statement.Out()))
+    {
+        return std::nullopt;
+    }
+
+    BindText(statement.Get(), 1, source);
+
+    int result = sqlite3_step(statement.Get());
+    if (result == SQLITE_ROW)
+    {
+        return ColumnText(statement.Get(), 0);
+    }
+
+    if (result != SQLITE_DONE)
+    {
+        LogError(L"query emoji skin target", result);
+    }
+    return std::nullopt;
 }
 
 std::vector<std::wstring> ImeDatabase::LookupRomanizationsForWord(const std::wstring& word) const
