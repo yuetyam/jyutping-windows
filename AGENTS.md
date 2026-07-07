@@ -5,7 +5,7 @@ This project is a Windows Input Method Editor for Cantonese Jyutping romanizatio
 
 ## Build
 - Development platform: Windows 11 or later, x64 and ARM64
-- Target platform: Windows 10 or later, x64 and ARM64
+- Target platform: Windows 10 or later, Win32, x64, and ARM64
 - Language: C++23 and C17
 - Build system: Visual Studio 2026 / MSBuild
 
@@ -14,6 +14,8 @@ Build from the repository root:
 ```powershell
 msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=x64
 msbuild Jyutping.sln /p:Configuration=Release /p:Platform=x64
+msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=Win32
+msbuild Jyutping.sln /p:Configuration=Release /p:Platform=Win32
 msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=ARM64
 msbuild Jyutping.sln /p:Configuration=Release /p:Platform=ARM64
 ```
