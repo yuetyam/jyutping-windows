@@ -103,16 +103,16 @@ std::wstring ResolveUserDataDirectory()
 
 std::wstring ResolveLogFilePath()
 {
-    std::wstring userDataDirectory = ResolveUserDataDirectory();
-    if (userDataDirectory.empty())
+    std::wstring logRootDirectory = CreateAppDirectory(TempDirectoryPath());
+    if (logRootDirectory.empty())
     {
         return std::wstring();
     }
 
-    std::wstring logDirectory = JoinPath(userDataDirectory, LogsDirectoryName);
+    std::wstring logDirectory = JoinPath(logRootDirectory, LogsDirectoryName);
     if (!EnsureDirectory(logDirectory))
     {
-        logDirectory = userDataDirectory;
+        logDirectory = logRootDirectory;
     }
     return JoinPath(logDirectory, LogFileName);
 }
