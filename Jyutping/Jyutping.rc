@@ -40,7 +40,7 @@ BEGIN
     BEGIN
         BLOCK "040904b0"
         BEGIN
-            VALUE "CompanyName", "Jyutping.app"
+            VALUE "CompanyName", "Jyutping.org"
             VALUE "FileDescription", "Jyutping Input Method"
             VALUE "FileVersion", "0.1.0"
             VALUE "InternalName", "Jyutping"
@@ -51,7 +51,7 @@ BEGIN
         END
         BLOCK "0c0404b0"
         BEGIN
-            VALUE "CompanyName", "Jyutping.app"
+            VALUE "CompanyName", "Jyutping.org"
             VALUE "FileDescription", "粵拼輸入法"
             VALUE "FileVersion", "0.1.0"
             VALUE "InternalName", "Jyutping"
@@ -62,7 +62,7 @@ BEGIN
         END
         BLOCK "040404b0"
         BEGIN
-            VALUE "CompanyName", "Jyutping.app"
+            VALUE "CompanyName", "Jyutping.org"
             VALUE "FileDescription", "粵拼輸入法"
             VALUE "FileVersion", "0.1.0"
             VALUE "InternalName", "Jyutping"
@@ -73,7 +73,7 @@ BEGIN
         END
         BLOCK "080404b0"
         BEGIN
-            VALUE "CompanyName", "Jyutping.app"
+            VALUE "CompanyName", "Jyutping.org"
             VALUE "FileDescription", "粤拼输入法"
             VALUE "FileVersion", "0.1.0"
             VALUE "InternalName", "Jyutping"

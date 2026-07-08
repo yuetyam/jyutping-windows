@@ -16,7 +16,7 @@
 AppId={#AppId}
 AppName=Jyutping
 AppVersion={#AppVersion}
-AppPublisher=Jyutping.app
+AppPublisher=Jyutping.org
 DefaultDirName={autopf64}\Jyutping
 DisableDirPage=yes
 DisableProgramGroupPage=yes
@@ -28,7 +28,7 @@ WizardStyle=modern
 UninstallDisplayName=Jyutping
 UninstallDisplayIcon={app}\Jyutping.dll
 UninstallFilesDir={app}
-VersionInfoCompany=Jyutping.app
+VersionInfoCompany=Jyutping.org
 VersionInfoCopyright=CC0 1.0 Public Domain
 VersionInfoDescription=Jyutping Installer
 VersionInfoProductName=Jyutping
