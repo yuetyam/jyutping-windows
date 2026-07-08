@@ -8,6 +8,26 @@
 
 constexpr auto limitedMaxSpace = 2000.0f;
 constexpr D2D1_DRAW_TEXT_OPTIONS textDrawOptions = D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT;
+constexpr BYTE candidateWindowAcrylicAlpha = 0xB8;
+constexpr FLOAT candidateWindowClearAlpha = 0.0f;
+
+static DWORD ColorRefToAccentGradientColor(_In_ COLORREF color, _In_ BYTE alpha)
+{
+    return (static_cast<DWORD>(alpha) << 24) |
+        (static_cast<DWORD>(GetBValue(color)) << 16) |
+        (static_cast<DWORD>(GetGValue(color)) << 8) |
+        static_cast<DWORD>(GetRValue(color));
+}
+
+static D2D1_COLOR_F ColorRefToD2DColor(_In_ COLORREF color, _In_ FLOAT alpha = 1.0f)
+{
+    return D2D1::ColorF(
+        GetRValue(color) / 255.0f,
+        GetGValue(color) / 255.0f,
+        GetBValue(color) / 255.0f,
+        alpha
+    );
+}
 
 static HRESULT CreateRoleTextFormat(
     _In_ FLOAT fontSize,
@@ -87,6 +107,31 @@ struct WINDOWCOMPOSITIONATTRIBDATA {
 
 typedef BOOL(WINAPI* pfnSetWindowCompositionAttribute)(HWND, WINDOWCOMPOSITIONATTRIBDATA*);
 
+static void ApplyCandidateWindowAccent(_In_ HWND wndHandle)
+{
+    HMODULE hUser = GetModuleHandle(L"user32.dll");
+    if (hUser == nullptr)
+    {
+        return;
+    }
+
+    pfnSetWindowCompositionAttribute setWindowCompositionAttribute = (pfnSetWindowCompositionAttribute)GetProcAddress(hUser, "SetWindowCompositionAttribute");
+    if (setWindowCompositionAttribute == nullptr)
+    {
+        return;
+    }
+
+    ACCENT_POLICY accent = {};
+    accent.AccentState = ACCENT_ENABLE_ACRYLICBLURBEHIND;
+    accent.GradientColor = ColorRefToAccentGradientColor(Global::GetCandidateWindowBackgroundColor(), candidateWindowAcrylicAlpha);
+
+    WINDOWCOMPOSITIONATTRIBDATA data = {};
+    data.Attrib = 19; // WCA_ACCENT_POLICY
+    data.pvData = &accent;
+    data.cbData = sizeof(accent);
+    setWindowCompositionAttribute(wndHandle, &data);
+}
+
 
 //+---------------------------------------------------------------------------
 //
@@ -145,21 +190,7 @@ BOOL CCandidateWindow::_Create(ATOM atom, _In_opt_ HWND parentWndHandle)
         return TRUE;
     }
 
-    // Enable Blur/Acrylic
-    HMODULE hUser = GetModuleHandle(L"user32.dll");
-    if (hUser)
-    {
-        pfnSetWindowCompositionAttribute setWindowCompositionAttribute = (pfnSetWindowCompositionAttribute)GetProcAddress(hUser, "SetWindowCompositionAttribute");
-        if (setWindowCompositionAttribute)
-        {
-            ACCENT_POLICY accent = { ACCENT_ENABLE_ACRYLICBLURBEHIND, 0, 0x00808080, 0 };
-            WINDOWCOMPOSITIONATTRIBDATA data;
-            data.Attrib = 19; // WCA_ACCENT_POLICY
-            data.pvData = &accent;
-            data.cbData = sizeof(accent);
-            setWindowCompositionAttribute(_wndHandle, &data);
-        }
-    }
+    ApplyCandidateWindowAccent(_wndHandle);
 
     // Enable Rounded Corners (Win11+)
 #ifndef DWMWA_WINDOW_CORNER_PREFERENCE
@@ -678,6 +709,7 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
     case WM_SETTINGCHANGE:
     {
         Global::UpdateSystemTheme();
+        ApplyCandidateWindowAccent(wndHandle);
         _ResizeWindow();
         _InvalidateRect();
         return 0;
@@ -931,7 +963,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         _pDirect2DRenderTarget->BindDC(dcHandle, prc);
         _pDirect2DRenderTarget->BeginDraw();
         _pDirect2DRenderTarget->SetTransform(D2D1::IdentityMatrix());
-        _pDirect2DRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::White, 0.0f)); // Transparent clear for Acrylic
+        _pDirect2DRenderTarget->Clear(ColorRefToD2DColor(Global::GetCandidateWindowBackgroundColor(), candidateWindowClearAlpha));
     }
 
     const size_t lenOfPageCount = 16;
@@ -966,7 +998,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                     static_cast<FLOAT>(rc.bottom)
                 );
                 ComPtr<ID2D1SolidColorBrush> pBkBrush;
-                _pDirect2DRenderTarget->CreateSolidColorBrush(D2D1::ColorF(GetRValue(crBk) / 255.0f, GetGValue(crBk) / 255.0f, GetBValue(crBk) / 255.0f), &pBkBrush);
+                _pDirect2DRenderTarget->CreateSolidColorBrush(ColorRefToD2DColor(crBk), &pBkBrush);
                 if (pBkBrush)
                 {
                     _pDirect2DRenderTarget->FillRectangle(&rcRow, pBkBrush.Get());
@@ -977,7 +1009,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         ComPtr<ID2D1SolidColorBrush> pTextBrush;
         if (_pDirect2DRenderTarget)
         {
-            _pDirect2DRenderTarget->CreateSolidColorBrush(D2D1::ColorF(GetRValue(crText) / 255.0f, GetGValue(crText) / 255.0f, GetBValue(crText) / 255.0f), &pTextBrush);
+            _pDirect2DRenderTarget->CreateSolidColorBrush(ColorRefToD2DColor(crText), &pTextBrush);
         }
 
         // HStack layout: accumulate x position as we draw each element
