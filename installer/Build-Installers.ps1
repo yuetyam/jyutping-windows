@@ -153,10 +153,8 @@ if (-not $SkipBuild) {
 
 $payloads = @{
     X64Dll = Join-Path $RepoRoot "x64\$Configuration\Jyutping.dll"
-    X64Uninstaller = Join-Path $RepoRoot "x64\$Configuration\uninstall.exe"
     X86Dll = Join-Path $RepoRoot "Win32\$Configuration\Jyutping.dll"
     Arm64Dll = Join-Path $RepoRoot "ARM64EC\$Configuration\Jyutping.dll"
-    Arm64Uninstaller = Join-Path $RepoRoot "ARM64EC\$Configuration\uninstall.exe"
     Database = Join-Path $RepoRoot "Jyutping\Resources\ime.sqlite3"
 }
 
@@ -184,20 +182,16 @@ $x64StageRoot = Join-Path $StageRoot "x64"
 $arm64StageRoot = Join-Path $StageRoot "ARM64"
 
 Copy-RequiredFile -Source $payloads.X64Dll -Destination (Join-Path $x64StageRoot "x64\Jyutping.dll")
-Copy-RequiredFile -Source $payloads.X64Uninstaller -Destination (Join-Path $x64StageRoot "x64\uninstall.exe")
 Copy-RequiredFile -Source $payloads.X86Dll -Destination (Join-Path $x64StageRoot "x86\Jyutping.dll")
 Copy-RequiredFile -Source $payloads.Database -Destination (Join-Path $x64StageRoot "ime.sqlite3")
 
 Copy-RequiredFile -Source $payloads.Arm64Dll -Destination (Join-Path $arm64StageRoot "Jyutping.dll")
-Copy-RequiredFile -Source $payloads.Arm64Uninstaller -Destination (Join-Path $arm64StageRoot "uninstall.exe")
 Copy-RequiredFile -Source $payloads.Database -Destination (Join-Path $arm64StageRoot "ime.sqlite3")
 
 $stagedBinaries = @(
     (Join-Path $x64StageRoot "x64\Jyutping.dll"),
-    (Join-Path $x64StageRoot "x64\uninstall.exe"),
     (Join-Path $x64StageRoot "x86\Jyutping.dll"),
-    (Join-Path $arm64StageRoot "Jyutping.dll"),
-    (Join-Path $arm64StageRoot "uninstall.exe")
+    (Join-Path $arm64StageRoot "Jyutping.dll")
 )
 Invoke-SignTool -Paths $stagedBinaries
 

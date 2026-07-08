@@ -11,7 +11,6 @@ ArchitecturesInstallIn64BitMode=arm64
 
 [Files]
 Source: "{#StageRoot}\Jyutping.dll"; DestDir: "{autopf64}\Jyutping"; DestName: "Jyutping.dll"; Flags: ignoreversion restartreplace
-Source: "{#StageRoot}\uninstall.exe"; DestDir: "{autopf64}\Jyutping"; DestName: "uninstall.exe"; Flags: ignoreversion restartreplace
 Source: "{#StageRoot}\ime.sqlite3"; DestDir: "{autopf64}\Jyutping"; DestName: "ime.sqlite3"; Flags: ignoreversion
 
 [UninstallDelete]
