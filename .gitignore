@@ -494,3 +494,7 @@ $RECYCLE.BIN/
 ### Databases ###
 /Jyutping/Resources/*.sqlite3
 
+### Installer payloads ###
+/installer/output/
+/installer/stage/*
+!/installer/stage/.gitkeep
