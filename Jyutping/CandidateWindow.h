@@ -65,7 +65,7 @@ public:
 private:
     void _HandleMouseMsg(_In_ UINT mouseMsg, _In_ POINT point);
     void _DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT *prc);
-    void _DrawBorder(_In_ HWND wndHandle, _In_ int cx);
+    void _DrawBorder(_In_ HDC dcHandle, _In_ RECT *prc, _In_ int cx);
     HRESULT _GetPageBounds(_In_ UINT page, _Out_ UINT *pStart, _Out_ UINT *pEnd);
     BOOL _SetSelectionOffset(_In_ int offSet);
     BOOL _AdjustPageIndexForSelection();

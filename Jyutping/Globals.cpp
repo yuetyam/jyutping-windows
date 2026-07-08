@@ -612,7 +612,7 @@ ThemeMode GetSystemTheme()
 
 COLORREF GetCandidateWindowBorderColor()
 {
-    return GetSystemTheme() == DARK_MODE ? RGB(0x60, 0x60, 0x60) : RGB(0x44, 0x44, 0x44);
+    return GetHighlightedBackColor();
 }
 
 COLORREF GetNumberLabelColor()

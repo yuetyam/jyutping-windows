@@ -8,6 +8,7 @@
 
 constexpr auto limitedMaxSpace = 2000.0f;
 constexpr D2D1_DRAW_TEXT_OPTIONS textDrawOptions = D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT;
+constexpr DWORD windows11MinimumBuildNumber = 22000;
 constexpr BYTE candidateWindowAcrylicAlpha = 0xB8;
 constexpr FLOAT candidateWindowClearAlpha = 0.0f;
 
@@ -27,6 +28,39 @@ static D2D1_COLOR_F ColorRefToD2DColor(_In_ COLORREF color, _In_ FLOAT alpha = 1
         GetBValue(color) / 255.0f,
         alpha
     );
+}
+
+static BOOL IsWindows11OrGreater()
+{
+    static const BOOL isWindows11OrGreater = []() -> BOOL
+    {
+        typedef LONG(WINAPI* RtlGetVersionFunc)(_Out_ PRTL_OSVERSIONINFOW);
+
+        HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+        if (ntdll == nullptr)
+        {
+            return FALSE;
+        }
+
+        RtlGetVersionFunc rtlGetVersion = reinterpret_cast<RtlGetVersionFunc>(GetProcAddress(ntdll, "RtlGetVersion"));
+        if (rtlGetVersion == nullptr)
+        {
+            return FALSE;
+        }
+
+        RTL_OSVERSIONINFOW versionInfo = {};
+        versionInfo.dwOSVersionInfoSize = sizeof(versionInfo);
+        if (rtlGetVersion(&versionInfo) != 0)
+        {
+            return FALSE;
+        }
+
+        return versionInfo.dwMajorVersion > 10 ||
+            (versionInfo.dwMajorVersion == 10 && versionInfo.dwBuildNumber >= windows11MinimumBuildNumber);
+    }();
+
+    // return FALSE; // For testing window border on Windows 11
+    return isWindows11OrGreater;
 }
 
 static HRESULT CreateRoleTextFormat(
@@ -132,6 +166,24 @@ static void ApplyCandidateWindowAccent(_In_ HWND wndHandle)
     setWindowCompositionAttribute(wndHandle, &data);
 }
 
+static void ApplyCandidateWindowCornerPreference(_In_ HWND wndHandle)
+{
+    // Enable rounded corners where DWM supports the Windows 11 corner preference.
+#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
+#define DWMWA_WINDOW_CORNER_PREFERENCE 33
+#endif
+    enum DWM_WINDOW_CORNER_PREFERENCE
+    {
+        DWMWCP_DEFAULT = 0,
+        DWMWCP_DONOTROUND = 1,
+        DWMWCP_ROUND = 2,
+        DWMWCP_ROUNDSMALL = 3
+    };
+
+    DWM_WINDOW_CORNER_PREFERENCE preference = DWMWCP_ROUND;
+    DwmSetWindowAttribute(wndHandle, DWMWA_WINDOW_CORNER_PREFERENCE, &preference, sizeof(preference));
+}
+
 
 //+---------------------------------------------------------------------------
 //
@@ -192,19 +244,10 @@ BOOL CCandidateWindow::_Create(ATOM atom, _In_opt_ HWND parentWndHandle)
 
     ApplyCandidateWindowAccent(_wndHandle);
 
-    // Enable Rounded Corners (Win11+)
-#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
-#define DWMWA_WINDOW_CORNER_PREFERENCE 33
-#endif
-    enum DWM_WINDOW_CORNER_PREFERENCE
+    if (IsWindows11OrGreater())
     {
-        DWMWCP_DEFAULT = 0,
-        DWMWCP_DONOTROUND = 1,
-        DWMWCP_ROUND = 2,
-        DWMWCP_ROUNDSMALL = 3
-    };
-    DWM_WINDOW_CORNER_PREFERENCE preference = DWMWCP_ROUND;
-    DwmSetWindowAttribute(_wndHandle, DWMWA_WINDOW_CORNER_PREFERENCE, &preference, sizeof(preference));
+        ApplyCandidateWindowCornerPreference(_wndHandle);
+    }
 
     if (!_CreateBackGroundShadowWindow())
     {
@@ -643,7 +686,6 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
 
         dcHandle = BeginPaint(wndHandle, &ps);
         _OnPaint(dcHandle, &ps);
-        // _DrawBorder(wndHandle, CANDWND_BORDER_WIDTH*2);
         EndPaint(wndHandle, &ps);
     }
     return 0;
@@ -1097,6 +1139,11 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         }
     }
 
+    if (!IsWindows11OrGreater())
+    {
+        _DrawBorder(dcHandle, prc, CANDWND_BORDER_WIDTH);
+    }
+
     if (_pDirect2DRenderTarget)
     {
         _pDirect2DRenderTarget->EndDraw();
@@ -1108,29 +1155,63 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
 // _DrawBorder
 //
 //----------------------------------------------------------------------------
-void CCandidateWindow::_DrawBorder(_In_ HWND wndHandle, _In_ int cx)
+void CCandidateWindow::_DrawBorder(_In_ HDC dcHandle, _In_ RECT* prc, _In_ int cx)
 {
-    RECT rcWnd;
+    if (dcHandle == nullptr || prc == nullptr || cx <= 0)
+    {
+        return;
+    }
 
-    HDC dcHandle = GetWindowDC(wndHandle);
+    COLORREF borderColor = Global::GetCandidateWindowBorderColor();
+    if (_pDirect2DRenderTarget)
+    {
+        ComPtr<ID2D1SolidColorBrush> pBorderBrush;
+        _pDirect2DRenderTarget->CreateSolidColorBrush(ColorRefToD2DColor(borderColor), &pBorderBrush);
+        if (!pBorderBrush)
+        {
+            return;
+        }
 
-    GetWindowRect(wndHandle, &rcWnd);
-    // zero based
-    OffsetRect(&rcWnd, -rcWnd.left, -rcWnd.top);
+        FLOAT left = static_cast<FLOAT>(prc->left);
+        FLOAT top = static_cast<FLOAT>(prc->top);
+        FLOAT right = static_cast<FLOAT>(prc->right);
+        FLOAT bottom = static_cast<FLOAT>(prc->bottom);
+        FLOAT width = static_cast<FLOAT>(cx);
 
-    HPEN hPen = CreatePen(PS_DOT, cx, Global::GetCandidateWindowBorderColor());
-    HPEN hPenOld = (HPEN)SelectObject(dcHandle, hPen);
-    HBRUSH hBorderBrush = (HBRUSH)GetStockObject(NULL_BRUSH);
-    HBRUSH hBorderBrushOld = (HBRUSH)SelectObject(dcHandle, hBorderBrush);
+        _pDirect2DRenderTarget->FillRectangle(D2D1::RectF(left, top, right, top + width), pBorderBrush.Get());
+        _pDirect2DRenderTarget->FillRectangle(D2D1::RectF(left, bottom - width, right, bottom), pBorderBrush.Get());
+        _pDirect2DRenderTarget->FillRectangle(D2D1::RectF(left, top + width, left + width, bottom - width), pBorderBrush.Get());
+        _pDirect2DRenderTarget->FillRectangle(D2D1::RectF(right - width, top + width, right, bottom - width), pBorderBrush.Get());
+        return;
+    }
 
-    Rectangle(dcHandle, rcWnd.left, rcWnd.top, rcWnd.right, rcWnd.bottom);
+    HBRUSH hBrush = CreateSolidBrush(borderColor);
+    if (hBrush == nullptr)
+    {
+        return;
+    }
 
-    SelectObject(dcHandle, hPenOld);
-    SelectObject(dcHandle, hBorderBrushOld);
-    DeleteObject(hPen);
-    DeleteObject(hBorderBrush);
-    ReleaseDC(wndHandle, dcHandle);
+    RECT rcBorder = *prc;
+    rcBorder.bottom = prc->top + cx;
+    FillRect(dcHandle, &rcBorder, hBrush);
 
+    rcBorder = *prc;
+    rcBorder.top = prc->bottom - cx;
+    FillRect(dcHandle, &rcBorder, hBrush);
+
+    rcBorder = *prc;
+    rcBorder.top += cx;
+    rcBorder.right = prc->left + cx;
+    rcBorder.bottom -= cx;
+    FillRect(dcHandle, &rcBorder, hBrush);
+
+    rcBorder = *prc;
+    rcBorder.top += cx;
+    rcBorder.left = prc->right - cx;
+    rcBorder.bottom -= cx;
+    FillRect(dcHandle, &rcBorder, hBrush);
+
+    DeleteObject(hBrush);
 }
 
 //+---------------------------------------------------------------------------
