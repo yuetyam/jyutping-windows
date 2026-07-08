@@ -16,6 +16,11 @@ bool StartsWith(std::wstring_view text, std::wstring_view prefix)
     return text.size() >= prefix.size() && text.substr(0, prefix.size()) == prefix;
 }
 
+bool EndsWith(std::wstring_view text, std::wstring_view suffix)
+{
+    return text.size() >= suffix.size() && text.substr(text.size() - suffix.size()) == suffix;
+}
+
 bool Equal(const std::vector<std::wstring>& left, const std::vector<std::wstring>& right)
 {
     return left.size() == right.size() && std::equal(left.begin(), left.end(), right.begin());
@@ -361,6 +366,48 @@ bool ContainsToneInputKey(const std::vector<VirtualInputKey>& keys)
     }) != keys.end();
 }
 
+std::wstring NonSyllableInputText(const std::vector<VirtualInputKey>& keys)
+{
+    std::wstring result;
+    for (const VirtualInputKey& key : keys)
+    {
+        if (!key.IsSyllableLetter())
+        {
+            result.append(key.text);
+        }
+    }
+    return result;
+}
+
+std::wstring LeadingSyllableAndToneInputText(const std::vector<VirtualInputKey>& keys)
+{
+    std::vector<VirtualInputKey> leadingKeys;
+    for (const VirtualInputKey& key : keys)
+    {
+        if (key.IsSyllableLetter())
+        {
+            leadingKeys.push_back(key);
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    for (size_t index = leadingKeys.size(); index < keys.size(); index++)
+    {
+        if (!keys[index].IsSyllableLetter())
+        {
+            leadingKeys.push_back(keys[index]);
+        }
+        else
+        {
+            break;
+        }
+    }
+    return Ime::TextFromKeys(leadingKeys);
+}
+
 const Ime::Lexicon* FindWithInputCount(const std::vector<Ime::Lexicon>& items, size_t inputCount)
 {
     auto found = std::find_if(items.begin(), items.end(), [inputCount](const Ime::Lexicon& item)
@@ -608,7 +655,17 @@ std::vector<Lexicon> InputEngine::Dispatch(const std::vector<VirtualInputKey>& k
         lexicons = Search(syllableKeys, segmentation, std::nullopt);
     }
 
-    if (ContainsApostrophe(keys) && !ContainsToneInputKey(keys))
+    bool hasApostrophe = ContainsApostrophe(keys);
+    bool hasTone = ContainsToneInputKey(keys);
+    if (hasApostrophe && hasTone)
+    {
+        return FilterApostropheAndToneSuggestions(keys, lexicons);
+    }
+    if (hasTone)
+    {
+        return FilterToneSuggestions(keys, lexicons);
+    }
+    if (hasApostrophe)
     {
         return FilterApostropheSuggestions(keys, lexicons);
     }
@@ -887,6 +944,114 @@ std::vector<Lexicon> InputEngine::ProcessSlices(const std::vector<VirtualInputKe
     }
 
     return Sorted(Distinct(result));
+}
+
+std::vector<Lexicon> InputEngine::FilterToneSuggestions(const std::vector<VirtualInputKey>& keys, const std::vector<Lexicon>& lexicons) const
+{
+    std::wstring inputText = TextFromKeys(keys);
+    std::wstring toneInput = NonSyllableInputText(keys);
+    std::wstring text = ToneConverted(inputText);
+    std::wstring textTones = ToneDigitOnly(text);
+
+    std::vector<Lexicon> qualified;
+    for (const Lexicon& item : lexicons)
+    {
+        std::wstring syllableText = StrippedSpaces(item.romanization);
+        if (StartsWith(syllableText, text))
+        {
+            qualified.push_back(item.ReplacedInput(inputText));
+            continue;
+        }
+
+        std::wstring tones = ToneDigitOnly(syllableText);
+        if (textTones.size() == 1 && tones.size() == 1)
+        {
+            bool isCorrectPosition = item.inputCount < text.size() && IsCantoneseToneDigit(text[item.inputCount]);
+            if (textTones == tones && isCorrectPosition)
+            {
+                qualified.push_back(item.ReplacedInput(item.input + toneInput));
+            }
+            continue;
+        }
+
+        if (textTones.size() == 1 && tones.size() == 2)
+        {
+            bool isToneLast = !text.empty() && IsCantoneseToneDigit(text.back());
+            if (isToneLast)
+            {
+                bool hasMatchingTone = EndsWith(tones, textTones);
+                bool isCorrectPosition = item.inputCount < text.size() && IsCantoneseToneDigit(text[item.inputCount]);
+                if (hasMatchingTone && isCorrectPosition)
+                {
+                    qualified.push_back(item.ReplacedInput(inputText));
+                }
+            }
+            else if (StartsWith(tones, textTones))
+            {
+                qualified.push_back(item.ReplacedInput(item.input + toneInput));
+            }
+            continue;
+        }
+
+        if (textTones.size() == 2 && tones.size() == 1)
+        {
+            bool isCorrectPosition = item.inputCount < text.size() && IsCantoneseToneDigit(text[item.inputCount]);
+            if (StartsWith(textTones, tones) && isCorrectPosition)
+            {
+                qualified.push_back(item.ReplacedInput(LeadingSyllableAndToneInputText(keys)));
+            }
+            continue;
+        }
+
+        if (textTones.size() == 2 && tones.size() == 2)
+        {
+            if (textTones != tones)
+            {
+                continue;
+            }
+
+            bool isToneLast = !text.empty() && IsCantoneseToneDigit(text.back());
+            if (isToneLast)
+            {
+                if (item.inputCount == text.size() - 2)
+                {
+                    qualified.push_back(item.ReplacedInput(inputText));
+                }
+            }
+            else
+            {
+                size_t tailStart = item.inputCount + 1;
+                bool isCorrectPosition = tailStart < text.size() && text[tailStart] == textTones.back();
+                if (isCorrectPosition)
+                {
+                    qualified.push_back(item.ReplacedInput(item.input + toneInput));
+                }
+            }
+            continue;
+        }
+
+        if (StartsWith(inputText, syllableText))
+        {
+            qualified.push_back(item.ReplacedInput(syllableText));
+        }
+    }
+    return SortedByInputCount(qualified);
+}
+
+std::vector<Lexicon> InputEngine::FilterApostropheAndToneSuggestions(const std::vector<VirtualInputKey>& keys, const std::vector<Lexicon>& lexicons) const
+{
+    std::wstring inputText = TextFromKeys(keys);
+    std::wstring text = ToneConverted(inputText);
+
+    std::vector<Lexicon> qualified;
+    for (const Lexicon& item : lexicons)
+    {
+        if (StartsWith(text, item.romanization))
+        {
+            qualified.push_back(item.ReplacedInput(inputText));
+        }
+    }
+    return qualified;
 }
 
 std::vector<Lexicon> InputEngine::FilterApostropheSuggestions(const std::vector<VirtualInputKey>& keys, const std::vector<Lexicon>& lexicons) const

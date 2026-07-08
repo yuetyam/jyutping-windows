@@ -54,6 +54,8 @@ private:
     std::vector<Lexicon> Query(size_t inputLength, const Segmentation& segmentation, std::optional<int> limit) const;
     std::vector<Lexicon> Perform(const Scheme& scheme, std::optional<int> limit) const;
     std::vector<Lexicon> ProcessSlices(const std::vector<VirtualInputKey>& keys, const std::wstring& text, std::optional<int> limit) const;
+    std::vector<Lexicon> FilterToneSuggestions(const std::vector<VirtualInputKey>& keys, const std::vector<Lexicon>& lexicons) const;
+    std::vector<Lexicon> FilterApostropheAndToneSuggestions(const std::vector<VirtualInputKey>& keys, const std::vector<Lexicon>& lexicons) const;
     std::vector<Lexicon> FilterApostropheSuggestions(const std::vector<VirtualInputKey>& keys, const std::vector<Lexicon>& lexicons) const;
 
     std::vector<Lexicon> AnchorsMatch(const std::vector<VirtualInputKey>& keys, std::optional<std::wstring> input = std::nullopt, std::optional<int> limit = std::nullopt) const;

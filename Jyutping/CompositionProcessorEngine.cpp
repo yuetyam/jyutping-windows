@@ -51,6 +51,14 @@ BOOL IsStrokeMethod(Ime::ReverseLookupMethod method)
     return method == Ime::ReverseLookupMethod::Stroke;
 }
 
+BOOL ContainsToneInputKey(const std::vector<VirtualInputKey>& keys)
+{
+    return std::find_if(keys.begin(), keys.end(), [](const VirtualInputKey& key)
+    {
+        return key.IsToneInputKey();
+    }) != keys.end();
+}
+
 BOOL IsNoModifier()
 {
     return Global::CheckModifiers(Global::ModifiersValue, 0);
@@ -573,7 +581,18 @@ void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStri
                 matchedInputCount = (std::min)(matchedInputCount, inputLength - 1) + 1;
             }
 
-            if (matchedInputCount < inputLength)
+            std::vector<VirtualInputKey> inputKeys = CurrentInputKeys();
+            if (!isReverseLookupBuffer && ContainsToneInputKey(inputKeys))
+            {
+                std::vector<Ime::BasicInputEvent> inputEvents;
+                inputEvents.reserve(inputKeys.size());
+                for (const VirtualInputKey& inputKey : inputKeys)
+                {
+                    inputEvents.push_back(Ime::BasicInputEvent(inputKey, Ime::KeyboardCase::Lowercased));
+                }
+                _readingStringStorage = Ime::PreviewMarkNormalized(inputEvents);
+            }
+            else if (matchedInputCount < inputLength)
             {
                 _readingStringStorage = currentInputText;
             }
