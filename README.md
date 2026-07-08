@@ -34,6 +34,50 @@ See also:
 ## Download and Install
 Please visit our website: https://jyutping.app
 
+## Keyboard Shortcuts
+
+### Input and candidates
+
+| Shortcut | Description |
+| --- | --- |
+| `Space` | Choose the curent highlighted candidate. |
+| `Enter` | Commit the raw text currently being typed. |
+| `1`-`7` | Choose a candidate from the current page. |
+| `Up` / `Down` | Move the candidate selection up or down. |
+| `Tab` / `Shift+Tab` | Move the candidate selection down or up. |
+| `Left` / `Right` | Move to the previous or next candidate page. |
+| `Page Up` / `Page Down` | Move to the previous or next candidate page. |
+| `-` / `[` | Move to the previous candidate page. |
+| `=` / `]` | Move to the next candidate page. |
+| `Home` / `End` | Move to the first or last candidate on the page. |
+| `Backspace` | Delete the previous composing character. |
+| `Esc` | Cancel the current composition. |
+| `Ctrl+Shift+Backspace` | Forget the curent highlighted candidate. |
+
+### Modes and output
+
+| Shortcut | Description |
+| --- | --- |
+| `Shift` | Toggle Cantonese mode and ABC mode. |
+| `Shift+Space` | Toggle half-width and full-width character form. |
+| `Ctrl+.` | Toggle Cantonese and English punctuation form. |
+| `Ctrl+Shift+1` | Use traditional characters. |
+| `Ctrl+Shift+2` | Use Hong Kong traditional characters. |
+| `Ctrl+Shift+3` | Use Taiwan traditional characters. |
+| `Ctrl+Shift+4` | Use simplified characters. |
+
+### Reverse lookup
+
+Type one of these prefix keys first, then type the lookup code to find
+Cantonese Jyutping candidates.
+
+| Prefix | Lookup method |
+| --- | --- |
+| `r` | Mandarin Pinyin reverse lookup. |
+| `v` | Cangjie/Quick reverse lookup. |
+| `x` | Stroke reverse lookup. |
+| `q` | Decomposition(拆字) reverse lookup. |
+
 ## Build
 
 Requirements:
