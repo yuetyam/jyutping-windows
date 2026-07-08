@@ -31,61 +31,16 @@ See also:
         <img src="images/screenshot.png" alt="Screenshot of Jyutping for Windows" width="316"/>
 </a>
 
-## Download and Install
+## Download and install
 Please visit our website: https://jyutping.app
 
-## Keyboard Shortcuts
-
-### Input and candidates
-
-| Shortcut | Description |
-| --- | --- |
-| `Space` | Choose the curent highlighted candidate. |
-| `Enter` | Commit the raw text currently being typed. |
-| `1`-`7` | Choose a candidate from the current page. |
-| `Up` / `Down` | Move the candidate selection up or down. |
-| `Tab` / `Shift+Tab` | Move the candidate selection down or up. |
-| `Left` / `Right` | Move to the previous or next candidate page. |
-| `Page Up` / `Page Down` | Move to the previous or next candidate page. |
-| `-` / `[` | Move to the previous candidate page. |
-| `=` / `]` | Move to the next candidate page. |
-| `Home` / `End` | Move to the first or last candidate on the page. |
-| `Backspace` | Delete the previous composing character. |
-| `Esc` | Cancel the current composition. |
-| `Ctrl+Shift+Backspace` | Forget the curent highlighted candidate. |
-
-### Modes and output
-
-| Shortcut | Description |
-| --- | --- |
-| `Shift` | Toggle Cantonese mode and ABC mode. |
-| `Shift+Space` | Toggle half-width and full-width character form. |
-| `Ctrl+.` | Toggle Cantonese and English punctuation form. |
-| `Ctrl+Shift+1` | Use traditional characters. |
-| `Ctrl+Shift+2` | Use Hong Kong traditional characters. |
-| `Ctrl+Shift+3` | Use Taiwan traditional characters. |
-| `Ctrl+Shift+4` | Use simplified characters. |
-
-### Reverse lookup
-
-Type one of these prefix keys first, then type the lookup code to find
-Cantonese Jyutping candidates.
-
-| Prefix | Lookup method |
-| --- | --- |
-| `r` | Mandarin Pinyin reverse lookup. |
-| `v` | Cangjie/Quick reverse lookup. |
-| `x` | Stroke reverse lookup. |
-| `q` | Decomposition(拆字) reverse lookup. |
-
-## Build
+## How to build
 
 Requirements:
 
-- Windows 11 or later for development
-- Visual Studio 2026 with the C++ desktop toolchain
-- Windows 10 SDK or later
-- `Jyutping\Resources\ime.sqlite3`
+- Windows 11
+- Visual Studio 2026 with the C++ desktop toolchain and the Windows 11 SDK
+- `Jyutping\Resources\ime.sqlite3` (You can download from [here](https://github.com/yuetyam/jyutping-windows/releases/download/0.1.0/ime.sqlite3) )
 
 Build from the repository root:
 
@@ -100,10 +55,9 @@ msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=ARM64EC
 msbuild Jyutping.sln /p:Configuration=Release /p:Platform=ARM64EC
 ```
 
-The build copies `Jyutping\Resources\ime.sqlite3` beside each built
-`Jyutping.dll`.
+The build copies `Jyutping\Resources\ime.sqlite3` beside each built `Jyutping.dll`.
 
-## Package
+## Packaging
 
 Requirements:
 
@@ -126,16 +80,11 @@ installer\output\jyutping-v0.1.0-arm64.exe
 installer\output\SHA256SUMS.txt
 ```
 
-Use `-AppVersion` to package a different version:
+The x64 installer contains x64 and x86 DLL payloads.
 
-```powershell
-pwsh -File installer\Build-Installers.ps1 -AppVersion 0.1.1
-```
+The ARM64 installer uses the `ARM64EC\Release\Jyutping.dll` ARM64X root DLL and does not install an x86 fallback.
 
-The x64 installer contains x64 and x86 DLL payloads. The ARM64 installer uses
-the `ARM64EC\Release\Jyutping.dll` ARM64X root DLL and does not install an x86
-fallback. Uninstall is handled by Inno Setup's generated `unins000.exe` and the
-Windows Apps & Features uninstall entry.
+Uninstall is handled by Inno Setup's generated `unins000.exe` and the Windows Apps & Features uninstall entry.
 
 ## Credits
 - [Rime-Cantonese](https://github.com/rime/rime-cantonese) (Cantonese Lexicon)
