@@ -20,7 +20,7 @@
 #define CANDIDATE_FONT_SIZE      16
 #define NUMBER_LABEL_FONT_NAMES  L"Monaspace Neon", L"JetBrains Mono", L"Consolas"
 #define NUMBER_LABEL_FONT_SIZE   13
-#define COMMENT_FONT_NAMES       L"Monaspace Neon", L"JetBrains Mono", L"Consolas", L"Shanggu Sans", L"Microsoft JhengHei UI", L"Microsoft YaHei UI"
+#define COMMENT_FONT_NAMES       L"Monaspace Neon", L"JetBrains Mono", L"Inter", L"Segoe UI"
 #define COMMENT_FONT_SIZE        13
 
 //---------------------------------------------------------------------
