@@ -5,7 +5,7 @@ This project is a Windows Input Method Editor for Cantonese Jyutping romanizatio
 
 ## Build
 - Development platform: Windows 11 or later, x64 and ARM64
-- Target platform: Windows 10 or later, Win32, x64, and ARM64
+- Target platform: Windows 10 or later, Win32, x64, ARM64, and ARM64EC/ARM64X
 - Language: C++23 and C17
 - Build system: Visual Studio 2026 / MSBuild
 
@@ -18,49 +18,56 @@ msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=Win32
 msbuild Jyutping.sln /p:Configuration=Release /p:Platform=Win32
 msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=ARM64
 msbuild Jyutping.sln /p:Configuration=Release /p:Platform=ARM64
+msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=ARM64EC
+msbuild Jyutping.sln /p:Configuration=Release /p:Platform=ARM64EC
 ```
 
 The build links against `d2d1.lib`, `dwrite.lib`, `shlwapi.lib`, and `winsqlite3.lib`, and copies `Jyutping\Resources\ime.sqlite3` into the target output after build.
 
-## Project Architecture
-The solution is `Jyutping.sln`; the native project is `Jyutping\Jyutping.vcxproj`. Most source files are under `Jyutping\`.
+## Packaging
+- Packaging requires Inno Setup 7. `installer\Build-Installers.ps1` searches `Program Files\Inno Setup 7\ISCC.exe` first, then Inno Setup 6, then `ISCC.exe` on `PATH`.
+- Build both installer packages from the repository root:
 
-- COM and TSF registration: `DllMain.cpp`, `Server.cpp`, and `Register.cpp` initialize process-wide state, expose the COM class factory, implement `DllRegisterServer` and `DllUnregisterServer`, register the TSF language profile, and declare supported TSF categories.
-- Main text service: `CJyutping` in `Jyutping.h` and `Jyutping.cpp` is the central TSF object. It implements activation, deactivation, key handling, thread/document sinks, text edit sinks, composition callbacks, display attributes, language profile notifications, thread focus handling, function provider support, and touch keyboard layout preference.
-- TSF sink implementations: `ThreadMgrEventSink.cpp`, `TextEditSink.cpp`, `KeyEventSink.cpp`, `ActiveLanguageProfileNotifySink.cpp`, `ThreadFocusSink.cpp`, and `FunctionProviderSink.cpp` split the `CJyutping` interface implementations by responsibility.
-- Composition flow: `KeyEventSink.cpp` decides whether a key should be eaten, then `_InvokeKeyHandler` schedules `CKeyHandlerEditSession`. `KeyHandler.cpp`, `KeyHandlerEditSession.cpp`, `Composition.cpp`, `StartComposition.cpp`, and `EndComposition.cpp` update TSF ranges, composition text, display attributes, and final committed text.
-- Input engine: `CompositionProcessorEngine.*` owns keystroke tables, preserved keys, punctuation and full-width conversion, candidate index ranges, language bar state, compartments, the raw input buffer, and reverse-lookup buffer handling. It delegates Jyutping suggestions and reverse lookup to `Ime::InputEngine`.
-- IME lookup: `InputEngine.*`, `InputEngineReverseLookup.cpp`, `ImeDatabase.*`, `ImeTypes.*`, `Segmenter.*`, `PinyinSegmenter.*`, and `VirtualInputKey.*` convert keystrokes into input keys, segment Jyutping and Pinyin syllables, query the SQLite lexicon database, and return ranked `Ime::Lexicon` suggestions.
-- Reverse lookup: `InputEnginePinyin.cpp`, `InputEngineCangjie.cpp`, `InputEngineStroke.cpp`, and `InputEngineStructure.cpp` implement the ported reverse lookup methods. The first input key selects the method (`r` = Pinyin, `v` = Cangjie, `x` = Stroke, `q` = Structure); `CompositionProcessorEngine.*` keeps that selector in the user-visible buffer but passes only the remaining query keys to `Ime::InputEngine::ReverseLookup`.
-- Candidate UI: `CandidateListUIPresenter.*` bridges TSF candidate UI interfaces with the custom Win32 candidate window. `CandidateWindow.*`, `BaseWindow.*`, `ShadowWindow.*`, `ScrollBarWindow.*`, and `ButtonWindow.*` implement the visible UI using Win32, DirectWrite, and Direct2D.
-- Candidate positioning: `TfTextLayoutSink.*` and `GetTextExtentEditSession.*` track composition text layout and move the candidate window near the active text range.
-- Language bar, compartments, and display attributes: `LanguageBar.*`, `Compartment.*`, `DisplayAttribute*.cpp`, `DisplayAttributeInfo.*`, and `EnumDisplayAttributeInfo.*` manage TSF UI state, mode toggles, and visual composition attributes.
-- Search integration and TSF candidate wrappers: `SearchCandidateProvider.*`, `TipCandidateList.*`, `TipCandidateString.*`, and `EnumTfCandidates.*` expose suggestions through TSF function provider and candidate list interfaces.
-- Shared utilities and global data: `Globals.*`, `Define.h`, `JyutpingBaseStructure.*`, `JyutpingStructureArray.h`, `RegKey.*`, and `Logger.*` provide GUIDs, global resources, small containers, registry helpers, theme colors, punctuation tables, and logging.
-
-The main runtime path is:
-
-```text
-TSF key event
-  -> CJyutping::_IsKeyEaten / _InvokeKeyHandler
-  -> CKeyHandlerEditSession
-  -> CJyutping composition handlers
-  -> CCompositionProcessorEngine
-  -> Ime::InputEngine / ImeDatabase / Segmenter / PinyinSegmenter
-  -> CCandidateListUIPresenter / CCandidateWindow
-  -> selected candidate committed back through TSF ranges
+```powershell
+pwsh -File installer\Build-Installers.ps1
 ```
 
-Reverse lookup follows the same TSF composition and candidate UI path, but `CCompositionProcessorEngine` recognizes the leading method selector and calls `Ime::InputEngine::ReverseLookup` instead of `Suggest`. Reverse lookup candidates display the matched character or word as candidate text and the Cantonese romanization as the comment.
+- The script builds `Release|x64`, `Release|Win32`, and `Release|ARM64EC`, stages payloads under `installer\stage`, compiles both Inno Setup scripts, and writes artifacts to `installer\output`.
+- Output filenames are:
+
+```text
+installer\output\jyutping-v0.1.0-x64.exe
+installer\output\jyutping-v0.1.0-arm64.exe
+installer\output\SHA256SUMS.txt
+```
+
+- Use `-AppVersion <version>` to change the output version and filenames. The script converts versions like `0.1.0` to a four-part installer file version like `0.1.0.0`.
+- Use `-SkipBuild` only when the required Release payloads already exist.
+- Use `-SignToolCommand "<command>"` to sign staged DLLs before packaging and final installer EXEs after packaging. The script appends each file path to the command.
+- x64 installer payloads:
+
+```text
+installer\stage\x64\x64\Jyutping.dll
+installer\stage\x64\x86\Jyutping.dll
+installer\stage\x64\ime.sqlite3
+```
+
+- ARM64 installer payloads:
+
+```text
+installer\stage\ARM64\Jyutping.dll
+installer\stage\ARM64\ime.sqlite3
+```
+
+- The ARM64 installer uses `ARM64EC\Release\Jyutping.dll` as the ARM64X root DLL. Do not add an x86 fallback to the ARM64 installer.
+- The installers use Inno Setup's generated `unins000.exe` and Windows Apps & Features uninstall entry. Do not add a dedicated `uninstall.exe` launcher unless the roadmap is explicitly changed.
 
 ## Debugging
-Runtime logging is written to:
+Runtime logging is implemented in `Jyutping\Logger.cpp`.
 
-```text
-%LOCALAPPDATA%\Jyutping\Logs\Jyutping.log
-```
-
-If that path is unavailable, logging falls back to the temp path under `Jyutping\Logs`.
+- `Global::Log` writes each line to `OutputDebugStringW`.
+- `Global::LogFilePath()` currently writes the file log under the temp directory, normally `%TEMP%\Jyutping\Logs\Jyutping.log`.
+- `Global::UserDataDirectory()` is separate from logging; it prefers `%LOCALAPPDATA%\Jyutping` and falls back to the temp directory.
 
 ## Coding
 Check the root `.editorconfig` for code style and formatting.
@@ -75,5 +82,4 @@ Check the root `.editorconfig` for code style and formatting.
 - When adding/deleting source files, update both `Jyutping\Jyutping.vcxproj` and `Jyutping\Jyutping.vcxproj.filters`.
 
 ## Porting from the Swift/macOS version of code
-- The reverse lookup methods from the macOS/Swift code have been ported into the Windows C++ input engine: Pinyin, Cangjie, Stroke, and Structure are implemented and wired into composition/candidate handling.
 - The Windows version should remain dedicated to the 26-key QWERTY desktop input; 9-key and other layouts are excluded.
