@@ -14,8 +14,11 @@ constexpr UINT MenuIdCharacterVariantTraditional = 2;
 constexpr UINT MenuIdCharacterVariantHongKong = 3;
 constexpr UINT MenuIdCharacterVariantTaiwan = 4;
 constexpr UINT MenuIdCharacterVariantSimplified = 5;
-constexpr UINT MenuIdMoreSettings = 6;
-constexpr UINT MenuIdSeparator = 7;
+constexpr UINT MenuIdCandidatePageSize = 6;
+constexpr UINT MenuIdCandidatePageSizeFirst = 7;
+constexpr UINT MenuIdCandidatePageSizeLast = 16;
+constexpr UINT MenuIdMoreSettings = 17;
+constexpr UINT MenuIdSeparator = 18;
 
 std::wstring LoadMenuString(UINT resourceId, PCWSTR fallback)
 {
@@ -53,6 +56,16 @@ UINT MenuIdForCharacterVariant(CharacterVariant variant)
     default:
         return MenuIdCharacterVariantTraditional;
     }
+}
+
+UINT MenuIdForCandidatePageSize(DWORD pageSize)
+{
+    return MenuIdCandidatePageSizeFirst + pageSize - 1;
+}
+
+DWORD CandidatePageSizeForMenuId(UINT id)
+{
+    return id - MenuIdCandidatePageSizeFirst + 1;
 }
 
 BOOL AppendPopupMenuItem(_In_ HMENU menuHandle, UINT id, UINT flags, UINT resourceId, PCWSTR fallback)
@@ -411,8 +424,13 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
 
     HMENU menuHandle = CreatePopupMenu();
     HMENU characterVariantMenuHandle = CreatePopupMenu();
-    if (menuHandle == nullptr || characterVariantMenuHandle == nullptr)
+    HMENU candidatePageSizeMenuHandle = CreatePopupMenu();
+    if (menuHandle == nullptr || characterVariantMenuHandle == nullptr || candidatePageSizeMenuHandle == nullptr)
     {
+        if (candidatePageSizeMenuHandle != nullptr)
+        {
+            DestroyMenu(candidatePageSizeMenuHandle);
+        }
         if (characterVariantMenuHandle != nullptr)
         {
             DestroyMenu(characterVariantMenuHandle);
@@ -427,6 +445,7 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
     std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variant");
     if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(characterVariantMenuHandle), characterVariantText.c_str()))
     {
+        DestroyMenu(candidatePageSizeMenuHandle);
         DestroyMenu(characterVariantMenuHandle);
         DestroyMenu(menuHandle);
         return E_FAIL;
@@ -443,6 +462,28 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
         MenuIdCharacterVariantTraditional,
         MenuIdCharacterVariantSimplified,
         MenuIdForCharacterVariant(currentVariant),
+        MF_BYCOMMAND);
+
+    std::wstring candidatePageSizeText = LoadMenuString(IDS_MENU_CANDIDATE_PAGE_SIZE, L"Candidate Count per Page");
+    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(candidatePageSizeMenuHandle), candidatePageSizeText.c_str()))
+    {
+        DestroyMenu(candidatePageSizeMenuHandle);
+        DestroyMenu(menuHandle);
+        return E_FAIL;
+    }
+
+    for (DWORD pageSize = 1; pageSize <= 10; pageSize++)
+    {
+        WCHAR pageSizeText[3] = {};
+        StringCchPrintf(pageSizeText, ARRAYSIZE(pageSizeText), L"%lu", pageSize);
+        AppendMenuW(candidatePageSizeMenuHandle, MF_STRING, MenuIdForCandidatePageSize(pageSize), pageSizeText);
+    }
+
+    CheckMenuRadioItem(
+        candidatePageSizeMenuHandle,
+        MenuIdCandidatePageSizeFirst,
+        MenuIdCandidatePageSizeLast,
+        MenuIdForCandidatePageSize(_pSettingsMenuHandler->CurrentCandidatePageSize()),
         MF_BYCOMMAND);
 
     AppendMenuW(menuHandle, MF_SEPARATOR, MenuIdSeparator, nullptr);
@@ -596,6 +637,35 @@ STDAPI CLangBarItemButton::InitMenu(_In_ ITfMenu *pMenu)
         pCharacterVariantMenu->Release();
     }
 
+    std::wstring candidatePageSizeText = LoadMenuString(IDS_MENU_CANDIDATE_PAGE_SIZE, L"Candidate Count per Page");
+    ITfMenu* pCandidatePageSizeMenu = nullptr;
+    hr = AddMenuItem(
+        pMenu,
+        MenuIdCandidatePageSize,
+        TF_LBMENUF_SUBMENU,
+        candidatePageSizeText,
+        &pCandidatePageSizeMenu);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (pCandidatePageSizeMenu)
+    {
+        DWORD currentPageSize = _pSettingsMenuHandler->CurrentCandidatePageSize();
+        for (DWORD pageSize = 1; pageSize <= 10; pageSize++)
+        {
+            WCHAR pageSizeTextBuffer[3] = {};
+            StringCchPrintf(pageSizeTextBuffer, ARRAYSIZE(pageSizeTextBuffer), L"%lu", pageSize);
+            AddMenuItem(
+                pCandidatePageSizeMenu,
+                MenuIdForCandidatePageSize(pageSize),
+                currentPageSize == pageSize ? TF_LBMENUF_RADIOCHECKED : 0,
+                pageSizeTextBuffer);
+        }
+        pCandidatePageSizeMenu->Release();
+    }
+
     pMenu->AddMenuItem(MenuIdSeparator, TF_LBMENUF_SEPARATOR, nullptr, nullptr, nullptr, 0, nullptr);
     AddMenuItem(
         pMenu,
@@ -616,6 +686,12 @@ STDAPI CLangBarItemButton::OnMenuSelect(UINT wID)
 {
     if (_pSettingsMenuHandler == nullptr)
     {
+        return S_OK;
+    }
+
+    if (wID >= MenuIdCandidatePageSizeFirst && wID <= MenuIdCandidatePageSizeLast)
+    {
+        _pSettingsMenuHandler->SetCandidatePageSize(CandidatePageSizeForMenuId(wID));
         return S_OK;
     }
 

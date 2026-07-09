@@ -11,7 +11,11 @@ constexpr PCWSTR InputMethodModeValueName = L"InputMethodMode";
 constexpr PCWSTR CharacterFormValueName = L"CharacterForm";
 constexpr PCWSTR PunctuationFormValueName = L"PunctuationForm";
 constexpr PCWSTR CharacterVariantValueName = L"CharacterVariant";
+constexpr PCWSTR CandidatePageSizeValueName = L"CandidatePageSize";
 constexpr DWORD CurrentSettingsVersion = 1;
+constexpr DWORD DefaultCandidatePageSize = 7;
+constexpr DWORD MinimumCandidatePageSize = 1;
+constexpr DWORD MaximumCandidatePageSize = 10;
 
 bool IsValidInputMethodMode(DWORD value)
 {
@@ -37,6 +41,11 @@ bool IsValidCharacterVariant(DWORD value)
         value == static_cast<DWORD>(CharacterVariant::HongKong) ||
         value == static_cast<DWORD>(CharacterVariant::Taiwan) ||
         value == static_cast<DWORD>(CharacterVariant::Simplified);
+}
+
+bool IsValidCandidatePageSize(DWORD value)
+{
+    return value >= MinimumCandidatePageSize && value <= MaximumCandidatePageSize;
 }
 
 } // namespace
@@ -75,6 +84,12 @@ ImeSettings SettingsStore::Load() const
         settings.characterVariant = static_cast<CharacterVariant>(characterVariant);
     }
 
+    DWORD candidatePageSize = 0;
+    if (ReadDWORD(CandidatePageSizeValueName, candidatePageSize) && IsValidCandidatePageSize(candidatePageSize))
+    {
+        settings.candidatePageSize = candidatePageSize;
+    }
+
     return settings;
 }
 
@@ -106,7 +121,12 @@ bool SettingsStore::Save(const ImeSettings& settings) const
         return false;
     }
 
-    return key.SetDWORDValue(CharacterVariantValueName, static_cast<DWORD>(settings.characterVariant)) == ERROR_SUCCESS;
+    if (key.SetDWORDValue(CharacterVariantValueName, static_cast<DWORD>(settings.characterVariant)) != ERROR_SUCCESS)
+    {
+        return false;
+    }
+
+    return key.SetDWORDValue(CandidatePageSizeValueName, CandidatePageSizeFromRawValue(settings.candidatePageSize)) == ERROR_SUCCESS;
 }
 
 bool SettingsStore::SaveInputMethodMode(InputMethodMode mode) const
@@ -134,6 +154,13 @@ bool SettingsStore::SaveCharacterVariant(CharacterVariant variant) const
 {
     ImeSettings settings = Load();
     settings.characterVariant = variant;
+    return Save(settings);
+}
+
+bool SettingsStore::SaveCandidatePageSize(DWORD pageSize) const
+{
+    ImeSettings settings = Load();
+    settings.candidatePageSize = CandidatePageSizeFromRawValue(pageSize);
     return Save(settings);
 }
 
@@ -208,4 +235,9 @@ CharacterStandard CharacterStandardFromCharacterVariant(CharacterVariant variant
     default:
         return CharacterStandard::Preset;
     }
+}
+
+DWORD CandidatePageSizeFromRawValue(DWORD value)
+{
+    return IsValidCandidatePageSize(value) ? value : DefaultCandidatePageSize;
 }

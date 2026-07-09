@@ -72,6 +72,8 @@ public:
     void SetLanguageBarStatus(DWORD status, BOOL isSet);
     CharacterVariant CurrentCharacterVariant() const override;
     void SetCharacterVariant(CharacterVariant variant) override;
+    DWORD CurrentCandidatePageSize() const override;
+    void SetCandidatePageSize(DWORD pageSize) override;
 
     void ConversionModeCompartmentUpdated(_In_ ITfThreadMgr *pThreadMgr);
     void ApplyPersistedSettings(_In_ ITfThreadMgr *pThreadMgr);
@@ -108,7 +110,7 @@ private:
         DWORD dwOffDarkIconIndex,
         _Outptr_result_maybenull_ CLangBarItemButton **ppLangBarItemButton,
         BOOL isSecureMode);
-    void SetInitialCandidateListRange();
+    void SetCandidateListRange(DWORD pageSize);
 	void InitializeJyutpingCompartment(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
 
     class XPreservedKey;

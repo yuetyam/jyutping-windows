@@ -24,5 +24,6 @@ BEGIN
     IDS_MENU_CHARACTER_VARIANT_HONG_KONG   "Traditional, HK"
     IDS_MENU_CHARACTER_VARIANT_TAIWAN      "Traditional, TW"
     IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  "Simplified"
-    IDS_MENU_MORE_SETTINGS                 "More Settings…"
+    IDS_MENU_CANDIDATE_PAGE_SIZE           "Candidates per Page"
+    IDS_MENU_MORE_SETTINGS                 "Jyutping v0.2.0"
 END

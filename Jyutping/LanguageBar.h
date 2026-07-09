@@ -11,6 +11,8 @@ public:
     virtual ~ILangBarItemButtonSettingsMenuHandler() = default;
     virtual CharacterVariant CurrentCharacterVariant() const = 0;
     virtual void SetCharacterVariant(CharacterVariant variant) = 0;
+    virtual DWORD CurrentCandidatePageSize() const = 0;
+    virtual void SetCandidatePageSize(DWORD pageSize) = 0;
 };
 
 class CLangBarItemButton : public ITfLangBarItemButton,

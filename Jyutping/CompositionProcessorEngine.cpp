@@ -395,6 +395,7 @@ void CCompositionProcessorEngine::ApplyPersistedSettings(_In_ ITfThreadMgr *pThr
     }
 
     _settings = _settingsStore.Load();
+    SetCandidateListRange(_settings.candidatePageSize);
     _isApplyingSettings = TRUE;
     ApplySettingsToCompartments(pThreadMgr, _tfClientId);
     PrivateCompartmentsUpdated(pThreadMgr);
@@ -1153,7 +1154,7 @@ BOOL CCompositionProcessorEngine::IsCharacterVariantPreservedKey(REFGUID rguid) 
 
 void CCompositionProcessorEngine::SetupConfiguration()
 {
-    SetInitialCandidateListRange();
+    SetCandidateListRange(_settings.candidatePageSize);
 
     return;
 }
@@ -1450,6 +1451,29 @@ void CCompositionProcessorEngine::SetCharacterVariant(CharacterVariant variant)
 
     _settings.characterVariant = variant;
     _settingsStore.SaveCharacterVariant(variant);
+
+    if (_pTextService)
+    {
+        _pTextService->RefreshCandidateListAfterCharacterVariantChange();
+    }
+}
+
+DWORD CCompositionProcessorEngine::CurrentCandidatePageSize() const
+{
+    return _settings.candidatePageSize;
+}
+
+void CCompositionProcessorEngine::SetCandidatePageSize(DWORD pageSize)
+{
+    DWORD normalizedPageSize = CandidatePageSizeFromRawValue(pageSize);
+    if (_settings.candidatePageSize == normalizedPageSize)
+    {
+        return;
+    }
+
+    _settings.candidatePageSize = normalizedPageSize;
+    SetCandidateListRange(normalizedPageSize);
+    _settingsStore.SaveCandidatePageSize(normalizedPageSize);
 
     if (_pTextService)
     {
@@ -2042,9 +2066,11 @@ void CCompositionProcessorEngine::HideAllLanguageBarIcons()
     SetLanguageBarStatus(TF_LBI_STATUS_HIDDEN, TRUE);
 }
 
-void CCompositionProcessorEngine::SetInitialCandidateListRange()
+void CCompositionProcessorEngine::SetCandidateListRange(DWORD pageSize)
 {
-    for (DWORD i = 1; i <= 9; i++)
+    _candidateListIndexRange.Clear();
+
+    for (DWORD i = 1; i <= pageSize; i++)
     {
         DWORD* pNewIndexRange = nullptr;
 

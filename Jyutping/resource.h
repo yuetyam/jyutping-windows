@@ -40,6 +40,7 @@
 #define IDS_MENU_CHARACTER_VARIANT_TAIWAN      43
 #define IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  44
 #define IDS_MENU_MORE_SETTINGS                 45
+#define IDS_MENU_CANDIDATE_PAGE_SIZE           46
 #define IDR_VERSION                       1
 
 // Next default values for new objects

@@ -24,5 +24,6 @@ BEGIN
     IDS_MENU_CHARACTER_VARIANT_HONG_KONG   "傳統漢字·香港"
     IDS_MENU_CHARACTER_VARIANT_TAIWAN      "傳統漢字·臺灣"
     IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  "简化字"
-    IDS_MENU_MORE_SETTINGS                 "更多設定…"
+    IDS_MENU_CANDIDATE_PAGE_SIZE           "每䈎候選詞數目"
+    IDS_MENU_MORE_SETTINGS                 "Jyutping v0.2.0"
 END

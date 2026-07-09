@@ -37,6 +37,7 @@ struct ImeSettings
     CharacterForm characterForm = CharacterForm::HalfWidth;
     PunctuationForm punctuationForm = PunctuationForm::Cantonese;
     CharacterVariant characterVariant = CharacterVariant::Traditional;
+    DWORD candidatePageSize = 7;
 };
 
 class SettingsStore
@@ -48,6 +49,7 @@ public:
     bool SaveCharacterForm(CharacterForm form) const;
     bool SavePunctuationForm(PunctuationForm form) const;
     bool SaveCharacterVariant(CharacterVariant variant) const;
+    bool SaveCandidatePageSize(DWORD pageSize) const;
 
 private:
     bool ReadDWORD(_In_z_ PCWSTR valueName, _Out_ DWORD& value) const;
@@ -62,3 +64,4 @@ PunctuationForm PunctuationFormFromCantonesePunctuation(BOOL isCantonesePunctuat
 BOOL CantonesePunctuationFromPunctuationForm(PunctuationForm form);
 CharacterVariant CharacterVariantFromRawValue(DWORD value);
 CharacterStandard CharacterStandardFromCharacterVariant(CharacterVariant variant);
+DWORD CandidatePageSizeFromRawValue(DWORD value);

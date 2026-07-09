@@ -192,6 +192,10 @@ public:
     {
         return _CandidateListIndexRange.Append();
     }
+    inline void Clear()
+    {
+        _CandidateListIndexRange.Clear();
+    }
 
 private:
     CJyutpingArray<DWORD> _CandidateListIndexRange;
