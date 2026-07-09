@@ -419,20 +419,30 @@ STDAPI CJyutping::OnPreservedKey(ITfContext *pContext, REFGUID rguid, BOOL *pIsE
 
     if (*pIsEaten && isCharacterVariantPreservedKey && _pCandidateListUIPresenter)
     {
-        UINT selectedCandidateIndex = 0;
-        _pCandidateListUIPresenter->GetSelection(&selectedCandidateIndex);
-
-        CJyutpingArray<CCandidateListItem> candidateList;
-        pCompositionProcessorEngine->GetCandidateList(&candidateList);
-        if (candidateList.Count() > 0)
-        {
-            _pCandidateListUIPresenter->_ClearList();
-            _pCandidateListUIPresenter->_SetText(&candidateList);
-            _pCandidateListUIPresenter->_SetSelection(static_cast<int>(selectedCandidateIndex));
-        }
+        RefreshCandidateListAfterCharacterVariantChange();
     }
 
     return S_OK;
+}
+
+void CJyutping::RefreshCandidateListAfterCharacterVariantChange()
+{
+    if (!_pCandidateListUIPresenter || !_pCompositionProcessorEngine)
+    {
+        return;
+    }
+
+    UINT selectedCandidateIndex = 0;
+    _pCandidateListUIPresenter->GetSelection(&selectedCandidateIndex);
+
+    CJyutpingArray<CCandidateListItem> candidateList;
+    _pCompositionProcessorEngine->GetCandidateList(&candidateList);
+    if (candidateList.Count() > 0)
+    {
+        _pCandidateListUIPresenter->_ClearList();
+        _pCandidateListUIPresenter->_SetText(&candidateList);
+        _pCandidateListUIPresenter->_SetSelection(static_cast<int>(selectedCandidateIndex));
+    }
 }
 
 //+---------------------------------------------------------------------------

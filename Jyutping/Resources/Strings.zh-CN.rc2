@@ -19,4 +19,10 @@ BEGIN
     IDS_LANGBAR_INPUT_METHOD_MODE         "输入模式"
     IDS_FILE_DESCRIPTION                  "粤拼输入法"
     IDS_PRODUCT_NAME                      "粤拼"
+    IDS_MENU_CHARACTER_VARIANT             "候选词字符集"
+    IDS_MENU_CHARACTER_VARIANT_TRADITIONAL "傳統漢字"
+    IDS_MENU_CHARACTER_VARIANT_HONG_KONG   "傳統漢字·香港"
+    IDS_MENU_CHARACTER_VARIANT_TAIWAN      "傳統漢字·香港"
+    IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  "简化字"
+    IDS_MENU_MORE_SETTINGS                 "更多设置…"
 END

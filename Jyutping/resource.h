@@ -34,6 +34,12 @@
 #define IDS_LANGBAR_INPUT_METHOD_MODE     37
 #define IDS_FILE_DESCRIPTION              38
 #define IDS_PRODUCT_NAME                  39
+#define IDS_MENU_CHARACTER_VARIANT        40
+#define IDS_MENU_CHARACTER_VARIANT_TRADITIONAL 41
+#define IDS_MENU_CHARACTER_VARIANT_HONG_KONG   42
+#define IDS_MENU_CHARACTER_VARIANT_TAIWAN      43
+#define IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  44
+#define IDS_MENU_MORE_SETTINGS                 45
 #define IDR_VERSION                       1
 
 // Next default values for new objects

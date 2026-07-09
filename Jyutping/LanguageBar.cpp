@@ -4,6 +4,85 @@
 #include "LanguageBar.h"
 #include "Globals.h"
 #include "Compartment.h"
+#include "Localization.h"
+#include "resource.h"
+
+namespace {
+
+constexpr UINT MenuIdCharacterVariant = 1;
+constexpr UINT MenuIdCharacterVariantTraditional = 2;
+constexpr UINT MenuIdCharacterVariantHongKong = 3;
+constexpr UINT MenuIdCharacterVariantTaiwan = 4;
+constexpr UINT MenuIdCharacterVariantSimplified = 5;
+constexpr UINT MenuIdMoreSettings = 6;
+constexpr UINT MenuIdSeparator = 7;
+
+std::wstring LoadMenuString(UINT resourceId, PCWSTR fallback)
+{
+    return Localization::LoadStringOrFallback(resourceId, fallback);
+}
+
+HRESULT AddMenuItem(_In_ ITfMenu *pMenu, UINT id, DWORD flags, const std::wstring& text, _Inout_opt_ ITfMenu **ppSubMenu = nullptr)
+{
+    return pMenu->AddMenuItem(
+        id,
+        flags,
+        nullptr,
+        nullptr,
+        text.c_str(),
+        static_cast<ULONG>(text.length()),
+        ppSubMenu);
+}
+
+DWORD RadioFlagForVariant(CharacterVariant currentVariant, CharacterVariant itemVariant)
+{
+    return currentVariant == itemVariant ? TF_LBMENUF_RADIOCHECKED : 0;
+}
+
+UINT MenuIdForCharacterVariant(CharacterVariant variant)
+{
+    switch (variant)
+    {
+    case CharacterVariant::HongKong:
+        return MenuIdCharacterVariantHongKong;
+    case CharacterVariant::Taiwan:
+        return MenuIdCharacterVariantTaiwan;
+    case CharacterVariant::Simplified:
+        return MenuIdCharacterVariantSimplified;
+    case CharacterVariant::Traditional:
+    default:
+        return MenuIdCharacterVariantTraditional;
+    }
+}
+
+BOOL AppendPopupMenuItem(_In_ HMENU menuHandle, UINT id, UINT flags, UINT resourceId, PCWSTR fallback)
+{
+    std::wstring text = LoadMenuString(resourceId, fallback);
+    return AppendMenuW(menuHandle, flags, id, text.c_str());
+}
+
+POINT PopupPointFromClick(POINT pt, _In_opt_ const RECT *prcArea)
+{
+    POINT popupPoint = pt;
+    if (popupPoint.x != 0 || popupPoint.y != 0)
+    {
+        return popupPoint;
+    }
+
+    if (GetCursorPos(&popupPoint))
+    {
+        return popupPoint;
+    }
+
+    if (prcArea != nullptr)
+    {
+        popupPoint.x = prcArea->left;
+        popupPoint.y = prcArea->bottom;
+    }
+    return popupPoint;
+}
+
+} // namespace
 
 void CJyutping::_UpdateLanguageBarOnSetFocus(_In_ ITfDocumentMgr *pDocMgrFocus)
 {
@@ -96,6 +175,7 @@ CLangBarItemButton::CLangBarItemButton(
 
     // Initialize the sink pointer to NULL.
     _pLangBarItemSink = nullptr;
+    _pSettingsMenuHandler = nullptr;
 
     // Initialize ICON index and file name.
     _onIconIndex = onIconIndex;
@@ -317,6 +397,87 @@ void CLangBarItemButton::SetStatus(DWORD dwStatus, BOOL fSet)
     return;
 }
 
+void CLangBarItemButton::SetSettingsMenuHandler(_In_opt_ ILangBarItemButtonSettingsMenuHandler *pSettingsMenuHandler)
+{
+    _pSettingsMenuHandler = pSettingsMenuHandler;
+}
+
+HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcArea)
+{
+    if (_pSettingsMenuHandler == nullptr)
+    {
+        return S_OK;
+    }
+
+    HMENU menuHandle = CreatePopupMenu();
+    HMENU characterVariantMenuHandle = CreatePopupMenu();
+    if (menuHandle == nullptr || characterVariantMenuHandle == nullptr)
+    {
+        if (characterVariantMenuHandle != nullptr)
+        {
+            DestroyMenu(characterVariantMenuHandle);
+        }
+        if (menuHandle != nullptr)
+        {
+            DestroyMenu(menuHandle);
+        }
+        return E_OUTOFMEMORY;
+    }
+
+    std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variant");
+    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(characterVariantMenuHandle), characterVariantText.c_str()))
+    {
+        DestroyMenu(characterVariantMenuHandle);
+        DestroyMenu(menuHandle);
+        return E_FAIL;
+    }
+
+    AppendPopupMenuItem(characterVariantMenuHandle, MenuIdCharacterVariantTraditional, MF_STRING, IDS_MENU_CHARACTER_VARIANT_TRADITIONAL, L"Traditional");
+    AppendPopupMenuItem(characterVariantMenuHandle, MenuIdCharacterVariantHongKong, MF_STRING, IDS_MENU_CHARACTER_VARIANT_HONG_KONG, L"Hong Kong");
+    AppendPopupMenuItem(characterVariantMenuHandle, MenuIdCharacterVariantTaiwan, MF_STRING, IDS_MENU_CHARACTER_VARIANT_TAIWAN, L"Taiwan");
+    AppendPopupMenuItem(characterVariantMenuHandle, MenuIdCharacterVariantSimplified, MF_STRING, IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED, L"Simplified");
+
+    CharacterVariant currentVariant = _pSettingsMenuHandler->CurrentCharacterVariant();
+    CheckMenuRadioItem(
+        characterVariantMenuHandle,
+        MenuIdCharacterVariantTraditional,
+        MenuIdCharacterVariantSimplified,
+        MenuIdForCharacterVariant(currentVariant),
+        MF_BYCOMMAND);
+
+    AppendMenuW(menuHandle, MF_SEPARATOR, MenuIdSeparator, nullptr);
+    AppendPopupMenuItem(menuHandle, MenuIdMoreSettings, MF_STRING | MF_GRAYED, IDS_MENU_MORE_SETTINGS, L"More Settings...");
+
+    POINT popupPoint = PopupPointFromClick(pt, prcArea);
+    HWND ownerWndHandle = GetActiveWindow();
+    if (ownerWndHandle == nullptr)
+    {
+        ownerWndHandle = GetForegroundWindow();
+    }
+    if (ownerWndHandle == nullptr)
+    {
+        ownerWndHandle = GetDesktopWindow();
+    }
+
+    SetForegroundWindow(ownerWndHandle);
+    UINT command = TrackPopupMenu(
+        menuHandle,
+        TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY,
+        popupPoint.x,
+        popupPoint.y,
+        0,
+        ownerWndHandle,
+        nullptr);
+    if (command != 0)
+    {
+        OnMenuSelect(command);
+    }
+    PostMessage(ownerWndHandle, WM_NULL, 0, 0);
+
+    DestroyMenu(menuHandle);
+    return S_OK;
+}
+
 //+---------------------------------------------------------------------------
 //
 // Show
@@ -354,8 +515,20 @@ STDAPI CLangBarItemButton::GetTooltipString(_Out_ BSTR *pbstrToolTip)
 
 STDAPI CLangBarItemButton::OnClick(TfLBIClick click, POINT pt, _In_ const RECT *prcArea)
 {
-    click;pt;
-    prcArea;
+    if (click == TF_LBI_CLK_RIGHT)
+    {
+        return ShowSettingsMenu(pt, prcArea);
+    }
+
+    if (click != TF_LBI_CLK_LEFT)
+    {
+        return S_OK;
+    }
+
+    if (!_pCompartment)
+    {
+        return E_FAIL;
+    }
 
     BOOL isOn = FALSE;
 
@@ -373,7 +546,62 @@ STDAPI CLangBarItemButton::OnClick(TfLBIClick click, POINT pt, _In_ const RECT *
 
 STDAPI CLangBarItemButton::InitMenu(_In_ ITfMenu *pMenu)
 {
-    pMenu;
+    if (pMenu == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    if (_pSettingsMenuHandler == nullptr)
+    {
+        return S_OK;
+    }
+
+    CharacterVariant currentVariant = _pSettingsMenuHandler->CurrentCharacterVariant();
+    std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variant");
+
+    ITfMenu* pCharacterVariantMenu = nullptr;
+    HRESULT hr = AddMenuItem(
+        pMenu,
+        MenuIdCharacterVariant,
+        TF_LBMENUF_SUBMENU,
+        characterVariantText,
+        &pCharacterVariantMenu);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (pCharacterVariantMenu)
+    {
+        AddMenuItem(
+            pCharacterVariantMenu,
+            MenuIdCharacterVariantTraditional,
+            RadioFlagForVariant(currentVariant, CharacterVariant::Traditional),
+            LoadMenuString(IDS_MENU_CHARACTER_VARIANT_TRADITIONAL, L"Traditional"));
+        AddMenuItem(
+            pCharacterVariantMenu,
+            MenuIdCharacterVariantHongKong,
+            RadioFlagForVariant(currentVariant, CharacterVariant::HongKong),
+            LoadMenuString(IDS_MENU_CHARACTER_VARIANT_HONG_KONG, L"Hong Kong"));
+        AddMenuItem(
+            pCharacterVariantMenu,
+            MenuIdCharacterVariantTaiwan,
+            RadioFlagForVariant(currentVariant, CharacterVariant::Taiwan),
+            LoadMenuString(IDS_MENU_CHARACTER_VARIANT_TAIWAN, L"Taiwan"));
+        AddMenuItem(
+            pCharacterVariantMenu,
+            MenuIdCharacterVariantSimplified,
+            RadioFlagForVariant(currentVariant, CharacterVariant::Simplified),
+            LoadMenuString(IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED, L"Simplified"));
+        pCharacterVariantMenu->Release();
+    }
+
+    pMenu->AddMenuItem(MenuIdSeparator, TF_LBMENUF_SEPARATOR, nullptr, nullptr, nullptr, 0, nullptr);
+    AddMenuItem(
+        pMenu,
+        MenuIdMoreSettings,
+        TF_LBMENUF_GRAYED,
+        LoadMenuString(IDS_MENU_MORE_SETTINGS, L"More Settings..."));
 
     return S_OK;
 }
@@ -386,7 +614,29 @@ STDAPI CLangBarItemButton::InitMenu(_In_ ITfMenu *pMenu)
 
 STDAPI CLangBarItemButton::OnMenuSelect(UINT wID)
 {
-    wID;
+    if (_pSettingsMenuHandler == nullptr)
+    {
+        return S_OK;
+    }
+
+    switch (wID)
+    {
+    case MenuIdCharacterVariantTraditional:
+        _pSettingsMenuHandler->SetCharacterVariant(CharacterVariant::Traditional);
+        break;
+    case MenuIdCharacterVariantHongKong:
+        _pSettingsMenuHandler->SetCharacterVariant(CharacterVariant::HongKong);
+        break;
+    case MenuIdCharacterVariantTaiwan:
+        _pSettingsMenuHandler->SetCharacterVariant(CharacterVariant::Taiwan);
+        break;
+    case MenuIdCharacterVariantSimplified:
+        _pSettingsMenuHandler->SetCharacterVariant(CharacterVariant::Simplified);
+        break;
+    case MenuIdMoreSettings:
+    default:
+        break;
+    }
 
     return S_OK;
 }

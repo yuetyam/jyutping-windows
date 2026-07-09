@@ -6,6 +6,7 @@
 #include "Compartment.h"
 #include "define.h"
 #include "InputEngine.h"
+#include "LanguageBar.h"
 #include "Settings.h"
 #include "VirtualInputKey.h"
 
@@ -13,11 +14,15 @@
 #include <string>
 #include <vector>
 
-class CCompositionProcessorEngine
+class CJyutping;
+
+class CCompositionProcessorEngine : public ILangBarItemButtonSettingsMenuHandler
 {
 public:
     CCompositionProcessorEngine(void);
     ~CCompositionProcessorEngine(void);
+
+    void SetTextService(_In_opt_ CJyutping *pTextService);
 
     BOOL SetupLanguageProfile(LANGID langid, REFGUID guidLanguageProfile, _In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId, BOOL isSecureMode, BOOL isComLessMode);
 
@@ -65,6 +70,8 @@ public:
 
     // Language bar control
     void SetLanguageBarStatus(DWORD status, BOOL isSet);
+    CharacterVariant CurrentCharacterVariant() const override;
+    void SetCharacterVariant(CharacterVariant variant) override;
 
     void ConversionModeCompartmentUpdated(_In_ ITfThreadMgr *pThreadMgr);
     void ApplyPersistedSettings(_In_ ITfThreadMgr *pThreadMgr);
@@ -152,6 +159,7 @@ private:
     LANGID _langid;
     GUID _guidProfile;
     TfClientId  _tfClientId;
+    CJyutping* _pTextService;
 
     CJyutpingArray<_KEYSTROKE> _KeystrokeComposition;
     CJyutpingArray<_KEYSTROKE> _KeystrokeCandidate;

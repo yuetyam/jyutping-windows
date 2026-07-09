@@ -215,6 +215,7 @@ BOOL CJyutping::_AddTextProcessorEngine()
         if ((langid == langidProfile) && IsEqualGUID(guidProfile, guidLanguageProfile))
         {
             Global::Log(L"_AddTextProcessorEngine: existing engine matches current language profile");
+            _pCompositionProcessorEngine->SetTextService(this);
             return TRUE;
         }
     }
@@ -229,6 +230,7 @@ BOOL CJyutping::_AddTextProcessorEngine()
         Global::Log(L"_AddTextProcessorEngine failed: unable to allocate composition processor engine");
         return FALSE;
     }
+    _pCompositionProcessorEngine->SetTextService(this);
 
     // setup composition processor engine
     if (FALSE == _pCompositionProcessorEngine->SetupLanguageProfile(langid, guidProfile, _GetThreadMgr(), _GetClientId(), _IsSecureMode(), _IsComLess()))
@@ -258,6 +260,7 @@ CCompositionProcessorEngine::CCompositionProcessorEngine()
     _langid = 0xffff;
     _guidProfile = GUID_NULL;
     _tfClientId = TF_CLIENTID_NULL;
+    _pTextService = nullptr;
 
     _pLanguageBar_InputMethodMode = nullptr;
 
@@ -276,6 +279,11 @@ CCompositionProcessorEngine::CCompositionProcessorEngine()
     _candidateListPhraseModifier = 0;
 
     InitKeyStrokeTable();
+}
+
+void CCompositionProcessorEngine::SetTextService(_In_opt_ CJyutping *pTextService)
+{
+    _pTextService = pTextService;
 }
 
 //+---------------------------------------------------------------------------
@@ -1172,6 +1180,10 @@ void CCompositionProcessorEngine::SetupLanguageBar(_In_ ITfThreadMgr *pThreadMgr
         Global::InputMethodModeABCAltIcoIndex,
         &_pLanguageBar_InputMethodMode,
         isSecureMode);
+    if (_pLanguageBar_InputMethodMode)
+    {
+        _pLanguageBar_InputMethodMode->SetSettingsMenuHandler(this);
+    }
 
     InitLanguageBar(_pLanguageBar_InputMethodMode, pThreadMgr, tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
 
@@ -1422,6 +1434,27 @@ std::optional<Ime::Lexicon> CCompositionProcessorEngine::CandidateAt(UINT candid
 CharacterStandard CCompositionProcessorEngine::CurrentCharacterStandard() const
 {
     return CharacterStandardFromCharacterVariant(_settings.characterVariant);
+}
+
+CharacterVariant CCompositionProcessorEngine::CurrentCharacterVariant() const
+{
+    return _settings.characterVariant;
+}
+
+void CCompositionProcessorEngine::SetCharacterVariant(CharacterVariant variant)
+{
+    if (_settings.characterVariant == variant)
+    {
+        return;
+    }
+
+    _settings.characterVariant = variant;
+    _settingsStore.SaveCharacterVariant(variant);
+
+    if (_pTextService)
+    {
+        _pTextService->RefreshCandidateListAfterCharacterVariantChange();
+    }
 }
 
 std::wstring CCompositionProcessorEngine::DisplayTextForCandidate(const Ime::Lexicon& suggestion) const

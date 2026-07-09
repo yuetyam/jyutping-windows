@@ -1,7 +1,17 @@
 #pragma once
 
+#include "Settings.h"
+
 class CCompartment;
 class CCompartmentEventSink;
+
+class ILangBarItemButtonSettingsMenuHandler
+{
+public:
+    virtual ~ILangBarItemButtonSettingsMenuHandler() = default;
+    virtual CharacterVariant CurrentCharacterVariant() const = 0;
+    virtual void SetCharacterVariant(CharacterVariant variant) = 0;
+};
 
 class CLangBarItemButton : public ITfLangBarItemButton,
     public ITfSource
@@ -51,9 +61,13 @@ public:
     void CleanUp();
 
     void SetStatus(DWORD dwStatus, BOOL fSet);
+    void SetSettingsMenuHandler(_In_opt_ ILangBarItemButtonSettingsMenuHandler *pSettingsMenuHandler);
 
 private:
+    HRESULT ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcArea);
+
     ITfLangBarItemSink* _pLangBarItemSink;
+    ILangBarItemButtonSettingsMenuHandler* _pSettingsMenuHandler;
 
     TF_LANGBARITEMINFO _tfLangBarItemInfo;
     LPCWSTR _pTooltipText;
