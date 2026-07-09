@@ -185,6 +185,7 @@ extern const int TextServiceAltIcoIndex = TEXTSERVICE_ALT_ICON_INDEX;
 // defined item in setting file table [PreservedKey] section
 //---------------------------------------------------------------------
 extern const WCHAR InputMethodModeDescription[] = L"Input Mode (Cantonese/ABC, Shift)";
+extern const WCHAR InputMethodModeTooltip[] = L"Left-click to switch modes\nRight-click for more options";
 extern const int InputMethodModeCantoneseIcoIndex = INPUT_MODE_CANTONESE_ICON_INDEX;
 extern const int InputMethodModeCantoneseAltIcoIndex = INPUT_MODE_CANTONESE_ALT_ICON_INDEX;
 extern const int InputMethodModeABCIcoIndex = INPUT_MODE_ABC_ICON_INDEX;

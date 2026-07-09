@@ -1168,13 +1168,13 @@ void CCompositionProcessorEngine::SetupConfiguration()
 void CCompositionProcessorEngine::SetupLanguageBar(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId, BOOL isSecureMode)
 {
     DWORD dwEnable = 1;
-    std::wstring inputMethodModeDescription = Localization::LoadStringOrFallback(IDS_INPUT_MODE_DESCRIPTION, Global::InputMethodModeDescription);
+    std::wstring inputMethodModeTooltip = Localization::LoadStringOrFallback(IDS_LANGBAR_INPUT_MODE_TOOLTIP, Global::InputMethodModeTooltip);
     std::wstring langbarInputMethodModeDescription = Localization::LoadStringOrFallback(IDS_LANGBAR_INPUT_METHOD_MODE, Global::LangbarInputMethodModeDescription);
     CreateLanguageBarButton(
         dwEnable,
         GUID_LBI_INPUTMODE,
         langbarInputMethodModeDescription.c_str(),
-        inputMethodModeDescription.c_str(),
+        inputMethodModeTooltip.c_str(),
         Global::InputMethodModeCantoneseIcoIndex,
         Global::InputMethodModeABCIcoIndex,
         Global::InputMethodModeCantoneseAltIcoIndex,

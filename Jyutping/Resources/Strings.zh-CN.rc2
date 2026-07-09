@@ -26,4 +26,5 @@ BEGIN
     IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  "简化字"
     IDS_MENU_CANDIDATE_PAGE_SIZE           "每页候选词数目"
     IDS_MENU_MORE_SETTINGS                 "Jyutping v0.2.0"
+    IDS_LANGBAR_INPUT_MODE_TOOLTIP         "左键切换模式\n右键开启选单"
 END
