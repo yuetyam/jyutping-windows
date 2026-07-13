@@ -205,7 +205,9 @@ CCandidateWindow::CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void* 
 
     _pShadowWnd = nullptr;
 
-    _rowHeight = CANDIDATE_ROW_HEIGHT;
+    _candidateTextMetric = {};
+    _numberLabelTextMetric = {};
+    _rowHeight = (int)ceil(CANDIDATE_FONT_SIZE + CANDIDATE_ROW_VERTICAL_SPACING);
     _windowWidth = 0;
 
     _pVScrollBarWnd = nullptr;
@@ -581,7 +583,22 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
                     }
                 }
 
-                _rowHeight = (int)((float)CANDIDATE_ROW_HEIGHT * scale);
+                LONG commentTextHeight = 0;
+                if (_pDWriteCommentFormat)
+                {
+                    ComPtr<IDWriteTextLayout> pCommentLayout;
+                    HRESULT hr = Global::pDWriteFactory->CreateTextLayout(L"A", 1, _pDWriteCommentFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pCommentLayout);
+                    if (SUCCEEDED(hr))
+                    {
+                        DWRITE_TEXT_METRICS dwriteMetrics;
+                        pCommentLayout->GetMetrics(&dwriteMetrics);
+                        commentTextHeight = (LONG)ceil(dwriteMetrics.height);
+                    }
+                }
+
+                LONG contentHeight = max(_candidateTextMetric.tmHeight, _numberLabelTextMetric.tmHeight);
+                contentHeight = max(contentHeight, commentTextHeight);
+                _rowHeight = contentHeight + (int)ceil(CANDIDATE_ROW_VERTICAL_SPACING * scale);
                 _windowWidth = _candidateTextMetric.tmMaxCharWidth;
 
                 // Create Direct2D Render Target

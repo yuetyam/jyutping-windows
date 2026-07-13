@@ -26,7 +26,7 @@
 //---------------------------------------------------------------------
 // defined Candidated Window
 //---------------------------------------------------------------------
-#define CANDIDATE_ROW_HEIGHT            (28)
+#define CANDIDATE_ROW_VERTICAL_SPACING  (6.0f)
 #define CANDWND_BORDER_WIDTH            (4)
 
 // HStack-style row layout: LeftPadding | NumberLabel | Spacing | CandidateWord | Spacing | Comment | RightPadding
