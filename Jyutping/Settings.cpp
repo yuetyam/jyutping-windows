@@ -12,11 +12,13 @@ constexpr PCWSTR CharacterFormValueName = L"CharacterForm";
 constexpr PCWSTR PunctuationFormValueName = L"PunctuationForm";
 constexpr PCWSTR CharacterVariantValueName = L"CharacterVariant";
 constexpr PCWSTR CandidatePageSizeValueName = L"CandidatePageSize";
+constexpr PCWSTR CandidateFontSizeValueName = L"CandidateFontSize";
+constexpr PCWSTR CandidateNumberFontSizeValueName = L"LabelFontSize";
+constexpr PCWSTR CandidateCommentFontSizeValueName = L"CommentFontSize";
 constexpr DWORD CurrentSettingsVersion = 1;
 constexpr DWORD DefaultCandidatePageSize = 7;
 constexpr DWORD MinimumCandidatePageSize = 1;
 constexpr DWORD MaximumCandidatePageSize = 10;
-
 bool IsValidInputMethodMode(DWORD value)
 {
     return value == static_cast<DWORD>(InputMethodMode::Cantonese) ||
@@ -46,6 +48,11 @@ bool IsValidCharacterVariant(DWORD value)
 bool IsValidCandidatePageSize(DWORD value)
 {
     return value >= MinimumCandidatePageSize && value <= MaximumCandidatePageSize;
+}
+
+bool IsValidCandidateFontSize(DWORD value)
+{
+    return value >= MinimumCandidateFontSize && value <= MaximumCandidateFontSize;
 }
 
 } // namespace
@@ -90,6 +97,24 @@ ImeSettings SettingsStore::Load() const
         settings.candidatePageSize = candidatePageSize;
     }
 
+    DWORD candidateFontSize = 0;
+    if (ReadDWORD(CandidateFontSizeValueName, candidateFontSize) && IsValidCandidateFontSize(candidateFontSize))
+    {
+        settings.candidateFontSize = candidateFontSize;
+    }
+
+    DWORD candidateNumberFontSize = 0;
+    if (ReadDWORD(CandidateNumberFontSizeValueName, candidateNumberFontSize) && IsValidCandidateFontSize(candidateNumberFontSize))
+    {
+        settings.candidateNumberFontSize = candidateNumberFontSize;
+    }
+
+    DWORD candidateCommentFontSize = 0;
+    if (ReadDWORD(CandidateCommentFontSizeValueName, candidateCommentFontSize) && IsValidCandidateFontSize(candidateCommentFontSize))
+    {
+        settings.candidateCommentFontSize = candidateCommentFontSize;
+    }
+
     return settings;
 }
 
@@ -126,7 +151,19 @@ bool SettingsStore::Save(const ImeSettings& settings) const
         return false;
     }
 
-    return key.SetDWORDValue(CandidatePageSizeValueName, CandidatePageSizeFromRawValue(settings.candidatePageSize)) == ERROR_SUCCESS;
+    if (key.SetDWORDValue(CandidatePageSizeValueName, CandidatePageSizeFromRawValue(settings.candidatePageSize)) != ERROR_SUCCESS)
+    {
+        return false;
+    }
+    if (key.SetDWORDValue(CandidateFontSizeValueName, CandidateFontSizeFromRawValue(settings.candidateFontSize)) != ERROR_SUCCESS)
+    {
+        return false;
+    }
+    if (key.SetDWORDValue(CandidateNumberFontSizeValueName, CandidateNumberFontSizeFromRawValue(settings.candidateNumberFontSize)) != ERROR_SUCCESS)
+    {
+        return false;
+    }
+    return key.SetDWORDValue(CandidateCommentFontSizeValueName, CandidateCommentFontSizeFromRawValue(settings.candidateCommentFontSize)) == ERROR_SUCCESS;
 }
 
 bool SettingsStore::SaveInputMethodMode(InputMethodMode mode) const
@@ -161,6 +198,27 @@ bool SettingsStore::SaveCandidatePageSize(DWORD pageSize) const
 {
     ImeSettings settings = Load();
     settings.candidatePageSize = CandidatePageSizeFromRawValue(pageSize);
+    return Save(settings);
+}
+
+bool SettingsStore::SaveCandidateFontSize(DWORD fontSize) const
+{
+    ImeSettings settings = Load();
+    settings.candidateFontSize = CandidateFontSizeFromRawValue(fontSize);
+    return Save(settings);
+}
+
+bool SettingsStore::SaveCandidateNumberFontSize(DWORD fontSize) const
+{
+    ImeSettings settings = Load();
+    settings.candidateNumberFontSize = CandidateNumberFontSizeFromRawValue(fontSize);
+    return Save(settings);
+}
+
+bool SettingsStore::SaveCandidateCommentFontSize(DWORD fontSize) const
+{
+    ImeSettings settings = Load();
+    settings.candidateCommentFontSize = CandidateCommentFontSizeFromRawValue(fontSize);
     return Save(settings);
 }
 
@@ -240,4 +298,19 @@ CharacterStandard CharacterStandardFromCharacterVariant(CharacterVariant variant
 DWORD CandidatePageSizeFromRawValue(DWORD value)
 {
     return IsValidCandidatePageSize(value) ? value : DefaultCandidatePageSize;
+}
+
+DWORD CandidateFontSizeFromRawValue(DWORD value)
+{
+    return IsValidCandidateFontSize(value) ? value : DefaultCandidateFontSize;
+}
+
+DWORD CandidateNumberFontSizeFromRawValue(DWORD value)
+{
+    return IsValidCandidateFontSize(value) ? value : DefaultCandidateNumberFontSize;
+}
+
+DWORD CandidateCommentFontSizeFromRawValue(DWORD value)
+{
+    return IsValidCandidateFontSize(value) ? value : DefaultCandidateCommentFontSize;
 }

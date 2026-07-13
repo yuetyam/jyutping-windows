@@ -19,6 +19,15 @@ constexpr UINT MenuIdCandidatePageSizeFirst = 7;
 constexpr UINT MenuIdCandidatePageSizeLast = 16;
 constexpr UINT MenuIdMoreSettings = 17;
 constexpr UINT MenuIdSeparator = 18;
+constexpr UINT MenuIdCandidateFontSize = 19;
+constexpr UINT MenuIdCandidateFontSizeFirst = 20;
+constexpr UINT MenuIdCandidateFontSizeLast = 33;
+constexpr UINT MenuIdCandidateNumberFontSize = 34;
+constexpr UINT MenuIdCandidateNumberFontSizeFirst = 35;
+constexpr UINT MenuIdCandidateNumberFontSizeLast = 48;
+constexpr UINT MenuIdCandidateCommentFontSize = 49;
+constexpr UINT MenuIdCandidateCommentFontSizeFirst = 50;
+constexpr UINT MenuIdCandidateCommentFontSizeLast = 63;
 
 std::wstring LoadMenuString(UINT resourceId, PCWSTR fallback)
 {
@@ -66,6 +75,74 @@ UINT MenuIdForCandidatePageSize(DWORD pageSize)
 DWORD CandidatePageSizeForMenuId(UINT id)
 {
     return id - MenuIdCandidatePageSizeFirst + 1;
+}
+
+UINT MenuIdForFontSize(UINT firstId, DWORD fontSize)
+{
+    return firstId + fontSize - MinimumCandidateFontSize;
+}
+
+DWORD FontSizeForMenuId(UINT firstId, UINT id)
+{
+    return MinimumCandidateFontSize + id - firstId;
+}
+
+HRESULT AddFontSizeMenu(
+    _In_ ITfMenu *pMenu,
+    UINT menuId,
+    UINT firstItemId,
+    const std::wstring& menuText,
+    DWORD currentFontSize)
+{
+    ITfMenu* pFontSizeMenu = nullptr;
+    HRESULT hr = AddMenuItem(pMenu, menuId, TF_LBMENUF_SUBMENU, menuText, &pFontSizeMenu);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (pFontSizeMenu)
+    {
+        for (DWORD fontSize = MinimumCandidateFontSize; fontSize <= MaximumCandidateFontSize; fontSize++)
+        {
+            WCHAR fontSizeText[3] = {};
+            StringCchPrintf(fontSizeText, ARRAYSIZE(fontSizeText), L"%lu", fontSize);
+            AddMenuItem(
+                pFontSizeMenu,
+                MenuIdForFontSize(firstItemId, fontSize),
+                currentFontSize == fontSize ? TF_LBMENUF_RADIOCHECKED : 0,
+                fontSizeText);
+        }
+        pFontSizeMenu->Release();
+    }
+    return S_OK;
+}
+
+BOOL AppendFontSizePopupMenu(
+    _In_ HMENU menuHandle,
+    _In_ HMENU fontSizeMenuHandle,
+    UINT firstItemId,
+    const std::wstring& menuText,
+    DWORD currentFontSize)
+{
+    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(fontSizeMenuHandle), menuText.c_str()))
+    {
+        return FALSE;
+    }
+
+    for (DWORD fontSize = MinimumCandidateFontSize; fontSize <= MaximumCandidateFontSize; fontSize++)
+    {
+        WCHAR fontSizeText[3] = {};
+        StringCchPrintf(fontSizeText, ARRAYSIZE(fontSizeText), L"%lu", fontSize);
+        AppendMenuW(fontSizeMenuHandle, MF_STRING, MenuIdForFontSize(firstItemId, fontSize), fontSizeText);
+    }
+    CheckMenuRadioItem(
+        fontSizeMenuHandle,
+        firstItemId,
+        firstItemId + MaximumCandidateFontSize - MinimumCandidateFontSize,
+        MenuIdForFontSize(firstItemId, currentFontSize),
+        MF_BYCOMMAND);
+    return TRUE;
 }
 
 BOOL AppendPopupMenuItem(_In_ HMENU menuHandle, UINT id, UINT flags, UINT resourceId, PCWSTR fallback)
@@ -425,8 +502,24 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
     HMENU menuHandle = CreatePopupMenu();
     HMENU characterVariantMenuHandle = CreatePopupMenu();
     HMENU candidatePageSizeMenuHandle = CreatePopupMenu();
-    if (menuHandle == nullptr || characterVariantMenuHandle == nullptr || candidatePageSizeMenuHandle == nullptr)
+    HMENU candidateFontSizeMenuHandle = CreatePopupMenu();
+    HMENU candidateNumberFontSizeMenuHandle = CreatePopupMenu();
+    HMENU candidateCommentFontSizeMenuHandle = CreatePopupMenu();
+    if (menuHandle == nullptr || characterVariantMenuHandle == nullptr || candidatePageSizeMenuHandle == nullptr ||
+        candidateFontSizeMenuHandle == nullptr || candidateNumberFontSizeMenuHandle == nullptr || candidateCommentFontSizeMenuHandle == nullptr)
     {
+        if (candidateCommentFontSizeMenuHandle != nullptr)
+        {
+            DestroyMenu(candidateCommentFontSizeMenuHandle);
+        }
+        if (candidateNumberFontSizeMenuHandle != nullptr)
+        {
+            DestroyMenu(candidateNumberFontSizeMenuHandle);
+        }
+        if (candidateFontSizeMenuHandle != nullptr)
+        {
+            DestroyMenu(candidateFontSizeMenuHandle);
+        }
         if (candidatePageSizeMenuHandle != nullptr)
         {
             DestroyMenu(candidatePageSizeMenuHandle);
@@ -445,6 +538,9 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
     std::wstring candidatePageSizeText = LoadMenuString(IDS_MENU_CANDIDATE_PAGE_SIZE, L"Candidate Count per Page");
     if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(candidatePageSizeMenuHandle), candidatePageSizeText.c_str()))
     {
+        DestroyMenu(candidateCommentFontSizeMenuHandle);
+        DestroyMenu(candidateNumberFontSizeMenuHandle);
+        DestroyMenu(candidateFontSizeMenuHandle);
         DestroyMenu(candidatePageSizeMenuHandle);
         DestroyMenu(characterVariantMenuHandle);
         DestroyMenu(menuHandle);
@@ -464,6 +560,29 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
         MenuIdCandidatePageSizeLast,
         MenuIdForCandidatePageSize(_pSettingsMenuHandler->CurrentCandidatePageSize()),
         MF_BYCOMMAND);
+
+    if (!AppendFontSizePopupMenu(
+        menuHandle,
+        candidateFontSizeMenuHandle,
+        MenuIdCandidateFontSizeFirst,
+        LoadMenuString(IDS_MENU_CANDIDATE_FONT_SIZE, L"Candidate Word Font Size"),
+        _pSettingsMenuHandler->CurrentCandidateFontSize()) ||
+        !AppendFontSizePopupMenu(
+            menuHandle,
+            candidateNumberFontSizeMenuHandle,
+            MenuIdCandidateNumberFontSizeFirst,
+            LoadMenuString(IDS_MENU_CANDIDATE_NUMBER_FONT_SIZE, L"Candidate Number Font Size"),
+            _pSettingsMenuHandler->CurrentCandidateNumberFontSize()) ||
+        !AppendFontSizePopupMenu(
+            menuHandle,
+            candidateCommentFontSizeMenuHandle,
+            MenuIdCandidateCommentFontSizeFirst,
+            LoadMenuString(IDS_MENU_CANDIDATE_COMMENT_FONT_SIZE, L"Candidate Comment Font Size"),
+            _pSettingsMenuHandler->CurrentCandidateCommentFontSize()))
+    {
+        DestroyMenu(menuHandle);
+        return E_FAIL;
+    }
 
     std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variant");
     if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(characterVariantMenuHandle), characterVariantText.c_str()))
@@ -626,6 +745,37 @@ STDAPI CLangBarItemButton::InitMenu(_In_ ITfMenu *pMenu)
         pCandidatePageSizeMenu->Release();
     }
 
+    hr = AddFontSizeMenu(
+        pMenu,
+        MenuIdCandidateFontSize,
+        MenuIdCandidateFontSizeFirst,
+        LoadMenuString(IDS_MENU_CANDIDATE_FONT_SIZE, L"Candidate Word Font Size"),
+        _pSettingsMenuHandler->CurrentCandidateFontSize());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    hr = AddFontSizeMenu(
+        pMenu,
+        MenuIdCandidateNumberFontSize,
+        MenuIdCandidateNumberFontSizeFirst,
+        LoadMenuString(IDS_MENU_CANDIDATE_NUMBER_FONT_SIZE, L"Candidate Number Font Size"),
+        _pSettingsMenuHandler->CurrentCandidateNumberFontSize());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    hr = AddFontSizeMenu(
+        pMenu,
+        MenuIdCandidateCommentFontSize,
+        MenuIdCandidateCommentFontSizeFirst,
+        LoadMenuString(IDS_MENU_CANDIDATE_COMMENT_FONT_SIZE, L"Candidate Comment Font Size"),
+        _pSettingsMenuHandler->CurrentCandidateCommentFontSize());
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
     CharacterVariant currentVariant = _pSettingsMenuHandler->CurrentCharacterVariant();
     std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variant");
 
@@ -692,6 +842,21 @@ STDAPI CLangBarItemButton::OnMenuSelect(UINT wID)
     if (wID >= MenuIdCandidatePageSizeFirst && wID <= MenuIdCandidatePageSizeLast)
     {
         _pSettingsMenuHandler->SetCandidatePageSize(CandidatePageSizeForMenuId(wID));
+        return S_OK;
+    }
+    if (wID >= MenuIdCandidateFontSizeFirst && wID <= MenuIdCandidateFontSizeLast)
+    {
+        _pSettingsMenuHandler->SetCandidateFontSize(FontSizeForMenuId(MenuIdCandidateFontSizeFirst, wID));
+        return S_OK;
+    }
+    if (wID >= MenuIdCandidateNumberFontSizeFirst && wID <= MenuIdCandidateNumberFontSizeLast)
+    {
+        _pSettingsMenuHandler->SetCandidateNumberFontSize(FontSizeForMenuId(MenuIdCandidateNumberFontSizeFirst, wID));
+        return S_OK;
+    }
+    if (wID >= MenuIdCandidateCommentFontSizeFirst && wID <= MenuIdCandidateCommentFontSizeLast)
+    {
+        _pSettingsMenuHandler->SetCandidateCommentFontSize(FontSizeForMenuId(MenuIdCandidateCommentFontSizeFirst, wID));
         return S_OK;
     }
 

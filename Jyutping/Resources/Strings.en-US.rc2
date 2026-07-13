@@ -25,6 +25,9 @@ BEGIN
     IDS_MENU_CHARACTER_VARIANT_TAIWAN      "Traditional, TW"
     IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  "Simplified"
     IDS_MENU_CANDIDATE_PAGE_SIZE           "Candidates per Page"
+    IDS_MENU_CANDIDATE_FONT_SIZE           "Candidate Font Size"
+    IDS_MENU_CANDIDATE_NUMBER_FONT_SIZE    "Number Font Size"
+    IDS_MENU_CANDIDATE_COMMENT_FONT_SIZE   "Comment Font Size"
     IDS_MENU_MORE_SETTINGS                 "Jyutping v0.2.0"
     IDS_LANGBAR_INPUT_MODE_TOOLTIP         "Left-click to switch modes\nRight-click for more options"
 END

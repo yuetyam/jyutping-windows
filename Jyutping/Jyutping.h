@@ -129,6 +129,7 @@ public:
 
     CCompositionProcessorEngine* GetCompositionProcessorEngine() { return (_pCompositionProcessorEngine); };
     void RefreshCandidateListAfterCharacterVariantChange();
+    void RefreshCandidateWindowFontSizes();
 
     // comless helpers
     static HRESULT CreateInstance(REFCLSID rclsid, REFIID riid, _Outptr_result_maybenull_ LPVOID* ppv, _Out_opt_ HINSTANCE* phInst, BOOL isComLessMode);

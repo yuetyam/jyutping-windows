@@ -2,6 +2,7 @@
 #include "Globals.h"
 #include "BaseWindow.h"
 #include "CandidateWindow.h"
+#include "Settings.h"
 #include <dwmapi.h>
 
 #pragma comment(lib, "dwmapi.lib")
@@ -191,7 +192,8 @@ static void ApplyCandidateWindowCornerPreference(_In_ HWND wndHandle)
 //
 //----------------------------------------------------------------------------
 
-CCandidateWindow::CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void* pv, _In_ CCandidateRange* pIndexRange, _In_ BOOL isStoreAppMode)
+CCandidateWindow::CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void* pv, _In_ CCandidateRange* pIndexRange, _In_ BOOL isStoreAppMode,
+    DWORD candidateFontSize, DWORD numberFontSize, DWORD commentFontSize)
 {
     _currentSelection = 0;
 
@@ -207,7 +209,7 @@ CCandidateWindow::CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void* 
 
     _candidateTextMetric = {};
     _numberLabelTextMetric = {};
-    _rowHeight = (int)ceil(CANDIDATE_FONT_SIZE + CANDIDATE_ROW_VERTICAL_SPACING);
+    _rowHeight = static_cast<int>(ceil(DefaultCandidateFontSize + CANDIDATE_ROW_VERTICAL_SPACING));
     _windowWidth = 0;
 
     _pVScrollBarWnd = nullptr;
@@ -215,6 +217,9 @@ CCandidateWindow::CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void* 
     _skipEmptyPageAdjustment = FALSE;
 
     _isStoreAppMode = isStoreAppMode;
+    _candidateFontSize = candidateFontSize;
+    _numberFontSize = numberFontSize;
+    _commentFontSize = commentFontSize;
 }
 
 //+---------------------------------------------------------------------------
@@ -459,6 +464,86 @@ void CCandidateWindow::_ResizeWindow()
     }
 }
 
+void CCandidateWindow::_SetFontSizes(DWORD candidateFontSize, DWORD numberFontSize, DWORD commentFontSize)
+{
+    _candidateFontSize = candidateFontSize;
+    _numberFontSize = numberFontSize;
+    _commentFontSize = commentFontSize;
+    _InitializeTextFormats(_wndHandle);
+    _ResizeWindow();
+    _InvalidateRect();
+}
+
+void CCandidateWindow::_InitializeTextFormats(_In_ HWND wndHandle)
+{
+    if (wndHandle == nullptr || Global::pDWriteFactory == nullptr)
+    {
+        return;
+    }
+
+    float scale = static_cast<float>(GetDpiForWindow(wndHandle)) / USER_DEFAULT_SCREEN_DPI;
+    CreateRoleTextFormat(
+        static_cast<float>(_candidateFontSize) * scale,
+        Global::candidateFontNames,
+        Global::candidateFontNamesCount,
+        Global::pDWriteCandidateFontFallback,
+        _pDWriteTextFormat.ReleaseAndGetAddressOf());
+    CreateRoleTextFormat(
+        static_cast<float>(_numberFontSize) * scale,
+        Global::numberLabelFontNames,
+        Global::numberLabelFontNamesCount,
+        Global::pDWriteNumberLabelFontFallback,
+        _pDWriteNumberFormat.ReleaseAndGetAddressOf());
+    CreateRoleTextFormat(
+        static_cast<float>(_commentFontSize) * scale,
+        Global::commentFontNames,
+        Global::commentFontNamesCount,
+        Global::pDWriteCommentFontFallback,
+        _pDWriteCommentFormat.ReleaseAndGetAddressOf());
+
+    _candidateTextMetric = {};
+    _numberLabelTextMetric = {};
+    LONG commentTextHeight = 0;
+    if (_pDWriteTextFormat)
+    {
+        ComPtr<IDWriteTextLayout> pTextLayout;
+        if (SUCCEEDED(Global::pDWriteFactory->CreateTextLayout(L"A", 1, _pDWriteTextFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pTextLayout)))
+        {
+            DWRITE_TEXT_METRICS metrics;
+            pTextLayout->GetMetrics(&metrics);
+            _candidateTextMetric.tmHeight = static_cast<LONG>(ceil(metrics.height));
+            _candidateTextMetric.tmAveCharWidth = static_cast<LONG>(ceil(metrics.width));
+            _candidateTextMetric.tmMaxCharWidth = _candidateTextMetric.tmAveCharWidth;
+        }
+    }
+    if (_pDWriteNumberFormat)
+    {
+        ComPtr<IDWriteTextLayout> pTextLayout;
+        if (SUCCEEDED(Global::pDWriteFactory->CreateTextLayout(L"0", 1, _pDWriteNumberFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pTextLayout)))
+        {
+            DWRITE_TEXT_METRICS metrics;
+            pTextLayout->GetMetrics(&metrics);
+            _numberLabelTextMetric.tmHeight = static_cast<LONG>(ceil(metrics.height));
+            _numberLabelTextMetric.tmAveCharWidth = static_cast<LONG>(ceil(metrics.width));
+        }
+    }
+    if (_pDWriteCommentFormat)
+    {
+        ComPtr<IDWriteTextLayout> pTextLayout;
+        if (SUCCEEDED(Global::pDWriteFactory->CreateTextLayout(L"A", 1, _pDWriteCommentFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pTextLayout)))
+        {
+            DWRITE_TEXT_METRICS metrics;
+            pTextLayout->GetMetrics(&metrics);
+            commentTextHeight = static_cast<LONG>(ceil(metrics.height));
+        }
+    }
+
+    LONG contentHeight = max(_candidateTextMetric.tmHeight, _numberLabelTextMetric.tmHeight);
+    contentHeight = max(contentHeight, commentTextHeight);
+    _rowHeight = contentHeight + static_cast<int>(ceil(CANDIDATE_ROW_VERTICAL_SPACING * scale));
+    _windowWidth = _candidateTextMetric.tmMaxCharWidth;
+}
+
 //+---------------------------------------------------------------------------
 //
 // _Move
@@ -521,85 +606,10 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
         dcHandle = GetDC(wndHandle);
         if (dcHandle)
         {
-            // Get DPI for the window
-            UINT dpi = GetDpiForWindow(wndHandle);
-            float scale = (float)dpi / USER_DEFAULT_SCREEN_DPI;
-
-            // Scale font sizes
-            float candidateFontSize = (float)CANDIDATE_FONT_SIZE * scale;
-            float numberFontSize = (float)NUMBER_LABEL_FONT_SIZE * scale;
-            float commentFontSize = (float)COMMENT_FONT_SIZE * scale;
-
             // Initialize DirectWrite
             if (Global::pDWriteFactory)
             {
-                CreateRoleTextFormat(
-                    candidateFontSize,
-                    Global::candidateFontNames,
-                    Global::candidateFontNamesCount,
-                    Global::pDWriteCandidateFontFallback,
-                    _pDWriteTextFormat.ReleaseAndGetAddressOf()
-                );
-                CreateRoleTextFormat(
-                    numberFontSize,
-                    Global::numberLabelFontNames,
-                    Global::numberLabelFontNamesCount,
-                    Global::pDWriteNumberLabelFontFallback,
-                    _pDWriteNumberFormat.ReleaseAndGetAddressOf()
-                );
-                CreateRoleTextFormat(
-                    commentFontSize,
-                    Global::commentFontNames,
-                    Global::commentFontNamesCount,
-                    Global::pDWriteCommentFontFallback,
-                    _pDWriteCommentFormat.ReleaseAndGetAddressOf()
-                );
-
-                // Measure metrics using DirectWrite
-                if (_pDWriteTextFormat)
-                {
-                    ComPtr<IDWriteTextLayout> pTextLayout;
-                    HRESULT hr = Global::pDWriteFactory->CreateTextLayout(L"A", 1, _pDWriteTextFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pTextLayout);
-                    if (SUCCEEDED(hr))
-                    {
-                        DWRITE_TEXT_METRICS dwriteMetrics;
-                        pTextLayout->GetMetrics(&dwriteMetrics);
-                        _candidateTextMetric.tmHeight = (LONG)ceil(dwriteMetrics.height);
-                        _candidateTextMetric.tmAveCharWidth = (LONG)ceil(dwriteMetrics.width);
-                        _candidateTextMetric.tmMaxCharWidth = _candidateTextMetric.tmAveCharWidth;
-                    }
-                }
-
-                if (_pDWriteNumberFormat)
-                {
-                    ComPtr<IDWriteTextLayout> pNumLayout;
-                    HRESULT hr = Global::pDWriteFactory->CreateTextLayout(L"0", 1, _pDWriteNumberFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pNumLayout);
-                    if (SUCCEEDED(hr))
-                    {
-                        DWRITE_TEXT_METRICS dwriteMetrics;
-                        pNumLayout->GetMetrics(&dwriteMetrics);
-                        _numberLabelTextMetric.tmHeight = (LONG)ceil(dwriteMetrics.height);
-                        _numberLabelTextMetric.tmAveCharWidth = (LONG)ceil(dwriteMetrics.width);
-                    }
-                }
-
-                LONG commentTextHeight = 0;
-                if (_pDWriteCommentFormat)
-                {
-                    ComPtr<IDWriteTextLayout> pCommentLayout;
-                    HRESULT hr = Global::pDWriteFactory->CreateTextLayout(L"A", 1, _pDWriteCommentFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pCommentLayout);
-                    if (SUCCEEDED(hr))
-                    {
-                        DWRITE_TEXT_METRICS dwriteMetrics;
-                        pCommentLayout->GetMetrics(&dwriteMetrics);
-                        commentTextHeight = (LONG)ceil(dwriteMetrics.height);
-                    }
-                }
-
-                LONG contentHeight = max(_candidateTextMetric.tmHeight, _numberLabelTextMetric.tmHeight);
-                contentHeight = max(contentHeight, commentTextHeight);
-                _rowHeight = contentHeight + (int)ceil(CANDIDATE_ROW_VERTICAL_SPACING * scale);
-                _windowWidth = _candidateTextMetric.tmMaxCharWidth;
+                _InitializeTextFormats(wndHandle);
 
                 // Create Direct2D Render Target
                 D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties(

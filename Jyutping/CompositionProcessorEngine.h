@@ -73,6 +73,12 @@ public:
     void SetCharacterVariant(CharacterVariant variant) override;
     DWORD CurrentCandidatePageSize() const override;
     void SetCandidatePageSize(DWORD pageSize) override;
+    DWORD CurrentCandidateFontSize() const override;
+    void SetCandidateFontSize(DWORD fontSize) override;
+    DWORD CurrentCandidateNumberFontSize() const override;
+    void SetCandidateNumberFontSize(DWORD fontSize) override;
+    DWORD CurrentCandidateCommentFontSize() const override;
+    void SetCandidateCommentFontSize(DWORD fontSize) override;
 
     void ConversionModeCompartmentUpdated(_In_ ITfThreadMgr *pThreadMgr);
     void ApplyPersistedSettings(_In_ ITfThreadMgr *pThreadMgr);

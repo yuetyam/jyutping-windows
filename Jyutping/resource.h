@@ -42,6 +42,9 @@
 #define IDS_MENU_MORE_SETTINGS                 45
 #define IDS_MENU_CANDIDATE_PAGE_SIZE           46
 #define IDS_LANGBAR_INPUT_MODE_TOOLTIP         47
+#define IDS_MENU_CANDIDATE_FONT_SIZE           48
+#define IDS_MENU_CANDIDATE_NUMBER_FONT_SIZE    49
+#define IDS_MENU_CANDIDATE_COMMENT_FONT_SIZE   50
 #define IDR_VERSION                       1
 
 // Next default values for new objects

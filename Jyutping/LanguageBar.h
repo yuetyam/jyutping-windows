@@ -13,6 +13,12 @@ public:
     virtual void SetCharacterVariant(CharacterVariant variant) = 0;
     virtual DWORD CurrentCandidatePageSize() const = 0;
     virtual void SetCandidatePageSize(DWORD pageSize) = 0;
+    virtual DWORD CurrentCandidateFontSize() const = 0;
+    virtual void SetCandidateFontSize(DWORD fontSize) = 0;
+    virtual DWORD CurrentCandidateNumberFontSize() const = 0;
+    virtual void SetCandidateNumberFontSize(DWORD fontSize) = 0;
+    virtual DWORD CurrentCandidateCommentFontSize() const = 0;
+    virtual void SetCandidateCommentFontSize(DWORD fontSize) = 0;
 };
 
 class CLangBarItemButton : public ITfLangBarItemButton,

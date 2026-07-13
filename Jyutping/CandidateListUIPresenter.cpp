@@ -941,6 +941,24 @@ void CCandidateListUIPresenter::_SetText(_In_ CJyutpingArray<CCandidateListItem>
     }
 }
 
+void CCandidateListUIPresenter::_UpdateFontSizes()
+{
+    if (_pCandidateWnd == nullptr)
+    {
+        return;
+    }
+
+    CCompositionProcessorEngine* pEngine = _pTextService->GetCompositionProcessorEngine();
+    if (pEngine == nullptr)
+    {
+        return;
+    }
+    _pCandidateWnd->_SetFontSizes(
+        pEngine->CurrentCandidateFontSize(),
+        pEngine->CurrentCandidateNumberFontSize(),
+        pEngine->CurrentCandidateCommentFontSize());
+}
+
 void CCandidateListUIPresenter::AddCandidateToCandidateListUI(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList)
 {
     if (_pCandidateWnd == nullptr || pCandidateList == nullptr)
@@ -1455,7 +1473,18 @@ HRESULT CCandidateListUIPresenter::MakeCandidateWindow(_In_ ITfContext *pContext
         return S_OK;
     }
 
-    _pCandidateWnd = new (std::nothrow) CCandidateWindow(_CandWndCallback, this, _pIndexRange, _pTextService->_IsStoreAppMode());
+    CCompositionProcessorEngine* pEngine = _pTextService->GetCompositionProcessorEngine();
+    DWORD candidateFontSize = pEngine ? pEngine->CurrentCandidateFontSize() : DefaultCandidateFontSize;
+    DWORD numberFontSize = pEngine ? pEngine->CurrentCandidateNumberFontSize() : DefaultCandidateNumberFontSize;
+    DWORD commentFontSize = pEngine ? pEngine->CurrentCandidateCommentFontSize() : DefaultCandidateCommentFontSize;
+    _pCandidateWnd = new (std::nothrow) CCandidateWindow(
+        _CandWndCallback,
+        this,
+        _pIndexRange,
+        _pTextService->_IsStoreAppMode(),
+        candidateFontSize,
+        numberFontSize,
+        commentFontSize);
     if (_pCandidateWnd == nullptr)
     {
         Global::Log(L"CandidateListUIPresenter MakeCandidateWindow failed: unable to allocate candidate window");

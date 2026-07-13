@@ -1298,6 +1298,66 @@ void CCompositionProcessorEngine::SetCandidatePageSize(DWORD pageSize)
     }
 }
 
+DWORD CCompositionProcessorEngine::CurrentCandidateFontSize() const
+{
+    return _settings.candidateFontSize;
+}
+
+void CCompositionProcessorEngine::SetCandidateFontSize(DWORD fontSize)
+{
+    DWORD normalizedFontSize = CandidateFontSizeFromRawValue(fontSize);
+    if (_settings.candidateFontSize == normalizedFontSize)
+    {
+        return;
+    }
+    _settings.candidateFontSize = normalizedFontSize;
+    _settingsStore.SaveCandidateFontSize(normalizedFontSize);
+    if (_pTextService)
+    {
+        _pTextService->RefreshCandidateWindowFontSizes();
+    }
+}
+
+DWORD CCompositionProcessorEngine::CurrentCandidateNumberFontSize() const
+{
+    return _settings.candidateNumberFontSize;
+}
+
+void CCompositionProcessorEngine::SetCandidateNumberFontSize(DWORD fontSize)
+{
+    DWORD normalizedFontSize = CandidateNumberFontSizeFromRawValue(fontSize);
+    if (_settings.candidateNumberFontSize == normalizedFontSize)
+    {
+        return;
+    }
+    _settings.candidateNumberFontSize = normalizedFontSize;
+    _settingsStore.SaveCandidateNumberFontSize(normalizedFontSize);
+    if (_pTextService)
+    {
+        _pTextService->RefreshCandidateWindowFontSizes();
+    }
+}
+
+DWORD CCompositionProcessorEngine::CurrentCandidateCommentFontSize() const
+{
+    return _settings.candidateCommentFontSize;
+}
+
+void CCompositionProcessorEngine::SetCandidateCommentFontSize(DWORD fontSize)
+{
+    DWORD normalizedFontSize = CandidateCommentFontSizeFromRawValue(fontSize);
+    if (_settings.candidateCommentFontSize == normalizedFontSize)
+    {
+        return;
+    }
+    _settings.candidateCommentFontSize = normalizedFontSize;
+    _settingsStore.SaveCandidateCommentFontSize(normalizedFontSize);
+    if (_pTextService)
+    {
+        _pTextService->RefreshCandidateWindowFontSizes();
+    }
+}
+
 std::wstring CCompositionProcessorEngine::DisplayTextForCandidate(const Ime::Lexicon& suggestion) const
 {
     if (suggestion.IsCantonese())

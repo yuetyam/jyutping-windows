@@ -80,6 +80,7 @@ public:
     BOOL _MovePage(_In_ int offSet);
 
     void _MoveWindowToTextExt();
+    void _UpdateFontSizes();
 
     // CTfTextLayoutSink
     virtual VOID _LayoutChangeNotification(_In_ RECT *lpRect);

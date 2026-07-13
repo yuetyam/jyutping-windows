@@ -16,7 +16,8 @@ typedef HRESULT (*CANDWNDCALLBACK)(void *pv, enum CANDWND_ACTION action);
 class CCandidateWindow : public CBaseWindow
 {
 public:
-    CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void *pv, _In_ CCandidateRange *pIndexRange, _In_ BOOL isStoreAppMode);
+    CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void *pv, _In_ CCandidateRange *pIndexRange, _In_ BOOL isStoreAppMode,
+        DWORD candidateFontSize, DWORD numberFontSize, DWORD commentFontSize);
     virtual ~CCandidateWindow();
 
     BOOL _Create(ATOM atom, _In_opt_ HWND parentWndHandle);
@@ -24,6 +25,7 @@ public:
     void _Move(int x, int y);
     void _Show(BOOL isShowWnd);
     void _ResizeWindow();
+    void _SetFontSizes(DWORD candidateFontSize, DWORD numberFontSize, DWORD commentFontSize);
 
     VOID _SetTextColor(_In_ COLORREF crColor, _In_ COLORREF crBkColor);
     VOID _SetFillColor(_In_ HBRUSH hBrush);
@@ -82,6 +84,7 @@ private:
 
     void _DeleteShadowWnd();
     void _DeleteVScrollBarWnd();
+    void _InitializeTextFormats(_In_ HWND wndHandle);
 
 private:
     // Selection and display state
@@ -122,4 +125,7 @@ private:
     // Behavioral flags
     BOOL _skipEmptyPageAdjustment; // Skip page index adjustment when page has empty slots
     BOOL _isStoreAppMode;          // Whether running in Store App mode
+    DWORD _candidateFontSize;
+    DWORD _numberFontSize;
+    DWORD _commentFontSize;
 };

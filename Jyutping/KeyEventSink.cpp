@@ -445,6 +445,14 @@ void CJyutping::RefreshCandidateListAfterCharacterVariantChange()
     }
 }
 
+void CJyutping::RefreshCandidateWindowFontSizes()
+{
+    if (_pCandidateListUIPresenter)
+    {
+        _pCandidateListUIPresenter->_UpdateFontSizes();
+    }
+}
+
 //+---------------------------------------------------------------------------
 //
 // _InitKeyEventSink

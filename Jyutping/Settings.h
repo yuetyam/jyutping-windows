@@ -4,6 +4,12 @@
 
 enum class CharacterStandard : int;
 
+inline constexpr DWORD MinimumCandidateFontSize = 11;
+inline constexpr DWORD MaximumCandidateFontSize = 24;
+inline constexpr DWORD DefaultCandidateFontSize = 16;
+inline constexpr DWORD DefaultCandidateNumberFontSize = 13;
+inline constexpr DWORD DefaultCandidateCommentFontSize = 13;
+
 enum class InputMethodMode : DWORD
 {
     Cantonese = 1,
@@ -38,6 +44,9 @@ struct ImeSettings
     PunctuationForm punctuationForm = PunctuationForm::Cantonese;
     CharacterVariant characterVariant = CharacterVariant::Traditional;
     DWORD candidatePageSize = 7;
+    DWORD candidateFontSize = DefaultCandidateFontSize;
+    DWORD candidateNumberFontSize = DefaultCandidateNumberFontSize;
+    DWORD candidateCommentFontSize = DefaultCandidateCommentFontSize;
 };
 
 class SettingsStore
@@ -50,6 +59,9 @@ public:
     bool SavePunctuationForm(PunctuationForm form) const;
     bool SaveCharacterVariant(CharacterVariant variant) const;
     bool SaveCandidatePageSize(DWORD pageSize) const;
+    bool SaveCandidateFontSize(DWORD fontSize) const;
+    bool SaveCandidateNumberFontSize(DWORD fontSize) const;
+    bool SaveCandidateCommentFontSize(DWORD fontSize) const;
 
 private:
     bool ReadDWORD(_In_z_ PCWSTR valueName, _Out_ DWORD& value) const;
@@ -65,3 +77,6 @@ BOOL CantonesePunctuationFromPunctuationForm(PunctuationForm form);
 CharacterVariant CharacterVariantFromRawValue(DWORD value);
 CharacterStandard CharacterStandardFromCharacterVariant(CharacterVariant variant);
 DWORD CandidatePageSizeFromRawValue(DWORD value);
+DWORD CandidateFontSizeFromRawValue(DWORD value);
+DWORD CandidateNumberFontSizeFromRawValue(DWORD value);
+DWORD CandidateCommentFontSizeFromRawValue(DWORD value);
