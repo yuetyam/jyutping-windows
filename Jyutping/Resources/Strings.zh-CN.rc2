@@ -28,6 +28,6 @@ BEGIN
     IDS_MENU_CHARACTER_VARIANT_HONG_KONG   "傳統漢字·香港"
     IDS_MENU_CHARACTER_VARIANT_TAIWAN      "傳統漢字·香港"
     IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  "简化字"
-    IDS_MENU_MORE_SETTINGS                 "Jyutping v0.2.0"
+    IDS_MENU_MORE_SETTINGS                 "Jyutping v0.3.0"
     IDS_LANGBAR_INPUT_MODE_TOOLTIP         "左键切换模式\n右键开启选单"
 END

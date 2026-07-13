@@ -37,8 +37,8 @@ pwsh -File installer\Build-Installers.ps1
 - Output filenames are:
 
 ```text
-installer\output\jyutping-v0.2.0-x64.exe
-installer\output\jyutping-v0.2.0-arm64.exe
+installer\output\jyutping-v0.3.0-x64.exe
+installer\output\jyutping-v0.3.0-arm64.exe
 installer\output\SHA256SUMS.txt
 ```
 
