@@ -202,6 +202,9 @@
     <ClCompile Include="Composition.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CompositionProcessorEngineKeystrokes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="CompositionProcessorEngine.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
