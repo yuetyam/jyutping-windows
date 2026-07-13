@@ -9,25 +9,25 @@
 
 namespace {
 
-constexpr UINT MenuIdCharacterVariant = 1;
-constexpr UINT MenuIdCharacterVariantTraditional = 2;
-constexpr UINT MenuIdCharacterVariantHongKong = 3;
-constexpr UINT MenuIdCharacterVariantTaiwan = 4;
-constexpr UINT MenuIdCharacterVariantSimplified = 5;
-constexpr UINT MenuIdCandidatePageSize = 6;
-constexpr UINT MenuIdCandidatePageSizeFirst = 7;
-constexpr UINT MenuIdCandidatePageSizeLast = 16;
-constexpr UINT MenuIdMoreSettings = 17;
-constexpr UINT MenuIdSeparator = 18;
-constexpr UINT MenuIdCandidateFontSize = 19;
-constexpr UINT MenuIdCandidateFontSizeFirst = 20;
-constexpr UINT MenuIdCandidateFontSizeLast = 33;
-constexpr UINT MenuIdCandidateNumberFontSize = 34;
-constexpr UINT MenuIdCandidateNumberFontSizeFirst = 35;
-constexpr UINT MenuIdCandidateNumberFontSizeLast = 48;
-constexpr UINT MenuIdCandidateCommentFontSize = 49;
-constexpr UINT MenuIdCandidateCommentFontSizeFirst = 50;
-constexpr UINT MenuIdCandidateCommentFontSizeLast = 63;
+constexpr UINT MenuIdCandidateFontSize = 1;
+constexpr UINT MenuIdCandidateFontSizeFirst = MenuIdCandidateFontSize + 1;
+constexpr UINT MenuIdCandidateFontSizeLast = MenuIdCandidateFontSizeFirst + MaximumCandidateFontSize - MinimumCandidateFontSize;
+constexpr UINT MenuIdCandidateNumberFontSize = MenuIdCandidateFontSizeLast + 1;
+constexpr UINT MenuIdCandidateNumberFontSizeFirst = MenuIdCandidateNumberFontSize + 1;
+constexpr UINT MenuIdCandidateNumberFontSizeLast = MenuIdCandidateNumberFontSizeFirst + MaximumCandidateFontSize - MinimumCandidateFontSize;
+constexpr UINT MenuIdCandidateCommentFontSize = MenuIdCandidateNumberFontSizeLast + 1;
+constexpr UINT MenuIdCandidateCommentFontSizeFirst = MenuIdCandidateCommentFontSize + 1;
+constexpr UINT MenuIdCandidateCommentFontSizeLast = MenuIdCandidateCommentFontSizeFirst + MaximumCandidateFontSize - MinimumCandidateFontSize;
+constexpr UINT MenuIdCandidatePageSize = MenuIdCandidateCommentFontSizeLast + 1;
+constexpr UINT MenuIdCandidatePageSizeFirst = MenuIdCandidatePageSize + 1;
+constexpr UINT MenuIdCandidatePageSizeLast = MenuIdCandidatePageSizeFirst + 9;
+constexpr UINT MenuIdCharacterVariant = MenuIdCandidatePageSizeLast + 1;
+constexpr UINT MenuIdCharacterVariantTraditional = MenuIdCharacterVariant + 1;
+constexpr UINT MenuIdCharacterVariantHongKong = MenuIdCharacterVariantTraditional + 1;
+constexpr UINT MenuIdCharacterVariantTaiwan = MenuIdCharacterVariantHongKong + 1;
+constexpr UINT MenuIdCharacterVariantSimplified = MenuIdCharacterVariantTaiwan + 1;
+constexpr UINT MenuIdSeparator = MenuIdCharacterVariantSimplified + 1;
+constexpr UINT MenuIdMoreSettings = MenuIdSeparator + 1;
 
 std::wstring LoadMenuString(UINT resourceId, PCWSTR fallback)
 {
@@ -67,16 +67,6 @@ UINT MenuIdForCharacterVariant(CharacterVariant variant)
     }
 }
 
-UINT MenuIdForCandidatePageSize(DWORD pageSize)
-{
-    return MenuIdCandidatePageSizeFirst + pageSize - 1;
-}
-
-DWORD CandidatePageSizeForMenuId(UINT id)
-{
-    return id - MenuIdCandidatePageSizeFirst + 1;
-}
-
 UINT MenuIdForFontSize(UINT firstId, DWORD fontSize)
 {
     return firstId + fontSize - MinimumCandidateFontSize;
@@ -85,6 +75,16 @@ UINT MenuIdForFontSize(UINT firstId, DWORD fontSize)
 DWORD FontSizeForMenuId(UINT firstId, UINT id)
 {
     return MinimumCandidateFontSize + id - firstId;
+}
+
+UINT MenuIdForCandidatePageSize(DWORD pageSize)
+{
+    return MenuIdCandidatePageSizeFirst + pageSize - 1;
+}
+
+DWORD CandidatePageSizeForMenuId(UINT id)
+{
+    return id - MenuIdCandidatePageSizeFirst + 1;
 }
 
 HRESULT AddFontSizeMenu(
@@ -500,13 +500,13 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
     }
 
     HMENU menuHandle = CreatePopupMenu();
-    HMENU characterVariantMenuHandle = CreatePopupMenu();
-    HMENU candidatePageSizeMenuHandle = CreatePopupMenu();
     HMENU candidateFontSizeMenuHandle = CreatePopupMenu();
     HMENU candidateNumberFontSizeMenuHandle = CreatePopupMenu();
     HMENU candidateCommentFontSizeMenuHandle = CreatePopupMenu();
-    if (menuHandle == nullptr || characterVariantMenuHandle == nullptr || candidatePageSizeMenuHandle == nullptr ||
-        candidateFontSizeMenuHandle == nullptr || candidateNumberFontSizeMenuHandle == nullptr || candidateCommentFontSizeMenuHandle == nullptr)
+    HMENU candidatePageSizeMenuHandle = CreatePopupMenu();
+    HMENU characterVariantMenuHandle = CreatePopupMenu();
+    if (menuHandle == nullptr || candidateFontSizeMenuHandle == nullptr || candidateNumberFontSizeMenuHandle == nullptr ||
+        candidateCommentFontSizeMenuHandle == nullptr || candidatePageSizeMenuHandle == nullptr || characterVariantMenuHandle == nullptr)
     {
         if (candidateCommentFontSizeMenuHandle != nullptr)
         {
@@ -535,32 +535,6 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
         return E_OUTOFMEMORY;
     }
 
-    std::wstring candidatePageSizeText = LoadMenuString(IDS_MENU_CANDIDATE_PAGE_SIZE, L"Candidate Count per Page");
-    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(candidatePageSizeMenuHandle), candidatePageSizeText.c_str()))
-    {
-        DestroyMenu(candidateCommentFontSizeMenuHandle);
-        DestroyMenu(candidateNumberFontSizeMenuHandle);
-        DestroyMenu(candidateFontSizeMenuHandle);
-        DestroyMenu(candidatePageSizeMenuHandle);
-        DestroyMenu(characterVariantMenuHandle);
-        DestroyMenu(menuHandle);
-        return E_FAIL;
-    }
-
-    for (DWORD pageSize = 1; pageSize <= 10; pageSize++)
-    {
-        WCHAR pageSizeText[3] = {};
-        StringCchPrintf(pageSizeText, ARRAYSIZE(pageSizeText), L"%lu", pageSize);
-        AppendMenuW(candidatePageSizeMenuHandle, MF_STRING, MenuIdForCandidatePageSize(pageSize), pageSizeText);
-    }
-
-    CheckMenuRadioItem(
-        candidatePageSizeMenuHandle,
-        MenuIdCandidatePageSizeFirst,
-        MenuIdCandidatePageSizeLast,
-        MenuIdForCandidatePageSize(_pSettingsMenuHandler->CurrentCandidatePageSize()),
-        MF_BYCOMMAND);
-
     if (!AppendFontSizePopupMenu(
         menuHandle,
         candidateFontSizeMenuHandle,
@@ -583,6 +557,29 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
         DestroyMenu(menuHandle);
         return E_FAIL;
     }
+
+    std::wstring candidatePageSizeText = LoadMenuString(IDS_MENU_CANDIDATE_PAGE_SIZE, L"Candidate Count per Page");
+    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(candidatePageSizeMenuHandle), candidatePageSizeText.c_str()))
+    {
+        DestroyMenu(candidatePageSizeMenuHandle);
+        DestroyMenu(characterVariantMenuHandle);
+        DestroyMenu(menuHandle);
+        return E_FAIL;
+    }
+
+    for (DWORD pageSize = 1; pageSize <= 10; pageSize++)
+    {
+        WCHAR pageSizeText[3] = {};
+        StringCchPrintf(pageSizeText, ARRAYSIZE(pageSizeText), L"%lu", pageSize);
+        AppendMenuW(candidatePageSizeMenuHandle, MF_STRING, MenuIdForCandidatePageSize(pageSize), pageSizeText);
+    }
+
+    CheckMenuRadioItem(
+        candidatePageSizeMenuHandle,
+        MenuIdCandidatePageSizeFirst,
+        MenuIdCandidatePageSizeLast,
+        MenuIdForCandidatePageSize(_pSettingsMenuHandler->CurrentCandidatePageSize()),
+        MF_BYCOMMAND);
 
     std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variant");
     if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(characterVariantMenuHandle), characterVariantText.c_str()))
@@ -716,36 +713,7 @@ STDAPI CLangBarItemButton::InitMenu(_In_ ITfMenu *pMenu)
         return S_OK;
     }
 
-    std::wstring candidatePageSizeText = LoadMenuString(IDS_MENU_CANDIDATE_PAGE_SIZE, L"Candidate Count per Page");
-    ITfMenu* pCandidatePageSizeMenu = nullptr;
-    HRESULT hr = AddMenuItem(
-        pMenu,
-        MenuIdCandidatePageSize,
-        TF_LBMENUF_SUBMENU,
-        candidatePageSizeText,
-        &pCandidatePageSizeMenu);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    if (pCandidatePageSizeMenu)
-    {
-        DWORD currentPageSize = _pSettingsMenuHandler->CurrentCandidatePageSize();
-        for (DWORD pageSize = 1; pageSize <= 10; pageSize++)
-        {
-            WCHAR pageSizeTextBuffer[3] = {};
-            StringCchPrintf(pageSizeTextBuffer, ARRAYSIZE(pageSizeTextBuffer), L"%lu", pageSize);
-            AddMenuItem(
-                pCandidatePageSizeMenu,
-                MenuIdForCandidatePageSize(pageSize),
-                currentPageSize == pageSize ? TF_LBMENUF_RADIOCHECKED : 0,
-                pageSizeTextBuffer);
-        }
-        pCandidatePageSizeMenu->Release();
-    }
-
-    hr = AddFontSizeMenu(
+    HRESULT hr = AddFontSizeMenu(
         pMenu,
         MenuIdCandidateFontSize,
         MenuIdCandidateFontSizeFirst,
@@ -774,6 +742,35 @@ STDAPI CLangBarItemButton::InitMenu(_In_ ITfMenu *pMenu)
     if (FAILED(hr))
     {
         return hr;
+    }
+
+    std::wstring candidatePageSizeText = LoadMenuString(IDS_MENU_CANDIDATE_PAGE_SIZE, L"Candidate Count per Page");
+    ITfMenu* pCandidatePageSizeMenu = nullptr;
+    hr = AddMenuItem(
+        pMenu,
+        MenuIdCandidatePageSize,
+        TF_LBMENUF_SUBMENU,
+        candidatePageSizeText,
+        &pCandidatePageSizeMenu);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (pCandidatePageSizeMenu)
+    {
+        DWORD currentPageSize = _pSettingsMenuHandler->CurrentCandidatePageSize();
+        for (DWORD pageSize = 1; pageSize <= 10; pageSize++)
+        {
+            WCHAR pageSizeTextBuffer[3] = {};
+            StringCchPrintf(pageSizeTextBuffer, ARRAYSIZE(pageSizeTextBuffer), L"%lu", pageSize);
+            AddMenuItem(
+                pCandidatePageSizeMenu,
+                MenuIdForCandidatePageSize(pageSize),
+                currentPageSize == pageSize ? TF_LBMENUF_RADIOCHECKED : 0,
+                pageSizeTextBuffer);
+        }
+        pCandidatePageSizeMenu->Release();
     }
 
     CharacterVariant currentVariant = _pSettingsMenuHandler->CurrentCharacterVariant();
@@ -839,11 +836,6 @@ STDAPI CLangBarItemButton::OnMenuSelect(UINT wID)
         return S_OK;
     }
 
-    if (wID >= MenuIdCandidatePageSizeFirst && wID <= MenuIdCandidatePageSizeLast)
-    {
-        _pSettingsMenuHandler->SetCandidatePageSize(CandidatePageSizeForMenuId(wID));
-        return S_OK;
-    }
     if (wID >= MenuIdCandidateFontSizeFirst && wID <= MenuIdCandidateFontSizeLast)
     {
         _pSettingsMenuHandler->SetCandidateFontSize(FontSizeForMenuId(MenuIdCandidateFontSizeFirst, wID));
@@ -857,6 +849,11 @@ STDAPI CLangBarItemButton::OnMenuSelect(UINT wID)
     if (wID >= MenuIdCandidateCommentFontSizeFirst && wID <= MenuIdCandidateCommentFontSizeLast)
     {
         _pSettingsMenuHandler->SetCandidateCommentFontSize(FontSizeForMenuId(MenuIdCandidateCommentFontSizeFirst, wID));
+        return S_OK;
+    }
+    if (wID >= MenuIdCandidatePageSizeFirst && wID <= MenuIdCandidatePageSizeLast)
+    {
+        _pSettingsMenuHandler->SetCandidatePageSize(CandidatePageSizeForMenuId(wID));
         return S_OK;
     }
 
