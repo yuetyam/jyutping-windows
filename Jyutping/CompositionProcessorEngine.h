@@ -40,15 +40,14 @@ public:
 
     BOOL IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCHAR *pwch, BOOL fComposing, CANDIDATE_MODE candidateMode, _Out_opt_ _KEYSTROKE_STATE *pKeyState);
 
-    BOOL AddVirtualKey(WCHAR wch);
-    void RemoveVirtualKey(DWORD_PTR dwIndex);
-    void PurgeVirtualKey();
+    BOOL AddInputKey(const VirtualInputKey& inputKey);
+    void RemoveInputKey(size_t index);
+    void ClearInputKeys();
 
-    DWORD_PTR GetVirtualKeyLength() { return _keystrokeBuffer.GetLength(); }
-    WCHAR GetVirtualKey(DWORD_PTR dwIndex);
+    size_t GetInputKeyCount() const { return _inputKeys.size(); }
     std::wstring GetRawInputText() const;
-    std::wstring GetCandidateTailInputText(DWORD_PTR inputCount) const;
-    BOOL SetRawInputText(const std::wstring& inputText);
+    std::vector<VirtualInputKey> GetCandidateTailInputKeys(size_t inputCount) const;
+    void SetInputKeys(const std::vector<VirtualInputKey>& inputKeys);
 
     void GetReadingStrings(_Inout_ CJyutpingArray<CStringRange> *pReadingStrings);
     void GetCandidateList(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
@@ -128,7 +127,7 @@ private:
 
     BOOL SetupInputEngine();
     std::wstring CurrentInputText() const;
-    std::vector<VirtualInputKey> CurrentInputKeys() const;
+    const std::vector<VirtualInputKey>& CurrentInputKeys() const;
     Ime::ReverseLookupMethod CurrentReverseLookupMethod() const;
     std::vector<VirtualInputKey> ReverseLookupQueryKeys() const;
     std::wstring ReverseLookupReadingText(const std::vector<Ime::Lexicon>& suggestions) const;
@@ -156,7 +155,7 @@ private:
     };
     _KEYSTROKE _keystrokeTable[VirtualInputKey::alphabetSetCount];
 
-    CStringRange _keystrokeBuffer;
+    std::vector<VirtualInputKey> _inputKeys;
 
     LANGID _langid;
     GUID _guidProfile;

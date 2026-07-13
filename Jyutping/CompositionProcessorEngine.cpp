@@ -327,102 +327,57 @@ void CCompositionProcessorEngine::ApplyPersistedSettings(_In_ ITfThreadMgr *pThr
 
 //+---------------------------------------------------------------------------
 //
-// AddVirtualKey
-// Add virtual key code to Composition Processor Engine for used to parse keystroke data.
+// AddInputKey
+// Add input key to Composition Processor Engine for use when parsing input data.
 // param
-//     [in] uCode - Specify virtual key code.
+//     [in] inputKey - input key.
 // returns
 //     State of Text Processor Engine.
 //----------------------------------------------------------------------------
 
-BOOL CCompositionProcessorEngine::AddVirtualKey(WCHAR wch)
+BOOL CCompositionProcessorEngine::AddInputKey(const VirtualInputKey& inputKey)
 {
-    if (!wch)
+    if (inputKey.code == 0)
     {
         return FALSE;
     }
 
-    VirtualInputKey inputKey;
-    if (!VirtualInputKey::MatchInputKeyForCharacter(wch, &inputKey))
-    {
-        return FALSE;
-    }
-
-    //
-    // append one keystroke in buffer.
-    //
-    DWORD_PTR srgKeystrokeBufLen = _keystrokeBuffer.GetLength();
-    PWCHAR pwch = new (std::nothrow) WCHAR[ srgKeystrokeBufLen + 1 ];
-    if (!pwch)
-    {
-        return FALSE;
-    }
-
-    memcpy(pwch, _keystrokeBuffer.Get(), srgKeystrokeBufLen * sizeof(WCHAR));
-    pwch[ srgKeystrokeBufLen ] = inputKey.character;
-
-    if (_keystrokeBuffer.Get())
-    {
-        delete [] _keystrokeBuffer.Get();
-    }
-
-    _keystrokeBuffer.Set(pwch, srgKeystrokeBufLen + 1);
-
+    _inputKeys.push_back(inputKey);
     return TRUE;
 }
 
 //+---------------------------------------------------------------------------
 //
-// RemoveVirtualKey
-// Remove stored virtual key code.
+// RemoveInputKey
+// Remove stored input key.
 // param
-//     [in] dwIndex   - Specified index.
+//     [in] index - index to remove.
 // returns
 //     none.
 //----------------------------------------------------------------------------
 
-void CCompositionProcessorEngine::RemoveVirtualKey(DWORD_PTR dwIndex)
+void CCompositionProcessorEngine::RemoveInputKey(size_t index)
 {
-    DWORD_PTR srgKeystrokeBufLen = _keystrokeBuffer.GetLength();
-
-    if (dwIndex + 1 < srgKeystrokeBufLen)
+    if (index < _inputKeys.size())
     {
-        // shift following eles left
-        memmove((BYTE*)_keystrokeBuffer.Get() + (dwIndex * sizeof(WCHAR)),
-            (BYTE*)_keystrokeBuffer.Get() + ((dwIndex + 1) * sizeof(WCHAR)),
-            (srgKeystrokeBufLen - dwIndex - 1) * sizeof(WCHAR));
+        _inputKeys.erase(_inputKeys.begin() + index);
     }
-
-    _keystrokeBuffer.Set(_keystrokeBuffer.Get(), srgKeystrokeBufLen - 1);
 }
 
 //+---------------------------------------------------------------------------
 //
-// PurgeVirtualKey
-// Purge stored virtual key code.
+// ClearInputKeys
+// Clear stored input keys.
 // param
 //     none.
 // returns
 //     none.
 //----------------------------------------------------------------------------
 
-void CCompositionProcessorEngine::PurgeVirtualKey()
+void CCompositionProcessorEngine::ClearInputKeys()
 {
-    if (_keystrokeBuffer.Get())
-    {
-        delete [] _keystrokeBuffer.Get();
-        _keystrokeBuffer.Set(NULL, 0);
-    }
+    _inputKeys.clear();
     ClearSelectedCandidateMemory();
-}
-
-WCHAR CCompositionProcessorEngine::GetVirtualKey(DWORD_PTR dwIndex)
-{
-    if (dwIndex < _keystrokeBuffer.GetLength())
-    {
-        return *(_keystrokeBuffer.Get() + dwIndex);
-    }
-    return 0;
 }
 
 std::wstring CCompositionProcessorEngine::GetRawInputText() const
@@ -430,59 +385,28 @@ std::wstring CCompositionProcessorEngine::GetRawInputText() const
     return CurrentInputText();
 }
 
-std::wstring CCompositionProcessorEngine::GetCandidateTailInputText(DWORD_PTR inputCount) const
+std::vector<VirtualInputKey> CCompositionProcessorEngine::GetCandidateTailInputKeys(size_t inputCount) const
 {
-    std::vector<VirtualInputKey> inputKeys = CurrentInputKeys();
-    size_t offset = (std::min)(static_cast<size_t>(inputCount), inputKeys.size());
-    BOOL isReverseLookupBuffer = ReverseLookupMethodFromKeys(inputKeys) != Ime::ReverseLookupMethod::None;
-    std::vector<VirtualInputKey> tail(inputKeys.begin() + offset, inputKeys.end());
+    size_t offset = (std::min)(inputCount, _inputKeys.size());
+    BOOL isReverseLookupBuffer = ReverseLookupMethodFromKeys(_inputKeys) != Ime::ReverseLookupMethod::None;
+    std::vector<VirtualInputKey> tail(_inputKeys.begin() + offset, _inputKeys.end());
     while (!tail.empty() && tail.front().IsApostrophe())
     {
         tail.erase(tail.begin());
     }
     if (isReverseLookupBuffer && offset > 0 && !tail.empty())
     {
-        tail.insert(tail.begin(), inputKeys.front());
+        tail.insert(tail.begin(), _inputKeys.front());
     }
-    return Ime::TextFromKeys(tail);
+    return tail;
 }
 
-BOOL CCompositionProcessorEngine::SetRawInputText(const std::wstring& inputText)
+void CCompositionProcessorEngine::SetInputKeys(const std::vector<VirtualInputKey>& inputKeys)
 {
-    if (inputText.empty())
-    {
-        PurgeVirtualKey();
-        _cachedInputText.clear();
-        _cachedReverseLookupMethod = Ime::ReverseLookupMethod::None;
-        _cachedSuggestions.clear();
-        return TRUE;
-    }
-
-    std::vector<VirtualInputKey> inputKeys = Ime::InputKeysFromText(inputText);
-    if (inputKeys.empty())
-    {
-        return FALSE;
-    }
-
-    std::wstring normalizedInputText = Ime::TextFromKeys(inputKeys);
-    PWCHAR pwch = new (std::nothrow) WCHAR[normalizedInputText.length()];
-    if (!pwch)
-    {
-        return FALSE;
-    }
-
-    memcpy(pwch, normalizedInputText.c_str(), normalizedInputText.length() * sizeof(WCHAR));
-
-    if (_keystrokeBuffer.Get())
-    {
-        delete [] _keystrokeBuffer.Get();
-    }
-
-    _keystrokeBuffer.Set(pwch, normalizedInputText.length());
+    _inputKeys = inputKeys;
     _cachedInputText.clear();
     _cachedReverseLookupMethod = Ime::ReverseLookupMethod::None;
     _cachedSuggestions.clear();
-    return TRUE;
 }
 
 //+---------------------------------------------------------------------------
@@ -498,7 +422,7 @@ BOOL CCompositionProcessorEngine::SetRawInputText(const std::wstring& inputText)
 
 void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStringRange> *pReadingStrings)
 {
-    if (pReadingStrings->Count() == 0 && _keystrokeBuffer.GetLength())
+    if (pReadingStrings->Count() == 0 && !_inputKeys.empty())
     {
         std::wstring currentInputText = CurrentInputText();
         const std::vector<Ime::Lexicon>& suggestions = GetInputSuggestions();
@@ -512,7 +436,7 @@ void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStri
                 matchedInputCount = (std::min)(matchedInputCount, inputLength - 1) + 1;
             }
 
-            std::vector<VirtualInputKey> inputKeys = CurrentInputKeys();
+            const std::vector<VirtualInputKey>& inputKeys = CurrentInputKeys();
             if (!isReverseLookupBuffer && ContainsToneInputKey(inputKeys))
             {
                 std::vector<Ime::BasicInputEvent> inputEvents;
@@ -1191,22 +1115,12 @@ BOOL CCompositionProcessorEngine::SetupInputEngine()
 
 std::wstring CCompositionProcessorEngine::CurrentInputText() const
 {
-    const WCHAR* buffer = _keystrokeBuffer.Get();
-    if (buffer == nullptr || _keystrokeBuffer.GetLength() == 0)
-    {
-        return std::wstring();
-    }
-    return std::wstring(buffer, static_cast<size_t>(_keystrokeBuffer.GetLength()));
+    return Ime::TextFromKeys(_inputKeys);
 }
 
-std::vector<VirtualInputKey> CCompositionProcessorEngine::CurrentInputKeys() const
+const std::vector<VirtualInputKey>& CCompositionProcessorEngine::CurrentInputKeys() const
 {
-    const WCHAR* buffer = _keystrokeBuffer.Get();
-    if (buffer == nullptr || _keystrokeBuffer.GetLength() == 0)
-    {
-        return std::vector<VirtualInputKey>();
-    }
-    return Ime::InputKeysFromText(std::wstring_view(buffer, static_cast<size_t>(_keystrokeBuffer.GetLength())));
+    return _inputKeys;
 }
 
 Ime::ReverseLookupMethod CCompositionProcessorEngine::CurrentReverseLookupMethod() const
@@ -1221,7 +1135,7 @@ BOOL CCompositionProcessorEngine::IsReverseLookupBuffer() const
 
 std::vector<VirtualInputKey> CCompositionProcessorEngine::ReverseLookupQueryKeys() const
 {
-    std::vector<VirtualInputKey> inputKeys = CurrentInputKeys();
+    const std::vector<VirtualInputKey>& inputKeys = CurrentInputKeys();
     if (inputKeys.empty() || ReverseLookupMethodFromKeys(inputKeys) == Ime::ReverseLookupMethod::None)
     {
         return std::vector<VirtualInputKey>();
@@ -1281,7 +1195,7 @@ BOOL CCompositionProcessorEngine::IsReverseLookupInputKey(UINT uCode) const
 
 const std::vector<Ime::Lexicon>& CCompositionProcessorEngine::GetInputSuggestions()
 {
-    std::vector<VirtualInputKey> inputKeys = CurrentInputKeys();
+    const std::vector<VirtualInputKey>& inputKeys = CurrentInputKeys();
     std::wstring inputText = Ime::TextFromKeys(inputKeys);
     Ime::ReverseLookupMethod reverseLookupMethod = ReverseLookupMethodFromKeys(inputKeys);
     if (!_isInputEngineReady || inputKeys.empty())
@@ -1420,7 +1334,7 @@ void CCompositionProcessorEngine::AppendInputEngineCandidates(_Inout_ CJyutpingA
     _candidateItemTextStorage.reserve(suggestions.size());
     _candidateItemCommentStorage.reserve(suggestions.size());
 
-    std::vector<VirtualInputKey> inputKeys = CurrentInputKeys();
+    const std::vector<VirtualInputKey>& inputKeys = CurrentInputKeys();
     BOOL isReverseLookupBuffer = ReverseLookupMethodFromKeys(inputKeys) != Ime::ReverseLookupMethod::None;
     size_t reverseLookupQueryLength = (isReverseLookupBuffer && !inputKeys.empty()) ? inputKeys.size() - 1 : 0;
 

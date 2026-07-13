@@ -2,8 +2,10 @@
 
 #include "KeyHandlerEditSession.h"
 #include "JyutpingBaseStructure.h"
+#include "VirtualInputKey.h"
 
 #include <string>
+#include <vector>
 
 class CLangBarItemButton;
 class CCandidateListUIPresenter;
@@ -100,7 +102,7 @@ public:
     HRESULT _HandleCancel(TfEditCookie ec, _In_ ITfContext *pContext);
 
     // key event handlers for composition object.
-    HRESULT _HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pContext, WCHAR wch);
+    HRESULT _HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pContext, const VirtualInputKey& inputKey);
     HRESULT _HandleCompositionFinalize(TfEditCookie ec, _In_ ITfContext *pContext, BOOL fCandidateList);
     HRESULT _HandleCompositionFinalizeRaw(TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *pContext);
@@ -142,7 +144,7 @@ private:
         TfEditCookie ec,
         _In_ ITfContext *pContext,
         _In_ CStringRange *pCandidateString,
-        const std::wstring& tailInput,
+        const std::vector<VirtualInputKey>& tailInputKeys,
         UINT candidateIndex,
         BOOL hasCandidateIndex);
 

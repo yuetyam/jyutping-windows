@@ -44,7 +44,7 @@ VOID CJyutping::_DeleteCandidateList(BOOL isForce, _In_opt_ ITfContext *pContext
 
     CCompositionProcessorEngine* pCompositionProcessorEngine = nullptr;
     pCompositionProcessorEngine = _pCompositionProcessorEngine;
-    pCompositionProcessorEngine->PurgeVirtualKey();
+    pCompositionProcessorEngine->ClearInputKeys();
 
     if (_pCandidateListUIPresenter)
     {
@@ -97,7 +97,7 @@ HRESULT CJyutping::_HandleCancel(TfEditCookie ec, _In_ ITfContext *pContext)
 //
 //----------------------------------------------------------------------------
 
-HRESULT CJyutping::_HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pContext, WCHAR wch)
+HRESULT CJyutping::_HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pContext, const VirtualInputKey& inputKey)
 {
     ITfRange* pRangeComposition = nullptr;
     TF_SELECTION tfSelection;
@@ -138,8 +138,8 @@ HRESULT CJyutping::_HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pCo
         }
     }
 
-    // Add virtual key to composition processor engine
-    pCompositionProcessorEngine->AddVirtualKey(wch);
+    // Add input key to composition processor engine
+    pCompositionProcessorEngine->AddInputKey(inputKey);
 
     _HandleCompositionInputWorker(pCompositionProcessorEngine, ec, pContext);
 
@@ -478,13 +478,13 @@ HRESULT CJyutping::_HandleCompositionBackspace(TfEditCookie ec, _In_ ITfContext 
     CCompositionProcessorEngine* pCompositionProcessorEngine = nullptr;
     pCompositionProcessorEngine = _pCompositionProcessorEngine;
 
-    DWORD_PTR vKeyLen = pCompositionProcessorEngine->GetVirtualKeyLength();
+    size_t inputKeyCount = pCompositionProcessorEngine->GetInputKeyCount();
 
-    if (vKeyLen)
+    if (inputKeyCount)
     {
-        pCompositionProcessorEngine->RemoveVirtualKey(vKeyLen - 1);
+        pCompositionProcessorEngine->RemoveInputKey(inputKeyCount - 1);
 
-        if (pCompositionProcessorEngine->GetVirtualKeyLength())
+        if (pCompositionProcessorEngine->GetInputKeyCount())
         {
             _HandleCompositionInputWorker(pCompositionProcessorEngine, ec, pContext);
         }

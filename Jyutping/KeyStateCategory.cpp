@@ -225,13 +225,13 @@ CKeyStateComposing::CKeyStateComposing(_In_ CJyutping *pTextService) : CKeyState
 
 HRESULT CKeyStateComposing::HandleKeyInput(KeyHandlerEditSessionDTO dto)
 {
-    return _pTextService->_HandleCompositionInput(dto.ec, dto.pContext, dto.wch);
+    return _pTextService->_HandleCompositionInput(dto.ec, dto.pContext, dto.inputKey);
 }
 
 HRESULT CKeyStateComposing::HandleKeyFinalizeTextStoreAndInput(KeyHandlerEditSessionDTO dto)
 {
     _pTextService->_HandleCompositionFinalize(dto.ec, dto.pContext, FALSE);
-    return _pTextService->_HandleCompositionInput(dto.ec, dto.pContext, dto.wch);
+    return _pTextService->_HandleCompositionInput(dto.ec, dto.pContext, dto.inputKey);
 }
 
 HRESULT CKeyStateComposing::HandleKeyFinalizeTextStore(KeyHandlerEditSessionDTO dto)
@@ -246,7 +246,7 @@ HRESULT CKeyStateComposing::HandleKeyFinalizeTextStore(KeyHandlerEditSessionDTO 
 HRESULT CKeyStateComposing::HandleKeyFinalizeCandidatelistAndInput(KeyHandlerEditSessionDTO dto)
 {
     _pTextService->_HandleCompositionFinalize(dto.ec, dto.pContext, TRUE);
-    return _pTextService->_HandleCompositionInput(dto.ec, dto.pContext, dto.wch);
+    return _pTextService->_HandleCompositionInput(dto.ec, dto.pContext, dto.inputKey);
 }
 
 HRESULT CKeyStateComposing::HandleKeyFinalizeCandidatelist(KeyHandlerEditSessionDTO dto)
@@ -301,7 +301,7 @@ HRESULT CKeyStateCandidate::HandleKeyFinalizeCandidatelist(KeyHandlerEditSession
 HRESULT CKeyStateCandidate::HandleKeyFinalizeCandidatelistAndInput(KeyHandlerEditSessionDTO dto)
 {
     _pTextService->_HandleCandidateFinalize(dto.ec, dto.pContext);
-    return _pTextService->_HandleCompositionInput(dto.ec, dto.pContext, dto.wch);
+    return _pTextService->_HandleCompositionInput(dto.ec, dto.pContext, dto.inputKey);
 }
 
 //_HandleCandidateConvert

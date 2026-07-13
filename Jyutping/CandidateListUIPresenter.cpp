@@ -47,10 +47,10 @@ HRESULT CJyutping::_HandleCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pC
     {
         if (_candidateMode == CANDIDATE_INCREMENTAL && candidateInputCount > 0 && _pCompositionProcessorEngine != nullptr)
         {
-            std::wstring tailInput = _pCompositionProcessorEngine->GetCandidateTailInputText(candidateInputCount);
-            if (!tailInput.empty())
+            std::vector<VirtualInputKey> tailInputKeys = _pCompositionProcessorEngine->GetCandidateTailInputKeys(candidateInputCount);
+            if (!tailInputKeys.empty())
             {
-                return _HandleIncrementalCandidateFinalize(ec, pContext, &candidateString, tailInput, candidateIndex, hasCandidateIndex);
+                return _HandleIncrementalCandidateFinalize(ec, pContext, &candidateString, tailInputKeys, candidateIndex, hasCandidateIndex);
             }
         }
 
@@ -78,7 +78,7 @@ HRESULT CJyutping::_HandleIncrementalCandidateFinalize(
     TfEditCookie ec,
     _In_ ITfContext *pContext,
     _In_ CStringRange *pCandidateString,
-    const std::wstring& tailInput,
+    const std::vector<VirtualInputKey>& tailInputKeys,
     UINT candidateIndex,
     BOOL hasCandidateIndex)
 {
@@ -103,19 +103,16 @@ HRESULT CJyutping::_HandleIncrementalCandidateFinalize(
 
     _TerminateComposition(ec, pContext);
 
-    if (_pCompositionProcessorEngine == nullptr || !_pCompositionProcessorEngine->SetRawInputText(tailInput))
+    if (_pCompositionProcessorEngine == nullptr)
     {
-        if (_pCompositionProcessorEngine != nullptr)
-        {
-            _pCompositionProcessorEngine->ClearSelectedCandidateMemory();
-        }
         return hr;
     }
+    _pCompositionProcessorEngine->SetInputKeys(tailInputKeys);
 
     _StartComposition(pContext);
     if (!_IsComposing())
     {
-        _pCompositionProcessorEngine->PurgeVirtualKey();
+        _pCompositionProcessorEngine->ClearInputKeys();
         return hr;
     }
 

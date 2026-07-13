@@ -22,12 +22,19 @@ private:
 
 typedef struct KeyHandlerEditSessionDTO
 {
-    KeyHandlerEditSessionDTO(TfEditCookie tFEC, _In_ ITfContext *pTfContext, UINT virualCode, WCHAR inputChar, KEYSTROKE_FUNCTION arrowKeyFunction)
+    KeyHandlerEditSessionDTO(
+        TfEditCookie tFEC,
+        _In_ ITfContext *pTfContext,
+        UINT virualCode,
+        WCHAR inputChar,
+        const VirtualInputKey& virtualInputKey,
+        KEYSTROKE_FUNCTION arrowKeyFunction)
     {
         ec = tFEC;
         pContext = pTfContext;
         code = virualCode;
         wch = inputChar;
+        inputKey = virtualInputKey;
         arrowKey = arrowKeyFunction;
     }
 
@@ -35,6 +42,7 @@ typedef struct KeyHandlerEditSessionDTO
     ITfContext* pContext;
     UINT code;
     WCHAR wch;
+    VirtualInputKey inputKey;
     KEYSTROKE_FUNCTION arrowKey;
 }KeyHandlerEditSessionDTO;
 
