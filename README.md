@@ -63,6 +63,9 @@ Requirements:
 
 - Release payloads for `x64`, `Win32`, and `ARM64EC`
 - Inno Setup 7
+- The official Inno Setup `ChineseSimplified.isl` and
+  `ChineseTraditional.isl` language files installed in the compiler's
+  `Languages` directory, normally `C:\Program Files\Inno Setup 7\Languages`
 
 Create both installer EXEs from the repository root:
 

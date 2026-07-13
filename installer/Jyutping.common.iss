@@ -25,6 +25,7 @@ OutputDir={#OutputDir}
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
+ShowLanguageDialog=no
 UninstallDisplayName=Jyutping
 UninstallDisplayIcon={app}\Jyutping.dll
 UninstallFilesDir={app}
@@ -34,6 +35,19 @@ VersionInfoDescription=Jyutping Installer
 VersionInfoProductName=Jyutping
 VersionInfoProductVersion={#AppVersion}
 VersionInfoVersion={#VersionInfoVersion}
+
+[Languages]
+Name: "english"; MessagesFile: "compiler:Default.isl"
+Name: "chinese_traditional"; MessagesFile: "compiler:Languages\ChineseTraditional.isl"
+Name: "chinese_simplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+
+[CustomMessages]
+english.RegistrationError=Could not register Jyutping.
+english.UnregistrationError=Could not unregister Jyutping.
+chinese_traditional.RegistrationError=無法註冊粵拼輸入法。
+chinese_traditional.UnregistrationError=無法取消註冊粵拼輸入法。
+chinese_simplified.RegistrationError=无法注册粤拼输入法。
+chinese_simplified.UnregistrationError=无法取消注册粤拼输入法。
 
 [Code]
 function RegistrationActionName(RegisterDll: Boolean): string;
@@ -77,12 +91,12 @@ begin
 end;
 
 procedure RequireRegSvr32(RegSvr32Path: string; DllPath: string; RegisterDll: Boolean);
-var
-    ActionName: string;
 begin
-    ActionName := RegistrationActionName(RegisterDll);
     if not RunRegSvr32(RegSvr32Path, DllPath, RegisterDll, True) then begin
-        MsgBox('Could not ' + ActionName + ' Jyutping.' + #13#10 + DllPath, mbError, MB_OK);
+        if RegisterDll then
+            MsgBox(CustomMessage('RegistrationError') + #13#10 + DllPath, mbError, MB_OK)
+        else
+            MsgBox(CustomMessage('UnregistrationError') + #13#10 + DllPath, mbError, MB_OK);
         Abort;
     end;
 end;

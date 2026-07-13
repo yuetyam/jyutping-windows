@@ -26,6 +26,7 @@ The build links against `d2d1.lib`, `dwrite.lib`, `shlwapi.lib`, and `winsqlite3
 
 ## Packaging
 - Packaging requires Inno Setup 7. `installer\Build-Installers.ps1` searches `Program Files\Inno Setup 7\ISCC.exe` first, then Inno Setup 6, then `ISCC.exe` on `PATH`.
+- The selected Inno Setup compiler must have the official `ChineseSimplified.isl` and `ChineseTraditional.isl` files installed in its `Languages` directory. For the standard Inno Setup 7 installation, place them under `C:\Program Files\Inno Setup 7\Languages`.
 - Build both installer packages from the repository root:
 
 ```powershell
