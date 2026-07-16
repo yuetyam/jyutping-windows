@@ -109,7 +109,6 @@ public:
 
     bool IsOpen() const;
     const std::wstring& Path() const;
-    bool VerifySchema() const;
 
     std::vector<LexiconRow> QueryLexiconByAnchors(int64_t anchors, int limit = 100) const;
     std::vector<LexiconRow> QueryLexiconBySpell(int64_t spell, int limit = -1) const;

@@ -429,11 +429,6 @@ bool InputEngine::Prepare()
         Global::Log(L"InputEngine prepare failed: unable to open database");
         return false;
     }
-    if (!_database.VerifySchema())
-    {
-        Global::Log(L"InputEngine prepare failed: database schema verification failed");
-        return false;
-    }
 
     bool isMemoryReady = _inputMemory.Prepare();
     if (!isMemoryReady)
@@ -462,11 +457,6 @@ bool InputEngine::Prepare(_In_z_ PCWSTR databasePath)
     if (!_database.Open(databasePath))
     {
         Global::Log(L"InputEngine prepare failed: unable to open database");
-        return false;
-    }
-    if (!_database.VerifySchema())
-    {
-        Global::Log(L"InputEngine prepare failed: database schema verification failed");
         return false;
     }
 

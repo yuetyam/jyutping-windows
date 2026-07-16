@@ -363,56 +363,6 @@ const std::wstring& ImeDatabase::Path() const
     return _path;
 }
 
-bool ImeDatabase::VerifySchema() const
-{
-    Global::Log(L"ImeDatabase schema verification start");
-
-    static constexpr PCWSTR statements[] =
-    {
-        L"SELECT rowid, word, romanization FROM core_lexicon WHERE spell = ? AND anchors = ? LIMIT 0;",
-        L"SELECT rowid, word, romanization FROM core_lexicon WHERE word = ? ORDER BY rowid LIMIT 0;",
-        L"SELECT alias_code, origin_code, alias, origin FROM core_syllable_table LIMIT 0;",
-        L"SELECT rowid, word, romanization FROM pinyin_lexicon WHERE spell = ? LIMIT 0;",
-        L"SELECT rowid, word, romanization FROM pinyin_lexicon WHERE anchors = ? LIMIT 0;",
-        L"SELECT code, syllable FROM pinyin_syllable_table LIMIT 0;",
-        L"SELECT rowid, word, c5code, cangjie5, c5complex FROM cangjie_table WHERE c5code = ? ORDER BY rowid LIMIT 0;",
-        L"SELECT rowid, word, c5complex FROM cangjie_table WHERE cangjie5 GLOB ? ORDER BY c5complex ASC, rowid ASC LIMIT 0;",
-        L"SELECT rowid, word, c3code, cangjie3, c3complex FROM cangjie_table WHERE c3code = ? ORDER BY rowid LIMIT 0;",
-        L"SELECT rowid, word, c3complex FROM cangjie_table WHERE cangjie3 GLOB ? ORDER BY c3complex ASC, rowid ASC LIMIT 0;",
-        L"SELECT rowid, word, q5code, quick5, q5complex FROM quick_table WHERE q5code = ? ORDER BY rowid LIMIT 0;",
-        L"SELECT rowid, word, q5complex FROM quick_table WHERE quick5 GLOB ? ORDER BY q5complex ASC, rowid ASC LIMIT 0;",
-        L"SELECT rowid, word, q3code, quick3, q3complex FROM quick_table WHERE q3code = ? ORDER BY rowid LIMIT 0;",
-        L"SELECT rowid, word, q3complex FROM quick_table WHERE quick3 GLOB ? ORDER BY q3complex ASC, rowid ASC LIMIT 0;",
-        L"SELECT rowid, word, code, spell, stroke, complex FROM stroke_table WHERE code = ? ORDER BY rowid LIMIT 0;",
-        L"SELECT rowid, word, complex FROM stroke_table WHERE spell = ? ORDER BY rowid LIMIT 0;",
-        L"SELECT rowid, word, complex FROM stroke_table WHERE stroke GLOB ? ORDER BY complex ASC, rowid ASC LIMIT 0;",
-        L"SELECT word, romanization FROM structure_table WHERE spell = ? LIMIT 0;",
-        L"SELECT mark FROM mark_table WHERE spell = ? LIMIT 0;",
-        L"SELECT category, unicode_version, code_point, cantonese, romanization FROM symbol_table WHERE spell = ? LIMIT 0;",
-        L"SELECT target FROM emoji_skin_map WHERE source = ? LIMIT 0;",
-        L"SELECT target FROM variant_old WHERE source = ? LIMIT 0;",
-        L"SELECT target FROM variant_hk WHERE source = ? LIMIT 0;",
-        L"SELECT target FROM variant_tw WHERE source = ? LIMIT 0;",
-        L"SELECT target FROM variant_prc WHERE source = ? LIMIT 0;",
-        L"SELECT target FROM variant_abp WHERE source = ? LIMIT 0;",
-        L"SELECT target FROM variant_sim WHERE source = ? LIMIT 0;"
-    };
-
-    for (size_t index = 0; index < ARRAYSIZE(statements); index++)
-    {
-        Statement statement;
-        if (!Prepare(statements[index], statement.Out()))
-        {
-            Global::Log(
-                L"ImeDatabase schema verification failed: statementIndex=%llu",
-                static_cast<unsigned long long>(index));
-            return false;
-        }
-    }
-    Global::Log(L"ImeDatabase schema verification success");
-    return true;
-}
-
 std::vector<ImeDatabase::LexiconRow> ImeDatabase::QueryLexiconByAnchors(int64_t anchors, int limit) const
 {
     static constexpr WCHAR sql[] = L"SELECT rowid, word, romanization FROM core_lexicon WHERE anchors = ? ORDER BY rowid LIMIT ?;";
