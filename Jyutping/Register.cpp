@@ -80,8 +80,8 @@ BOOL RegisterProfiles()
     }
     Global::UpdateSystemTheme();
     UINT iconIndex = static_cast<UINT>(Global::GetSystemTheme() == Global::DARK_MODE
-        ? Global::TextServiceAltIcoIndex
-        : Global::TextServiceIcoIndex);
+        ? TEXTSERVICE_ALT_ICON_INDEX
+        : TEXTSERVICE_ICON_INDEX);
 
     hr = pITfInputProcessorProfileMgr->RegisterProfile(Global::JyutpingCLSID,
         TEXTSERVICE_LANGID,

@@ -58,6 +58,8 @@ public:
 
     // Preserved key handler
     void OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsEaten, _In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
+    BOOL ShouldHandleInputMethodModePreservedKey(REFGUID rguid);
+    HRESULT ToggleInputMethodMode(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
     BOOL IsCharacterVariantPreservedKey(REFGUID rguid) const;
 
     // Punctuation

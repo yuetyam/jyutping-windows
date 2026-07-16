@@ -150,15 +150,8 @@ extern const WCHAR UnicodeByteOrderMark;
 extern const WCHAR KeywordDelimiter;
 extern const WCHAR StringDelimiter;
 
-extern const int TextServiceIcoIndex;
-extern const int TextServiceAltIcoIndex;
-
 extern const WCHAR InputMethodModeDescription[];
 extern const WCHAR InputMethodModeTooltip[];
-extern const int InputMethodModeCantoneseIcoIndex;
-extern const int InputMethodModeCantoneseAltIcoIndex;
-extern const int InputMethodModeABCIcoIndex;
-extern const int InputMethodModeABCAltIcoIndex;
 
 extern const WCHAR CharacterFormDescription[];
 

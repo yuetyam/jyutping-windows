@@ -3,13 +3,47 @@
 #include "Jyutping.h"
 #include "CandidateListUIPresenter.h"
 #include "CompositionProcessorEngine.h"
+#include "EditSession.h"
 #include "KeyHandlerEditSession.h"
 #include "Compartment.h"
+#include "Logger.h"
 #include "VirtualInputKey.h"
 
 // 0xF003, 0xF004 are the keys that the touch keyboard sends for next/previous
 #define THIRDPARTY_NEXTPAGE  static_cast<WORD>(0xF003)
 #define THIRDPARTY_PREVPAGE  static_cast<WORD>(0xF004)
+
+namespace {
+
+class CInputMethodModeEditSession final : public CEditSessionBase
+{
+public:
+    CInputMethodModeEditSession(_In_ CJyutping *pTextService, _In_ ITfContext *pContext) :
+        CEditSessionBase(pTextService, pContext)
+    {
+    }
+
+    STDMETHODIMP DoEditSession(TfEditCookie ec) override
+    {
+        HRESULT hr = _pTextService->_HandleCompositionFinalizeRaw(ec, _pContext);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+
+        CCompositionProcessorEngine *pCompositionProcessorEngine = _pTextService->GetCompositionProcessorEngine();
+        if (pCompositionProcessorEngine == nullptr)
+        {
+            return E_FAIL;
+        }
+
+        return pCompositionProcessorEngine->ToggleInputMethodMode(
+            _pTextService->_GetThreadMgr(),
+            _pTextService->_GetClientId());
+    }
+};
+
+} // namespace
 
 // Because the code mostly works with VKeys, here map a WCHAR back to a VKKey for certain
 // vkeys that the IME handles specially
@@ -409,10 +443,43 @@ STDAPI CJyutping::OnKeyUp(ITfContext *pContext, WPARAM wParam, LPARAM lParam, BO
 
 STDAPI CJyutping::OnPreservedKey(ITfContext *pContext, REFGUID rguid, BOOL *pIsEaten)
 {
-	pContext;
+    if (pIsEaten == nullptr)
+    {
+        return E_INVALIDARG;
+    }
 
     CCompositionProcessorEngine *pCompositionProcessorEngine;
     pCompositionProcessorEngine = _pCompositionProcessorEngine;
+
+    if (pContext != nullptr && _IsComposing() &&
+        pCompositionProcessorEngine->ShouldHandleInputMethodModePreservedKey(rguid))
+    {
+        CInputMethodModeEditSession *pEditSession = new (std::nothrow) CInputMethodModeEditSession(this, pContext);
+        if (pEditSession == nullptr)
+        {
+            *pIsEaten = FALSE;
+            return S_OK;
+        }
+
+        HRESULT editSessionResult = E_FAIL;
+        HRESULT requestResult = pContext->RequestEditSession(
+            _tfClientId,
+            pEditSession,
+            TF_ES_ASYNCDONTCARE | TF_ES_READWRITE,
+            &editSessionResult);
+        pEditSession->Release();
+
+        *pIsEaten = SUCCEEDED(requestResult) &&
+            (editSessionResult == TF_S_ASYNC || SUCCEEDED(editSessionResult));
+        if (!*pIsEaten)
+        {
+            Global::Log(
+                L"InputMethodMode edit session failed: requestHr=0x%08X editSessionHr=0x%08X",
+                static_cast<unsigned int>(requestResult),
+                static_cast<unsigned int>(editSessionResult));
+        }
+        return S_OK;
+    }
 
     BOOL isCharacterVariantPreservedKey = pCompositionProcessorEngine->IsCharacterVariantPreservedKey(rguid);
     pCompositionProcessorEngine->OnPreservedKey(rguid, pIsEaten, _GetThreadMgr(), _GetClientId());

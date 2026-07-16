@@ -849,33 +849,12 @@ void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsE
 
     if (IsEqualGUID(rguid, _PreservedKey_InputMethodMode.Guid))
     {
-        if (!CheckShiftKeyOnly(&_PreservedKey_InputMethodMode.TSFPreservedKeyTable))
+        if (!ShouldHandleInputMethodModePreservedKey(rguid))
         {
             *pIsEaten = FALSE;
             return;
         }
-        BOOL isOpen = FALSE;
-        CCompartment CompartmentKeyboardOpen(pThreadMgr, tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
-        HRESULT hr = CompartmentKeyboardOpen._GetCompartmentBOOL(isOpen);
-        if (FAILED(hr))
-        {
-            *pIsEaten = FALSE;
-            return;
-        }
-
-        BOOL newIsOpen = isOpen ? FALSE : TRUE;
-        hr = CompartmentKeyboardOpen._SetCompartmentBOOL(newIsOpen);
-        if (FAILED(hr))
-        {
-            *pIsEaten = FALSE;
-            return;
-        }
-
-        InputMethodMode mode = InputMethodModeFromKeyboardOpen(newIsOpen);
-        _settings.inputMethodMode = mode;
-        _settingsStore.SaveInputMethodMode(mode);
-
-        *pIsEaten = TRUE;
+        *pIsEaten = SUCCEEDED(ToggleInputMethodMode(pThreadMgr, tfClientId));
     }
     else if (IsEqualGUID(rguid, _PreservedKey_CharacterForm.Guid))
     {
@@ -965,6 +944,36 @@ void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsE
     }
 }
 
+BOOL CCompositionProcessorEngine::ShouldHandleInputMethodModePreservedKey(REFGUID rguid)
+{
+    return IsEqualGUID(rguid, _PreservedKey_InputMethodMode.Guid) &&
+        CheckShiftKeyOnly(&_PreservedKey_InputMethodMode.TSFPreservedKeyTable);
+}
+
+HRESULT CCompositionProcessorEngine::ToggleInputMethodMode(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId)
+{
+    BOOL isOpen = FALSE;
+    CCompartment CompartmentKeyboardOpen(pThreadMgr, tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
+    HRESULT hr = CompartmentKeyboardOpen._GetCompartmentBOOL(isOpen);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    BOOL newIsOpen = isOpen ? FALSE : TRUE;
+    hr = CompartmentKeyboardOpen._SetCompartmentBOOL(newIsOpen);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    InputMethodMode mode = InputMethodModeFromKeyboardOpen(newIsOpen);
+    _settings.inputMethodMode = mode;
+    _settingsStore.SaveInputMethodMode(mode);
+
+    return S_OK;
+}
+
 BOOL CCompositionProcessorEngine::IsCharacterVariantPreservedKey(REFGUID rguid) const
 {
     return IsEqualGUID(rguid, _PreservedKey_CharacterVariantTraditional.Guid) ||
@@ -1002,10 +1011,10 @@ void CCompositionProcessorEngine::SetupLanguageBar(_In_ ITfThreadMgr *pThreadMgr
         GUID_LBI_INPUTMODE,
         langbarInputMethodModeDescription.c_str(),
         inputMethodModeTooltip.c_str(),
-        Global::InputMethodModeCantoneseIcoIndex,
-        Global::InputMethodModeABCIcoIndex,
-        Global::InputMethodModeCantoneseAltIcoIndex,
-        Global::InputMethodModeABCAltIcoIndex,
+        INPUT_MODE_CANTONESE_ICON_INDEX,
+        INPUT_MODE_ABC_ICON_INDEX,
+        INPUT_MODE_CANTONESE_ALT_ICON_INDEX,
+        INPUT_MODE_ABC_ALT_ICON_INDEX,
         &_pLanguageBar_InputMethodMode,
         isSecureMode);
     if (_pLanguageBar_InputMethodMode)
