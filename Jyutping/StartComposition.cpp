@@ -1,97 +1,113 @@
 #include "Private.h"
 #include "Globals.h"
-#include "EditSession.h"
 #include "Jyutping.h"
-
-//+---------------------------------------------------------------------------
-//
-// CStartCompositinoEditSession
-//
-//----------------------------------------------------------------------------
-
-class CStartCompositionEditSession : public CEditSessionBase
-{
-public:
-    CStartCompositionEditSession(_In_ CJyutping *pTextService, _In_ ITfContext *pContext) : CEditSessionBase(pTextService, pContext)
-    {
-    }
-
-    // ITfEditSession
-    STDMETHODIMP DoEditSession(TfEditCookie ec);
-};
-
-//+---------------------------------------------------------------------------
-//
-// ITfEditSession::DoEditSession
-//
-//----------------------------------------------------------------------------
-
-STDAPI CStartCompositionEditSession::DoEditSession(TfEditCookie ec)
-{
-    ITfInsertAtSelection* pInsertAtSelection = nullptr;
-    ITfRange* pRangeInsert = nullptr;
-    ITfContextComposition* pContextComposition = nullptr;
-    ITfComposition* pComposition = nullptr;
-
-    if (FAILED(_pContext->QueryInterface(IID_ITfInsertAtSelection, (void **)&pInsertAtSelection)))
-    {
-        return S_OK;
-    }
-
-    if (FAILED(pInsertAtSelection->InsertTextAtSelection(ec, TF_IAS_QUERYONLY, NULL, 0, &pRangeInsert)))
-    {
-        pInsertAtSelection->Release();
-        return S_OK;
-    }
-
-    if (FAILED(_pContext->QueryInterface(IID_ITfContextComposition, (void **)&pContextComposition)))
-    {
-        pRangeInsert->Release();
-        pInsertAtSelection->Release();
-        return S_OK;
-    }
-
-    if (SUCCEEDED(pContextComposition->StartComposition(ec, pRangeInsert, _pTextService, &pComposition)) && (nullptr != pComposition))
-    {
-        _pTextService->_SetComposition(pComposition);
-
-        // set selection to the adjusted range
-        TF_SELECTION tfSelection;
-        tfSelection.range = pRangeInsert;
-        tfSelection.style.ase = TF_AE_NONE;
-        tfSelection.style.fInterimChar = FALSE;
-
-        _pContext->SetSelection(ec, 1, &tfSelection);
-        _pTextService->_SaveCompositionContext(_pContext);
-    }
-
-    pContextComposition->Release();
-    pRangeInsert->Release();
-    pInsertAtSelection->Release();
-
-    return S_OK;
-}
-
+#include "Logger.h"
 
 //+---------------------------------------------------------------------------
 //
 // _StartComposition
 //
-// this starts the new (std::nothrow) composition at the selection of the current
-// focus context.
 //----------------------------------------------------------------------------
 
-void CJyutping::_StartComposition(_In_ ITfContext *pContext)
+HRESULT CJyutping::_StartComposition(TfEditCookie ec, _In_ ITfContext *pContext)
 {
-    CStartCompositionEditSession* pStartCompositionEditSession = new (std::nothrow) CStartCompositionEditSession(this, pContext);
-
-    if (nullptr != pStartCompositionEditSession)
+    if (pContext == nullptr)
     {
-        HRESULT hr = S_OK;
-        pContext->RequestEditSession(_tfClientId, pStartCompositionEditSession, TF_ES_SYNC | TF_ES_READWRITE, &hr);
-
-        pStartCompositionEditSession->Release();
+        return E_INVALIDARG;
     }
+
+    if (_pComposition != nullptr)
+    {
+        return S_OK;
+    }
+
+    if (_pContext != nullptr)
+    {
+        Global::Log(L"StartComposition failed: saved context exists without a composition");
+        return E_UNEXPECTED;
+    }
+
+    HRESULT hr = E_FAIL;
+    ITfInsertAtSelection* pInsertAtSelection = nullptr;
+    ITfRange* pRangeInsert = nullptr;
+    ITfContextComposition* pContextComposition = nullptr;
+    ITfComposition* pComposition = nullptr;
+
+    hr = pContext->QueryInterface(IID_ITfInsertAtSelection, (void **)&pInsertAtSelection);
+    if (FAILED(hr) || pInsertAtSelection == nullptr)
+    {
+        hr = FAILED(hr) ? hr : E_UNEXPECTED;
+        Global::Log(L"StartComposition failed: QueryInterface(ITfInsertAtSelection) hr=0x%08X", static_cast<unsigned int>(hr));
+        return hr;
+    }
+
+    hr = pInsertAtSelection->InsertTextAtSelection(ec, TF_IAS_QUERYONLY, nullptr, 0, &pRangeInsert);
+    if (FAILED(hr) || pRangeInsert == nullptr)
+    {
+        hr = FAILED(hr) ? hr : E_UNEXPECTED;
+        Global::Log(L"StartComposition failed: InsertTextAtSelection hr=0x%08X", static_cast<unsigned int>(hr));
+        pInsertAtSelection->Release();
+        return hr;
+    }
+
+    hr = pContext->QueryInterface(IID_ITfContextComposition, (void **)&pContextComposition);
+    if (FAILED(hr) || pContextComposition == nullptr)
+    {
+        hr = FAILED(hr) ? hr : E_UNEXPECTED;
+        Global::Log(L"StartComposition failed: QueryInterface(ITfContextComposition) hr=0x%08X", static_cast<unsigned int>(hr));
+        pRangeInsert->Release();
+        pInsertAtSelection->Release();
+        return hr;
+    }
+
+    hr = pContextComposition->StartComposition(ec, pRangeInsert, this, &pComposition);
+    if (SUCCEEDED(hr) && pComposition == nullptr)
+    {
+        hr = E_UNEXPECTED;
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        TF_SELECTION tfSelection = {};
+        tfSelection.range = pRangeInsert;
+        tfSelection.style.ase = TF_AE_NONE;
+        tfSelection.style.fInterimChar = FALSE;
+
+        hr = pContext->SetSelection(ec, 1, &tfSelection);
+        if (FAILED(hr))
+        {
+            Global::Log(L"StartComposition failed: SetSelection hr=0x%08X", static_cast<unsigned int>(hr));
+        }
+    }
+    else
+    {
+        Global::Log(L"StartComposition failed: StartComposition hr=0x%08X", static_cast<unsigned int>(hr));
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        hr = _SaveCompositionContext(pContext);
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        _SetComposition(pComposition);
+        pComposition = nullptr;
+    }
+    else if (pComposition != nullptr)
+    {
+        pComposition->EndComposition(ec);
+    }
+
+    if (pComposition != nullptr)
+    {
+        pComposition->Release();
+    }
+    pContextComposition->Release();
+    pRangeInsert->Release();
+    pInsertAtSelection->Release();
+
+    return hr;
 }
 
 //+---------------------------------------------------------------------------
@@ -103,10 +119,21 @@ void CJyutping::_StartComposition(_In_ ITfContext *pContext)
 // deactivation
 //----------------------------------------------------------------------------
 
-void CJyutping::_SaveCompositionContext(_In_ ITfContext *pContext)
+HRESULT CJyutping::_SaveCompositionContext(_In_ ITfContext *pContext)
 {
-    assert(_pContext == nullptr);
+    if (pContext == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    if (_pContext != nullptr)
+    {
+        Global::Log(L"SaveCompositionContext failed: a context is already saved");
+        return E_UNEXPECTED;
+    }
 
     pContext->AddRef();
     _pContext = pContext;
+
+    return S_OK;
 }

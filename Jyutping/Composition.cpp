@@ -16,6 +16,12 @@ STDAPI CJyutping::OnCompositionTerminated(TfEditCookie ecWrite, _In_ ITfComposit
     // Clear dummy composition
     _RemoveDummyCompositionForComposing(ecWrite, pComposition);
 
+    // A composition that failed during startup was never published as current.
+    if (pComposition != _pComposition)
+    {
+        return S_OK;
+    }
+
     // Clear display attribute and end composition, _EndComposition will release composition for us
     ITfContext* pContext = _pContext;
     if (pContext)

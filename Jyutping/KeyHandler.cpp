@@ -4,6 +4,7 @@
 #include "Jyutping.h"
 #include "CandidateListUIPresenter.h"
 #include "CompositionProcessorEngine.h"
+#include "Logger.h"
 
 //+---------------------------------------------------------------------------
 //
@@ -99,52 +100,91 @@ HRESULT CJyutping::_HandleCancel(TfEditCookie ec, _In_ ITfContext *pContext)
 
 HRESULT CJyutping::_HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pContext, const VirtualInputKey& inputKey)
 {
+    HRESULT hr = S_OK;
     ITfRange* pRangeComposition = nullptr;
     TF_SELECTION tfSelection;
     ULONG fetched = 0;
     BOOL isCovered = TRUE;
+    BOOL startedComposition = FALSE;
 
     CCompositionProcessorEngine* pCompositionProcessorEngine = nullptr;
     pCompositionProcessorEngine = _pCompositionProcessorEngine;
 
     if ((_pCandidateListUIPresenter != nullptr) && (_candidateMode != CANDIDATE_INCREMENTAL))
     {
-        _HandleCompositionFinalize(ec, pContext, FALSE);
+        hr = _HandleCompositionFinalize(ec, pContext, FALSE);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
     }
 
-    // Start the new (std::nothrow) compositon if there is no composition.
+    // Start the composition in the write edit session that is handling this key.
     if (!_IsComposing())
     {
-        _StartComposition(pContext);
+        hr = _StartComposition(ec, pContext);
+        if (FAILED(hr))
+        {
+            pCompositionProcessorEngine->ClearInputKeys();
+            return hr;
+        }
+        startedComposition = TRUE;
+    }
+
+    if (_pComposition == nullptr)
+    {
+        pCompositionProcessorEngine->ClearInputKeys();
+        return E_UNEXPECTED;
     }
 
     // first, test where a keystroke would go in the document if we did an insert
-    if (pContext->GetSelection(ec, TF_DEFAULT_SELECTION, 1, &tfSelection, &fetched) != S_OK || fetched != 1)
+    hr = pContext->GetSelection(ec, TF_DEFAULT_SELECTION, 1, &tfSelection, &fetched);
+    if (hr != S_OK || fetched != 1)
     {
-        return S_FALSE;
+        Global::Log(L"HandleCompositionInput failed: GetSelection hr=0x%08X fetched=%lu", static_cast<unsigned int>(hr), fetched);
+        if (startedComposition)
+        {
+            pCompositionProcessorEngine->ClearInputKeys();
+            _TerminateComposition(ec, pContext);
+        }
+        return FAILED(hr) ? hr : E_FAIL;
     }
 
     // is the insertion point covered by a composition?
-    if (SUCCEEDED(_pComposition->GetRange(&pRangeComposition)))
+    hr = _pComposition->GetRange(&pRangeComposition);
+    if (FAILED(hr) || pRangeComposition == nullptr)
     {
-        isCovered = _IsRangeCovered(ec, tfSelection.range, pRangeComposition);
-
-        pRangeComposition->Release();
-
-        if (!isCovered)
+        Global::Log(L"HandleCompositionInput failed: GetRange hr=0x%08X", static_cast<unsigned int>(hr));
+        tfSelection.range->Release();
+        if (startedComposition)
         {
-            tfSelection.range->Release();
-            return S_OK;
+            pCompositionProcessorEngine->ClearInputKeys();
+            _TerminateComposition(ec, pContext);
         }
+        return FAILED(hr) ? hr : E_UNEXPECTED;
+    }
+
+    isCovered = _IsRangeCovered(ec, tfSelection.range, pRangeComposition);
+    pRangeComposition->Release();
+
+    if (!isCovered)
+    {
+        tfSelection.range->Release();
+        if (startedComposition)
+        {
+            pCompositionProcessorEngine->ClearInputKeys();
+            _TerminateComposition(ec, pContext);
+        }
+        return S_OK;
     }
 
     // Add input key to composition processor engine
     pCompositionProcessorEngine->AddInputKey(inputKey);
 
-    _HandleCompositionInputWorker(pCompositionProcessorEngine, ec, pContext);
+    hr = _HandleCompositionInputWorker(pCompositionProcessorEngine, ec, pContext);
 
     tfSelection.range->Release();
-    return S_OK;
+    return hr;
 }
 
 //+---------------------------------------------------------------------------
@@ -208,6 +248,7 @@ HRESULT CJyutping::_HandleCompositionInputWorker(_In_ CCompositionProcessorEngin
 HRESULT CJyutping::_CreateAndStartCandidate(_In_ CCompositionProcessorEngine *pCompositionProcessorEngine, TfEditCookie ec, _In_ ITfContext *pContext)
 {
     HRESULT hr = S_OK;
+    BOOL createdPresenter = FALSE;
 
     if (((_candidateMode == CANDIDATE_PHRASE) && (_pCandidateListUIPresenter))
         || ((_candidateMode == CANDIDATE_NONE) && (_pCandidateListUIPresenter)))
@@ -232,20 +273,47 @@ HRESULT CJyutping::_CreateAndStartCandidate(_In_ CCompositionProcessorEngine *pC
         }
 
         _candidateMode = CANDIDATE_INCREMENTAL;
+        createdPresenter = TRUE;
 
         // we don't cache the document manager object. So get it from pContext.
         ITfDocumentMgr* pDocumentMgr = nullptr;
-        if (SUCCEEDED(pContext->GetDocumentMgr(&pDocumentMgr)))
+        hr = pContext->GetDocumentMgr(&pDocumentMgr);
+        if (SUCCEEDED(hr) && pDocumentMgr != nullptr)
         {
             // get the composition range.
             ITfRange* pRange = nullptr;
-            if (SUCCEEDED(_pComposition->GetRange(&pRange)))
+            if (_pComposition == nullptr)
+            {
+                hr = E_UNEXPECTED;
+            }
+            else
+            {
+                hr = _pComposition->GetRange(&pRange);
+            }
+            if (SUCCEEDED(hr) && pRange != nullptr)
             {
                 hr = _pCandidateListUIPresenter->_StartCandidateList(_tfClientId, pDocumentMgr, pContext, ec, pRange);
                 pRange->Release();
             }
+            else if (SUCCEEDED(hr))
+            {
+                hr = E_UNEXPECTED;
+            }
             pDocumentMgr->Release();
         }
+        else if (SUCCEEDED(hr))
+        {
+            hr = E_UNEXPECTED;
+        }
+    }
+
+    if (FAILED(hr) && createdPresenter)
+    {
+        Global::Log(L"CreateAndStartCandidate failed: hr=0x%08X", static_cast<unsigned int>(hr));
+        _pCandidateListUIPresenter->_EndCandidateList();
+        delete _pCandidateListUIPresenter;
+        _pCandidateListUIPresenter = nullptr;
+        _candidateMode = CANDIDATE_NONE;
     }
 
     return hr;
@@ -653,9 +721,29 @@ HRESULT CJyutping::_InvokeKeyHandler(_In_ ITfContext *pContext, UINT code, WCHAR
     //
     // Do not specify TF_ES_SYNC so edit session is not invoked on WinWord
     //
-    HRESULT hr = pContext->RequestEditSession(_tfClientId, pEditSession, TF_ES_ASYNCDONTCARE | TF_ES_READWRITE, &hr);
+    HRESULT editSessionResult = E_FAIL;
+    HRESULT requestResult = pContext->RequestEditSession(
+        _tfClientId,
+        pEditSession,
+        TF_ES_ASYNCDONTCARE | TF_ES_READWRITE,
+        &editSessionResult);
 
     pEditSession->Release();
 
-    return hr;
+    if (FAILED(requestResult) || FAILED(editSessionResult))
+    {
+        Global::Log(
+            L"InvokeKeyHandler failed: category=%d function=%d requestHr=0x%08X editSessionHr=0x%08X",
+            static_cast<int>(keyState.Category),
+            static_cast<int>(keyState.Function),
+            static_cast<unsigned int>(requestResult),
+            static_cast<unsigned int>(editSessionResult));
+    }
+
+    if (FAILED(requestResult))
+    {
+        return requestResult;
+    }
+
+    return (editSessionResult == TF_S_ASYNC) ? requestResult : editSessionResult;
 }

@@ -246,7 +246,7 @@ BOOL CCandidateWindow::_Create(ATOM atom, _In_opt_ HWND parentWndHandle)
 {
     if (!_CreateMainWindow(atom, parentWndHandle))
     {
-        return TRUE;
+        return FALSE;
     }
 
     ApplyCandidateWindowAccent(_wndHandle);
@@ -258,12 +258,18 @@ BOOL CCandidateWindow::_Create(ATOM atom, _In_opt_ HWND parentWndHandle)
 
     if (!_CreateBackGroundShadowWindow())
     {
-        return TRUE;
+        DWORD error = GetLastError();
+        _Destroy();
+        SetLastError(error != ERROR_SUCCESS ? error : ERROR_NOT_ENOUGH_MEMORY);
+        return FALSE;
     }
 
     if (!_CreateVScrollWindow())
     {
-        return TRUE;
+        DWORD error = GetLastError();
+        _Destroy();
+        SetLastError(error != ERROR_SUCCESS ? error : ERROR_NOT_ENOUGH_MEMORY);
+        return FALSE;
     }
 
     _ResizeWindow();

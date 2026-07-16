@@ -109,11 +109,11 @@ HRESULT CJyutping::_HandleIncrementalCandidateFinalize(
     }
     _pCompositionProcessorEngine->SetInputKeys(tailInputKeys);
 
-    _StartComposition(pContext);
-    if (!_IsComposing())
+    HRESULT startResult = _StartComposition(ec, pContext);
+    if (FAILED(startResult) || !_IsComposing())
     {
         _pCompositionProcessorEngine->ClearInputKeys();
-        return hr;
+        return FAILED(startResult) ? startResult : E_UNEXPECTED;
     }
 
     return _HandleCompositionInputWorker(_pCompositionProcessorEngine, ec, pContext);
@@ -1493,15 +1493,27 @@ HRESULT CCandidateListUIPresenter::MakeCandidateWindow(_In_ ITfContext *pContext
 
     HWND parentWndHandle = nullptr;
     ITfContextView* pView = nullptr;
-    if (SUCCEEDED(pContextDocument->GetActiveView(&pView)))
+    HRESULT viewResult = pContextDocument->GetActiveView(&pView);
+    if (SUCCEEDED(viewResult) && pView != nullptr)
     {
-        pView->GetWnd(&parentWndHandle);
+        HRESULT windowResult = pView->GetWnd(&parentWndHandle);
+        if (FAILED(windowResult))
+        {
+            Global::Log(L"CandidateListUIPresenter GetWnd failed: hr=0x%08X", static_cast<unsigned int>(windowResult));
+        }
+        pView->Release();
+    }
+    else if (FAILED(viewResult))
+    {
+        Global::Log(L"CandidateListUIPresenter GetActiveView failed: hr=0x%08X", static_cast<unsigned int>(viewResult));
     }
 
     if (!_pCandidateWnd->_Create(_atom, parentWndHandle))
     {
-        Global::Log(L"CandidateListUIPresenter MakeCandidateWindow failed: _Create lastError=%lu", GetLastError());
-        return E_OUTOFMEMORY;
+        DWORD error = GetLastError();
+        Global::Log(L"CandidateListUIPresenter MakeCandidateWindow failed: _Create lastError=%lu", error);
+        DisposeCandidateWindow();
+        return HRESULT_FROM_WIN32(error != ERROR_SUCCESS ? error : ERROR_CANNOT_MAKE);
     }
 
     return S_OK;

@@ -95,7 +95,7 @@ public:
     // functions for the composition object.
     void _SetComposition(_In_ ITfComposition *pComposition);
     void _TerminateComposition(TfEditCookie ec, _In_ ITfContext *pContext, BOOL isCalledFromDeactivate = FALSE);
-    void _SaveCompositionContext(_In_ ITfContext *pContext);
+    HRESULT _SaveCompositionContext(_In_ ITfContext *pContext);
 
     // key event handlers for composition/candidate/phrase common objects.
     HRESULT _HandleComplete(TfEditCookie ec, _In_ ITfContext *pContext);
@@ -149,7 +149,7 @@ private:
         UINT candidateIndex,
         BOOL hasCandidateIndex);
 
-    void _StartComposition(_In_ ITfContext *pContext);
+    HRESULT _StartComposition(TfEditCookie ec, _In_ ITfContext *pContext);
     void _EndComposition(_In_opt_ ITfContext *pContext);
     BOOL _IsComposing();
     BOOL _IsKeyboardDisabled();
