@@ -11,6 +11,7 @@ public:
     {
         _uCode = uCode;
         _wch = wch;
+        _isShifting = Global::CheckModifiers(Global::ModifiersValue, TF_MOD_SHIFT);
         VirtualInputKey::MatchInputKeyForCharacter(wch, &_inputKey);
         _KeyState = keyState;
     }
@@ -21,6 +22,7 @@ public:
 private:
     UINT _uCode;    // virtual key code
     WCHAR _wch;      // character code
+    BOOL _isShifting;
     VirtualInputKey _inputKey;
     _KEYSTROKE_STATE _KeyState;     // key function regarding virtual key
 };

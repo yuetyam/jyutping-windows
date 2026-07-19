@@ -10,6 +10,7 @@
 class CLangBarItemButton;
 class CCandidateListUIPresenter;
 class CCompositionProcessorEngine;
+struct PunctuationKey;
 
 const DWORD WM_CheckGlobalCompartment = WM_USER;
 LRESULT CALLBACK CJyutping_WindowProc(HWND wndHandle, UINT uMsg, WPARAM wParam, LPARAM lParam);
@@ -108,7 +109,7 @@ public:
     HRESULT _HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _HandleCompositionBackspace(TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _HandleCompositionArrowKey(TfEditCookie ec, _In_ ITfContext *pContext, KEYSTROKE_FUNCTION keyFunction);
-    HRESULT _HandleCompositionPunctuation(TfEditCookie ec, _In_ ITfContext *pContext, WCHAR wch);
+    HRESULT _HandlePunctuationKey(TfEditCookie ec, _In_ ITfContext *pContext, UINT keyCode, BOOL isShifting);
     HRESULT _HandleCompositionCharacterForm(TfEditCookie ec, _In_ ITfContext *pContext, WCHAR wch);
 
     // key event handlers for candidate object.
@@ -148,6 +149,12 @@ private:
         const std::vector<VirtualInputKey>& tailInputKeys,
         UINT candidateIndex,
         BOOL hasCandidateIndex);
+    HRESULT _FinalizeBeforePunctuation(TfEditCookie ec, _In_ ITfContext *pContext);
+    HRESULT _StartPunctuationCandidateList(
+        TfEditCookie ec,
+        _In_ ITfContext *pContext,
+        const PunctuationKey& punctuationKey,
+        BOOL isShifting);
 
     HRESULT _StartComposition(TfEditCookie ec, _In_ ITfContext *pContext);
     void _EndComposition(_In_opt_ ITfContext *pContext);

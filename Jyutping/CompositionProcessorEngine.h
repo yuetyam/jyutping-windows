@@ -62,10 +62,6 @@ public:
     HRESULT ToggleInputMethodMode(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
     BOOL IsCharacterVariantPreservedKey(REFGUID rguid) const;
 
-    // Punctuation
-    BOOL IsPunctuation(WCHAR wch);
-    WCHAR GetPunctuation(WCHAR wch);
-
     BOOL IsCharacterFormConvertible(WCHAR wch);
     BOOL IsReverseLookupBuffer() const;
 
@@ -105,7 +101,6 @@ private:
     void SetupConfiguration();
     void SetupLanguageBar(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId, BOOL isSecureMode);
     void SetKeystrokeTable(_Inout_ CJyutpingArray<_KEYSTROKE> *pKeystroke);
-    void SetupPunctuationPair();
     void CreateLanguageBarButton(
         DWORD dwEnable,
         GUID guidLangBar,
@@ -196,10 +191,6 @@ private:
     XPreservedKey _PreservedKey_CharacterVariantHongKong;
     XPreservedKey _PreservedKey_CharacterVariantTaiwan;
     XPreservedKey _PreservedKey_CharacterVariantSimplified;
-
-    // Punctuation data
-    CJyutpingArray<CPunctuationPair> _PunctuationPair;
-    CJyutpingArray<CPunctuationNestPair> _PunctuationNestPair;
 
     // Language bar data
     CLangBarItemButton* _pLanguageBar_InputMethodMode;

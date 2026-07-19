@@ -332,26 +332,6 @@ extern const WCHAR FullWidthCharTable[] = {
     0xFF50, 0xFF51, 0xFF52, 0xFF53, 0xFF54, 0xFF55, 0xFF56, 0xFF57, 0xFF58, 0xFF59, 0xFF5A, 0xFF5B, 0xFF5C, 0xFF5D, 0xFF5E
 };
 
-//---------------------------------------------------------------------
-// defined punctuation characters
-//---------------------------------------------------------------------
-extern const struct _PUNCTUATION PunctuationTable[14] = {
-    {L'!',  0xFF01},
-    {L'$',  0xFFE5},
-    {L'&',  0x2014},
-    {L'(',  0xFF08},
-    {L')',  0xFF09},
-    {L',',  0xFF0C},
-    {L'.',  0x3002},
-    {L':',  0xFF1A},
-    {L';',  0xFF1B},
-    {L'?',  0xFF1F},
-    {L'@',  0x00B7},
-    {L'\\', 0x3001},
-    {L'^',  0x2026},
-    {L'_',  0x2014}
-};
-
 //+---------------------------------------------------------------------------
 //
 // CheckModifiers

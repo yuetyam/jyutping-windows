@@ -176,6 +176,33 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
         pKeyState->Function = FUNCTION_NONE;
     }
 
+    if (candidateMode == CANDIDATE_PUNCTUATION)
+    {
+        switch (uCode)
+        {
+        case VK_RETURN:
+        case VK_SPACE:
+            return SetKeystrokeState(pKeyState, CATEGORY_CANDIDATE, FUNCTION_FINALIZE_CANDIDATELIST);
+        case VK_ESCAPE:
+        case VK_BACK:
+            return SetKeystrokeState(pKeyState, CATEGORY_CANDIDATE, FUNCTION_CANCEL);
+        }
+
+        if (TrySetCandidateNavigationKey(uCode, CATEGORY_CANDIDATE, pKeyState))
+        {
+            return TRUE;
+        }
+        if (IsKeystrokeRange(uCode, pKeyState, candidateMode))
+        {
+            return TRUE;
+        }
+        if (VirtualInputKey::IsMatchedLetter(uCode) && (IsNoModifier() || IsShiftOnlyModifier()))
+        {
+            return SetKeystrokeState(pKeyState, CATEGORY_CANDIDATE, FUNCTION_FINALIZE_CANDIDATELIST_AND_INPUT);
+        }
+        return FALSE;
+    }
+
     if (candidateMode == CANDIDATE_ORIGINAL || candidateMode == CANDIDATE_PHRASE || candidateMode == CANDIDATE_WITH_NEXT_COMPOSITION)
     {
         fComposing = FALSE;

@@ -137,7 +137,6 @@ extern const GUID JyutpingGuidCompartmentCharacterForm;
 extern const GUID JyutpingGuidCompartmentPunctuationForm;
 
 extern const WCHAR FullWidthCharTable[];
-extern const struct _PUNCTUATION PunctuationTable[14];
 
 extern const GUID JyutpingGuidLangBarInputMethodMode;
 

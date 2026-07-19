@@ -110,7 +110,7 @@ HRESULT CKeyStateCategory::KeyStateHandler(KEYSTROKE_FUNCTION function, KeyHandl
     case FUNCTION_CHARACTER_FORM:
         return HandleKeyCharacterForm(dto);
 
-    case FUNCTION_PUNCTUATION_FORM:
+    case FUNCTION_PUNCTUATION_KEY:
         return HandleKeyPunctuation(dto);
 
     case FUNCTION_SELECT_BY_NUMBER:
@@ -197,7 +197,7 @@ HRESULT CKeyStateCategory::HandleKeyCharacterForm(KeyHandlerEditSessionDTO dto)
     return E_NOTIMPL;
 }
 
-//_HandleCompositionPunctuation
+// Handle punctuation key
 HRESULT CKeyStateCategory::HandleKeyPunctuation(KeyHandlerEditSessionDTO dto)
 {
 	dto;
@@ -281,7 +281,7 @@ HRESULT CKeyStateComposing::HandleKeyCharacterForm(KeyHandlerEditSessionDTO dto)
 
 HRESULT CKeyStateComposing::HandleKeyPunctuation(KeyHandlerEditSessionDTO dto)
 {
-    return _pTextService->_HandleCompositionPunctuation(dto.ec, dto.pContext, dto.wch);
+    return _pTextService->_HandlePunctuationKey(dto.ec, dto.pContext, dto.code, dto.isShifting);
 }
 
 /*

@@ -78,6 +78,7 @@
     <ClInclude Include="KeyHandlerEditSession.h" />
     <ClInclude Include="LanguageBar.h" />
     <ClInclude Include="Private.h" />
+    <ClInclude Include="PunctuationKey.h" />
     <ClInclude Include="RegKey.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Jyutping.h" />
@@ -134,6 +135,7 @@
     <ClCompile Include="LanguageBar.cpp" />
     <ClCompile Include="Localization.cpp" />
     <ClCompile Include="Logger.cpp" />
+    <ClCompile Include="PunctuationKey.cpp" />
     <ClCompile Include="Register.cpp" />
     <ClCompile Include="RegKey.cpp" />
     <ClCompile Include="ScrollBarWindow.cpp" />

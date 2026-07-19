@@ -27,6 +27,7 @@ typedef struct KeyHandlerEditSessionDTO
         _In_ ITfContext *pTfContext,
         UINT virualCode,
         WCHAR inputChar,
+        BOOL isShiftPressed,
         const VirtualInputKey& virtualInputKey,
         KEYSTROKE_FUNCTION arrowKeyFunction)
     {
@@ -34,6 +35,7 @@ typedef struct KeyHandlerEditSessionDTO
         pContext = pTfContext;
         code = virualCode;
         wch = inputChar;
+        isShifting = isShiftPressed;
         inputKey = virtualInputKey;
         arrowKey = arrowKeyFunction;
     }
@@ -42,6 +44,7 @@ typedef struct KeyHandlerEditSessionDTO
     ITfContext* pContext;
     UINT code;
     WCHAR wch;
+    BOOL isShifting;
     VirtualInputKey inputKey;
     KEYSTROKE_FUNCTION arrowKey;
 }KeyHandlerEditSessionDTO;

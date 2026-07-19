@@ -57,8 +57,8 @@ enum KEYSTROKE_FUNCTION
     // Function character form
     FUNCTION_CHARACTER_FORM,
 
-    // Function punctuation form
-    FUNCTION_PUNCTUATION_FORM
+    // Function punctuation key
+    FUNCTION_PUNCTUATION_KEY
 };
 
 //---------------------------------------------------------------------
@@ -70,7 +70,8 @@ enum CANDIDATE_MODE
     CANDIDATE_ORIGINAL,
     CANDIDATE_PHRASE,
     CANDIDATE_INCREMENTAL,
-    CANDIDATE_WITH_NEXT_COMPOSITION
+    CANDIDATE_WITH_NEXT_COMPOSITION,
+    CANDIDATE_PUNCTUATION
 };
 
 //---------------------------------------------------------------------
@@ -80,12 +81,6 @@ struct _KEYSTROKE_STATE
 {
     KEYSTROKE_CATEGORY Category;
     KEYSTROKE_FUNCTION Function;
-};
-
-struct _PUNCTUATION
-{
-    WCHAR _Code;
-    WCHAR _Punctuation;
 };
 
 BOOL CLSIDToString(REFGUID refGUID, _Out_writes_ (39) WCHAR *pCLSIDString);
@@ -238,31 +233,4 @@ struct CCandidateListItem
         _InputCount = rhs._InputCount;
         return *this;
     }
-};
-
-class CPunctuationPair
-{
-public:
-    CPunctuationPair();
-    CPunctuationPair(WCHAR code, WCHAR punctuation, WCHAR pair);
-
-    struct _PUNCTUATION _punctuation;
-    WCHAR _pairPunctuation;
-    BOOL _isPairToggle;
-};
-
-class CPunctuationNestPair
-{
-public:
-    CPunctuationNestPair();
-    CPunctuationNestPair(WCHAR wchCode_begin, WCHAR wch_begin, WCHAR wchPair_begin,
-        WCHAR wchCode_end,   WCHAR wch_end,   WCHAR wchPair_end);
-
-    struct _PUNCTUATION _punctuation_begin;
-    WCHAR _pairPunctuation_begin;
-
-    struct _PUNCTUATION _punctuation_end;
-    WCHAR _pairPunctuation_end;
-
-    int _nestCount;
 };

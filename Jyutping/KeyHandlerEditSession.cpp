@@ -28,7 +28,7 @@ STDAPI CKeyHandlerEditSession::DoEditSession(TfEditCookie ec)
 
     if (pKeyStateCategory)
     {
-        KeyHandlerEditSessionDTO keyHandlerEditSessioDTO(ec, _pContext, _uCode, _wch, _inputKey, _KeyState.Function);
+        KeyHandlerEditSessionDTO keyHandlerEditSessioDTO(ec, _pContext, _uCode, _wch, _isShifting, _inputKey, _KeyState.Function);
         hResult = pKeyStateCategory->KeyStateHandler(_KeyState.Function, keyHandlerEditSessioDTO);
 
         pKeyStateCategory->Release();

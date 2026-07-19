@@ -7,6 +7,7 @@
 #include "KeyHandlerEditSession.h"
 #include "Compartment.h"
 #include "Logger.h"
+#include "PunctuationKey.h"
 #include "VirtualInputKey.h"
 
 // 0xF003, 0xF004 are the keys that the touch keyboard sends for next/previous
@@ -42,6 +43,11 @@ public:
             _pTextService->_GetClientId());
     }
 };
+
+BOOL IsPageNavigationFunction(KEYSTROKE_FUNCTION function)
+{
+    return function == FUNCTION_MOVE_PAGE_UP || function == FUNCTION_MOVE_PAGE_DOWN;
+}
 
 } // namespace
 
@@ -109,10 +115,6 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     CCompartment CompartmentCharacterForm(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
     CompartmentCharacterForm._GetCompartmentBOOL(isFullWidth);
 
-    BOOL isCantonesePunctuation = FALSE;
-    CCompartment CompartmentPunctuationForm(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentPunctuationForm);
-    CompartmentPunctuationForm._GetCompartmentBOOL(isCantonesePunctuation);
-
     if (pKeyState)
     {
         pKeyState->Category = CATEGORY_NONE;
@@ -162,6 +164,13 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     CCompositionProcessorEngine *pCompositionProcessorEngine;
     pCompositionProcessorEngine = _pCompositionProcessorEngine;
 
+    BOOL isNoModifier = Global::CheckModifiers(Global::ModifiersValue, 0);
+    BOOL isShifting = Global::CheckModifiers(Global::ModifiersValue, TF_MOD_SHIFT);
+    const PunctuationKey* punctuationKey = (isNoModifier || isShifting) ? PunctuationKey::ForVirtualKey(*pCodeOut) : nullptr;
+    BOOL shouldHandlePunctuation = punctuationKey != nullptr && punctuationKey->ShouldHandle(isShifting);
+    BOOL isReverseLookupApostrophe = shouldHandlePunctuation && !isShifting &&
+        punctuationKey->keyCode == VK_OEM_7 && pCompositionProcessorEngine->IsReverseLookupBuffer();
+
     if (isCantoneseMode)
     {
         //
@@ -171,29 +180,29 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
         //
         if (pCompositionProcessorEngine->IsVirtualKeyNeed(*pCodeOut, pwch, _IsComposing(), _candidateMode, pKeyState))
         {
-            return TRUE;
+            if (!shouldHandlePunctuation || isReverseLookupApostrophe)
+            {
+                return TRUE;
+            }
+            if (!isShifting && pKeyState != nullptr &&
+                IsPageNavigationFunction(pKeyState->Function))
+            {
+                return TRUE;
+            }
         }
     }
 
     //
     // Punctuation
     //
-    VirtualInputKey punctuationInputKey;
-    BOOL isReverseLookupApostrophe = pCompositionProcessorEngine->IsReverseLookupBuffer() &&
-        VirtualInputKey::MatchInputKeyForCharacter(wch, &punctuationInputKey) &&
-        punctuationInputKey.IsApostrophe();
-    if (!isReverseLookupApostrophe &&
-        pCompositionProcessorEngine->IsPunctuation(wch))
+    if (shouldHandlePunctuation && !isReverseLookupApostrophe)
     {
-        if ((_candidateMode == CANDIDATE_NONE) && isCantonesePunctuation)
+        if (pKeyState)
         {
-            if (pKeyState)
-            {
-                pKeyState->Category = CATEGORY_COMPOSING;
-                pKeyState->Function = FUNCTION_PUNCTUATION_FORM;
-            }
-            return TRUE;
+            pKeyState->Category = CATEGORY_COMPOSING;
+            pKeyState->Function = FUNCTION_PUNCTUATION_KEY;
         }
+        return TRUE;
     }
 
     //
@@ -494,7 +503,8 @@ STDAPI CJyutping::OnPreservedKey(ITfContext *pContext, REFGUID rguid, BOOL *pIsE
 
 void CJyutping::RefreshCandidateListAfterCharacterVariantChange()
 {
-    if (!_pCandidateListUIPresenter || !_pCompositionProcessorEngine)
+    if (!_pCandidateListUIPresenter || !_pCompositionProcessorEngine ||
+        _candidateMode == CANDIDATE_PUNCTUATION)
     {
         return;
     }

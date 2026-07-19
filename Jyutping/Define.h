@@ -16,9 +16,9 @@
 #define INPUT_MODE_ABC_ICON_INDEX            IDI_INPUT_MODE_ABC
 #define INPUT_MODE_ABC_ALT_ICON_INDEX        IDI_INPUT_MODE_ABC_ALT
 
-#define CANDIDATE_FONT_NAMES     L"Inter", L"Segoe UI", L"Shanggu Sans", L"IBM Plex Sans TC", L"Plangothic P1", L"Plangothic P2", L"Microsoft JhengHei UI", L"Microsoft YaHei UI", L"MiSans L3", L"Segoe UI Emoji", L"Segoe UI Symbol"
+#define CANDIDATE_FONT_NAMES     L"Inter", L"Segoe UI", L"Shanggu Sans", L"IBM Plex Sans TC", L"Plangothic P1", L"Plangothic P2", L"Microsoft YaHei UI", L"Microsoft JhengHei UI", L"MiSans L3", L"Segoe UI Emoji", L"Segoe UI Symbol"
 #define NUMBER_LABEL_FONT_NAMES  L"Monaspace Neon", L"JetBrains Mono", L"Consolas"
-#define COMMENT_FONT_NAMES       L"Monaspace Neon", L"JetBrains Mono", L"Inter", L"Segoe UI"
+#define COMMENT_FONT_NAMES       L"Monaspace Neon", L"JetBrains Mono", L"Inter", L"Segoe UI", L"Shanggu Sans", L"Microsoft YaHei UI", L"Microsoft JhengHei UI"
 
 //---------------------------------------------------------------------
 // defined Candidated Window

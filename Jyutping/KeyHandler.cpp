@@ -3,8 +3,30 @@
 #include "EditSession.h"
 #include "Jyutping.h"
 #include "CandidateListUIPresenter.h"
+#include "Compartment.h"
 #include "CompositionProcessorEngine.h"
 #include "Logger.h"
+#include "PunctuationKey.h"
+
+namespace {
+
+std::wstring PunctuationComment(const PunctuationSymbol& symbol)
+{
+    if (symbol.comment == nullptr)
+    {
+        return std::wstring();
+    }
+
+    std::wstring comment(symbol.comment);
+    if (symbol.secondaryComment != nullptr)
+    {
+        comment.append(L" ");
+        comment.append(symbol.secondaryComment);
+    }
+    return comment;
+}
+
+} // namespace
 
 //+---------------------------------------------------------------------------
 //
@@ -351,7 +373,8 @@ HRESULT CJyutping::_HandleCompositionFinalize(TfEditCookie ec, _In_ ITfContext *
                 return hr;
             }
 
-            if (hasCandidateIndex && _pCompositionProcessorEngine != nullptr)
+            if (_candidateMode != CANDIDATE_PUNCTUATION && hasCandidateIndex &&
+                _pCompositionProcessorEngine != nullptr)
             {
                 _pCompositionProcessorEngine->CommitSelectedCandidateForMemory(candidateIndex);
             }
@@ -610,54 +633,178 @@ HRESULT CJyutping::_HandleCompositionArrowKey(TfEditCookie ec, _In_ ITfContext *
 
 //+---------------------------------------------------------------------------
 //
-// _HandleCompositionPunctuation
+// _HandlePunctuationKey
 //
 //----------------------------------------------------------------------------
 
-HRESULT CJyutping::_HandleCompositionPunctuation(TfEditCookie ec, _In_ ITfContext *pContext, WCHAR wch)
+HRESULT CJyutping::_HandlePunctuationKey(TfEditCookie ec, _In_ ITfContext *pContext, UINT keyCode, BOOL isShifting)
 {
-    HRESULT hr = S_OK;
-
-    if (_candidateMode != CANDIDATE_NONE && _pCandidateListUIPresenter)
+    const PunctuationKey* punctuationKey = PunctuationKey::ForVirtualKey(keyCode);
+    if (punctuationKey == nullptr || !punctuationKey->ShouldHandle(isShifting))
     {
-        DWORD_PTR candidateLen = 0;
-        const WCHAR* pCandidateString = nullptr;
-        UINT candidateIndex = 0;
-        BOOL hasCandidateIndex = _pCandidateListUIPresenter->_GetSelectedCandidateIndex(&candidateIndex);
-
-        candidateLen = _pCandidateListUIPresenter->_GetSelectedCandidateString(&pCandidateString);
-
-        CStringRange candidateString;
-        candidateString.Set(pCandidateString, candidateLen);
-
-        if (candidateLen)
-        {
-            HRESULT candidateHr = _AddComposingAndChar(ec, pContext, &candidateString);
-            if (SUCCEEDED(candidateHr) && hasCandidateIndex && _pCompositionProcessorEngine != nullptr)
-            {
-                _pCompositionProcessorEngine->CommitSelectedCandidateForMemory(candidateIndex);
-            }
-        }
+        return E_INVALIDARG;
     }
-    //
-    // Get punctuation char from composition processor engine
-    //
-    CCompositionProcessorEngine* pCompositionProcessorEngine = nullptr;
-    pCompositionProcessorEngine = _pCompositionProcessorEngine;
 
-    WCHAR punctuation = pCompositionProcessorEngine->GetPunctuation(wch);
-
-    CStringRange punctuationString;
-    punctuationString.Set(&punctuation, 1);
-
-    // Finalize character
-    hr = _AddCharAndFinalize(ec, pContext, &punctuationString);
+    HRESULT hr = _FinalizeBeforePunctuation(ec, pContext);
     if (FAILED(hr))
     {
         return hr;
     }
 
-    _HandleCancel(ec, pContext);
+    BOOL isCantonesePunctuation = TRUE;
+    CCompartment punctuationFormCompartment(
+        _pThreadMgr,
+        _tfClientId,
+        Global::JyutpingGuidCompartmentPunctuationForm);
+    punctuationFormCompartment._GetCompartmentBOOL(isCantonesePunctuation);
+
+    LPCWSTR output = isCantonesePunctuation ?
+        punctuationKey->InstantSymbol(isShifting) : punctuationKey->Text(isShifting);
+    if (output != nullptr)
+    {
+        CStringRange outputString;
+        outputString.Set(output, wcslen(output));
+        return _AddCharAndFinalize(ec, pContext, &outputString);
+    }
+
+    return _StartPunctuationCandidateList(ec, pContext, *punctuationKey, isShifting);
+}
+
+HRESULT CJyutping::_FinalizeBeforePunctuation(TfEditCookie ec, _In_ ITfContext *pContext)
+{
+    if (_pCandidateListUIPresenter != nullptr && _candidateMode != CANDIDATE_NONE)
+    {
+        const WCHAR* candidateText = nullptr;
+        DWORD_PTR candidateLength = _pCandidateListUIPresenter->_GetSelectedCandidateString(&candidateText);
+        UINT candidateIndex = 0;
+        BOOL hasCandidateIndex = _pCandidateListUIPresenter->_GetSelectedCandidateIndex(&candidateIndex);
+
+        if (candidateLength > 0)
+        {
+            CStringRange candidateString;
+            candidateString.Set(candidateText, candidateLength);
+
+            HRESULT hr = _AddComposingAndChar(ec, pContext, &candidateString);
+            if (FAILED(hr))
+            {
+                return hr;
+            }
+
+            if (_candidateMode != CANDIDATE_PUNCTUATION && hasCandidateIndex &&
+                _pCompositionProcessorEngine != nullptr)
+            {
+                _pCompositionProcessorEngine->CommitSelectedCandidateForMemory(candidateIndex);
+            }
+        }
+
+        return _HandleComplete(ec, pContext);
+    }
+
+    if (_IsComposing())
+    {
+        return _HandleCompositionFinalizeRaw(ec, pContext);
+    }
+    return S_OK;
+}
+
+HRESULT CJyutping::_StartPunctuationCandidateList(
+    TfEditCookie ec,
+    _In_ ITfContext *pContext,
+    const PunctuationKey& punctuationKey,
+    BOOL isShifting)
+{
+    PunctuationSymbolList symbols = punctuationKey.Symbols(isShifting);
+    if (symbols.symbols == nullptr || symbols.count == 0)
+    {
+        return S_FALSE;
+    }
+
+    HRESULT hr = _StartComposition(ec, pContext);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    LPCWSTR placeholder = punctuationKey.Text(isShifting);
+    CStringRange placeholderString;
+    placeholderString.Set(placeholder, wcslen(placeholder));
+    hr = _AddComposingAndChar(ec, pContext, &placeholderString);
+    if (FAILED(hr))
+    {
+        _HandleCancel(ec, pContext);
+        return hr;
+    }
+
+    _pCandidateListUIPresenter = new (std::nothrow) CCandidateListUIPresenter(
+        this,
+        Global::AtomCandidateWindow,
+        CATEGORY_CANDIDATE,
+        _pCompositionProcessorEngine->GetCandidateListIndexRange(),
+        FALSE);
+    if (_pCandidateListUIPresenter == nullptr)
+    {
+        _HandleCancel(ec, pContext);
+        return E_OUTOFMEMORY;
+    }
+    _candidateMode = CANDIDATE_PUNCTUATION;
+
+    ITfDocumentMgr* pDocumentManager = nullptr;
+    hr = pContext->GetDocumentMgr(&pDocumentManager);
+    if (SUCCEEDED(hr) && pDocumentManager != nullptr)
+    {
+        ITfRange* pCompositionRange = nullptr;
+        hr = _pComposition->GetRange(&pCompositionRange);
+        if (SUCCEEDED(hr) && pCompositionRange != nullptr)
+        {
+            hr = _pCandidateListUIPresenter->_StartCandidateList(
+                _tfClientId,
+                pDocumentManager,
+                pContext,
+                ec,
+                pCompositionRange);
+            pCompositionRange->Release();
+        }
+        else if (SUCCEEDED(hr))
+        {
+            hr = E_UNEXPECTED;
+        }
+        pDocumentManager->Release();
+    }
+    else if (SUCCEEDED(hr))
+    {
+        hr = E_UNEXPECTED;
+    }
+
+    if (FAILED(hr))
+    {
+        _HandleCancel(ec, pContext);
+        return hr;
+    }
+
+    std::vector<std::wstring> comments;
+    comments.reserve(symbols.count);
+    for (size_t index = 0; index < symbols.count; index++)
+    {
+        comments.push_back(PunctuationComment(symbols.symbols[index]));
+    }
+
+    CJyutpingArray<CCandidateListItem> candidateList;
+    candidateList.reserve(symbols.count);
+    for (size_t index = 0; index < symbols.count; index++)
+    {
+        const PunctuationSymbol& symbol = symbols.symbols[index];
+        CCandidateListItem* candidate = candidateList.Append();
+        if (candidate == nullptr)
+        {
+            _HandleCancel(ec, pContext);
+            return E_OUTOFMEMORY;
+        }
+
+        candidate->_ItemString.Set(symbol.text, wcslen(symbol.text));
+        candidate->_ItemComment.Set(comments[index].c_str(), comments[index].length());
+    }
+
+    _pCandidateListUIPresenter->_SetText(&candidateList);
 
     return S_OK;
 }

@@ -61,7 +61,8 @@ HRESULT CJyutping::_HandleCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pC
             return hr;
         }
 
-        if (hasCandidateIndex && _pCompositionProcessorEngine != nullptr)
+        if (_candidateMode != CANDIDATE_PUNCTUATION && hasCandidateIndex &&
+            _pCompositionProcessorEngine != nullptr)
         {
             _pCompositionProcessorEngine->CommitSelectedCandidateForMemory(candidateIndex);
         }

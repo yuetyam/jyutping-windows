@@ -295,7 +295,6 @@ BOOL CCompositionProcessorEngine::SetupLanguageProfile(LANGID langid, REFGUID gu
     _settings = _settingsStore.Load();
     _isApplyingSettings = TRUE;
     InitializeJyutpingCompartment(pThreadMgr, tfClientId);
-    SetupPunctuationPair();
     SetupLanguageBar(pThreadMgr, tfClientId, isSecureMode);
     PrivateCompartmentsUpdated(pThreadMgr);
     KeyboardOpenCompartmentUpdated(pThreadMgr);
@@ -539,113 +538,6 @@ BOOL CCompositionProcessorEngine::ForgetCandidateFromMemory(UINT candidateIndex)
 void CCompositionProcessorEngine::ClearSelectedCandidateMemory()
 {
     _selectedMemorySequence.clear();
-}
-
-//+---------------------------------------------------------------------------
-//
-// IsPunctuation
-//
-//----------------------------------------------------------------------------
-
-BOOL CCompositionProcessorEngine::IsPunctuation(WCHAR wch)
-{
-    for (int i = 0; i < ARRAYSIZE(Global::PunctuationTable); i++)
-    {
-        if (Global::PunctuationTable[i]._Code == wch)
-        {
-            return TRUE;
-        }
-    }
-
-    for (UINT j = 0; j < _PunctuationPair.Count(); j++)
-    {
-        CPunctuationPair* pPuncPair = _PunctuationPair.GetAt(j);
-
-        if (pPuncPair->_punctuation._Code == wch)
-        {
-            return TRUE;
-        }
-    }
-
-    for (UINT k = 0; k < _PunctuationNestPair.Count(); k++)
-    {
-        CPunctuationNestPair* pPuncNestPair = _PunctuationNestPair.GetAt(k);
-
-        if (pPuncNestPair->_punctuation_begin._Code == wch)
-        {
-            return TRUE;
-        }
-        if (pPuncNestPair->_punctuation_end._Code == wch)
-        {
-            return TRUE;
-        }
-    }
-    return FALSE;
-}
-
-//+---------------------------------------------------------------------------
-//
-// GetPunctuationPair
-//
-//----------------------------------------------------------------------------
-
-WCHAR CCompositionProcessorEngine::GetPunctuation(WCHAR wch)
-{
-    for (int i = 0; i < ARRAYSIZE(Global::PunctuationTable); i++)
-    {
-        if (Global::PunctuationTable[i]._Code == wch)
-        {
-            return Global::PunctuationTable[i]._Punctuation;
-        }
-    }
-
-    for (UINT j = 0; j < _PunctuationPair.Count(); j++)
-    {
-        CPunctuationPair* pPuncPair = _PunctuationPair.GetAt(j);
-
-        if (pPuncPair->_punctuation._Code == wch)
-        {
-            if (! pPuncPair->_isPairToggle)
-            {
-                pPuncPair->_isPairToggle = TRUE;
-                return pPuncPair->_punctuation._Punctuation;
-            }
-            else
-            {
-                pPuncPair->_isPairToggle = FALSE;
-                return pPuncPair->_pairPunctuation;
-            }
-        }
-    }
-
-    for (UINT k = 0; k < _PunctuationNestPair.Count(); k++)
-    {
-        CPunctuationNestPair* pPuncNestPair = _PunctuationNestPair.GetAt(k);
-
-        if (pPuncNestPair->_punctuation_begin._Code == wch)
-        {
-            if (pPuncNestPair->_nestCount++ == 0)
-            {
-                return pPuncNestPair->_punctuation_begin._Punctuation;
-            }
-            else
-            {
-                return pPuncNestPair->_pairPunctuation_begin;
-            }
-        }
-        if (pPuncNestPair->_punctuation_end._Code == wch)
-        {
-            if (--pPuncNestPair->_nestCount == 0)
-            {
-                return pPuncNestPair->_punctuation_end._Punctuation;
-            }
-            else
-            {
-                return pPuncNestPair->_pairPunctuation_end;
-            }
-        }
-    }
-    return 0;
 }
 
 //+---------------------------------------------------------------------------
@@ -1433,37 +1325,6 @@ void CCompositionProcessorEngine::AppendInputEngineCandidates(_Inout_ CJyutpingA
             pItem->_InputCount = static_cast<DWORD_PTR>(suggestion.inputCount);
         }
     }
-}
-
-//+---------------------------------------------------------------------------
-//
-// SetupPunctuationPair
-//
-//----------------------------------------------------------------------------
-
-void CCompositionProcessorEngine::SetupPunctuationPair()
-{
-    // Punctuation pair
-    const int pair_count = 2;
-    CPunctuationPair punc_quotation_mark(L'"', 0x201C, 0x201D);
-    CPunctuationPair punc_apostrophe(L'\'', 0x2018, 0x2019);
-
-    CPunctuationPair puncPairs[pair_count] = {
-        punc_quotation_mark,
-        punc_apostrophe,
-    };
-
-    for (int i = 0; i < pair_count; ++i)
-    {
-        CPunctuationPair *pPuncPair = _PunctuationPair.Append();
-        *pPuncPair = puncPairs[i];
-    }
-
-    // Punctuation nest pair
-    CPunctuationNestPair punc_angle_bracket(L'<', 0x300A, 0x3008, L'>', 0x300B, 0x3009);
-
-    CPunctuationNestPair* pPuncNestPair = _PunctuationNestPair.Append();
-    *pPuncNestPair = punc_angle_bracket;
 }
 
 void CCompositionProcessorEngine::InitializeJyutpingCompartment(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId)
