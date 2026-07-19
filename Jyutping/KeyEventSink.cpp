@@ -168,8 +168,8 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     BOOL isShifting = Global::CheckModifiers(Global::ModifiersValue, TF_MOD_SHIFT);
     const PunctuationKey* punctuationKey = (isNoModifier || isShifting) ? PunctuationKey::ForVirtualKey(*pCodeOut) : nullptr;
     BOOL shouldHandlePunctuation = punctuationKey != nullptr && punctuationKey->ShouldHandle(isShifting);
-    BOOL isReverseLookupApostrophe = shouldHandlePunctuation && !isShifting &&
-        punctuationKey->keyCode == VK_OEM_7 && pCompositionProcessorEngine->IsReverseLookupBuffer();
+    BOOL isUnshiftedApostrophe = shouldHandlePunctuation && !isShifting &&
+        punctuationKey->keyCode == VK_OEM_7;
 
     if (isCantoneseMode)
     {
@@ -178,14 +178,17 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
         //
         // eat only keys that CKeyHandlerEditSession can handles.
         //
-        if (pCompositionProcessorEngine->IsVirtualKeyNeed(*pCodeOut, pwch, _IsComposing(), _candidateMode, pKeyState))
+        _KEYSTROKE_STATE evaluatedKeyState;
+        _KEYSTROKE_STATE* pEvaluatedKeyState = pKeyState != nullptr ? pKeyState : &evaluatedKeyState;
+        if (pCompositionProcessorEngine->IsVirtualKeyNeed(*pCodeOut, pwch, _IsComposing(), _candidateMode, pEvaluatedKeyState))
         {
-            if (!shouldHandlePunctuation || isReverseLookupApostrophe)
+            BOOL isSyllableSeparator = isUnshiftedApostrophe &&
+                pEvaluatedKeyState->Function == FUNCTION_INPUT;
+            if (!shouldHandlePunctuation || isSyllableSeparator)
             {
                 return TRUE;
             }
-            if (!isShifting && pKeyState != nullptr &&
-                IsPageNavigationFunction(pKeyState->Function))
+            if (!isShifting && IsPageNavigationFunction(pEvaluatedKeyState->Function))
             {
                 return TRUE;
             }
@@ -195,7 +198,7 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     //
     // Punctuation
     //
-    if (shouldHandlePunctuation && !isReverseLookupApostrophe)
+    if (shouldHandlePunctuation)
     {
         if (pKeyState)
         {

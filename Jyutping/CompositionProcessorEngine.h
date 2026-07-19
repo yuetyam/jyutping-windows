@@ -134,7 +134,7 @@ private:
     Ime::ReverseLookupMethod CurrentReverseLookupMethod() const;
     std::vector<VirtualInputKey> ReverseLookupQueryKeys() const;
     std::wstring ReverseLookupReadingText(const std::vector<Ime::Lexicon>& suggestions) const;
-    BOOL IsReverseLookupInputKey(UINT uCode) const;
+    BOOL IsNonAlphabeticInputKey(UINT uCode) const;
     const std::vector<Ime::Lexicon>& GetInputSuggestions();
     std::optional<Ime::Lexicon> CandidateAt(UINT candidateIndex) const;
     CharacterStandard CurrentCharacterStandard() const;

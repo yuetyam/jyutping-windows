@@ -210,7 +210,7 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
 
     if (fComposing || candidateMode == CANDIDATE_INCREMENTAL || candidateMode == CANDIDATE_NONE)
     {
-        if ((fComposing || candidateMode == CANDIDATE_INCREMENTAL) && IsReverseLookupInputKey(uCode))
+        if ((fComposing || candidateMode == CANDIDATE_INCREMENTAL) && IsNonAlphabeticInputKey(uCode))
         {
             if (pKeyState)
             {

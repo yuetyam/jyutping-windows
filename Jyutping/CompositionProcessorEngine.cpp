@@ -51,11 +51,19 @@ BOOL IsStrokeMethod(Ime::ReverseLookupMethod method)
     return method == Ime::ReverseLookupMethod::Stroke;
 }
 
-BOOL ContainsToneInputKey(const std::vector<VirtualInputKey>& keys)
+BOOL ContainsNonSyllableInputKey(const std::vector<VirtualInputKey>& keys)
 {
     return std::find_if(keys.begin(), keys.end(), [](const VirtualInputKey& key)
     {
-        return key.IsToneInputKey();
+        return !key.IsSyllableLetter();
+    }) != keys.end();
+}
+
+BOOL ContainsNonLetterInputKey(const std::vector<VirtualInputKey>& keys)
+{
+    return std::find_if(keys.begin(), keys.end(), [](const VirtualInputKey& key)
+    {
+        return !key.IsLetter();
     }) != keys.end();
 }
 
@@ -436,7 +444,7 @@ void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStri
             }
 
             const std::vector<VirtualInputKey>& inputKeys = CurrentInputKeys();
-            if (!isReverseLookupBuffer && ContainsToneInputKey(inputKeys))
+            if (!isReverseLookupBuffer && ContainsNonSyllableInputKey(inputKeys))
             {
                 std::vector<Ime::BasicInputEvent> inputEvents;
                 inputEvents.reserve(inputKeys.size());
@@ -1058,7 +1066,10 @@ std::wstring CCompositionProcessorEngine::ReverseLookupReadingText(const std::ve
 
     if (method == Ime::ReverseLookupMethod::Pinyin)
     {
-        return std::wstring(VirtualInputKey::letterR.text) + L" " + suggestions.front().mark;
+        std::vector<VirtualInputKey> queryKeys = ReverseLookupQueryKeys();
+        std::wstring tailMark = ContainsNonLetterInputKey(queryKeys) ?
+            Ime::MarkFormatted(Ime::TextFromKeys(queryKeys)) : suggestions.front().mark;
+        return std::wstring(VirtualInputKey::letterR.text) + L" " + tailMark;
     }
     if (method == Ime::ReverseLookupMethod::Structure)
     {
@@ -1067,10 +1078,10 @@ std::wstring CCompositionProcessorEngine::ReverseLookupReadingText(const std::ve
     return suggestions.front().mark;
 }
 
-BOOL CCompositionProcessorEngine::IsReverseLookupInputKey(UINT uCode) const
+BOOL CCompositionProcessorEngine::IsNonAlphabeticInputKey(UINT uCode) const
 {
     Ime::ReverseLookupMethod method = CurrentReverseLookupMethod();
-    if (method == Ime::ReverseLookupMethod::None || Global::ModifiersValue != 0)
+    if (Global::ModifiersValue != 0)
     {
         return FALSE;
     }
@@ -1081,7 +1092,8 @@ BOOL CCompositionProcessorEngine::IsReverseLookupInputKey(UINT uCode) const
         return FALSE;
     }
 
-    if (IsPinyinOrStructureMethod(method) && inputKey.IsApostrophe())
+    if (inputKey.IsApostrophe() &&
+        (method == Ime::ReverseLookupMethod::None || IsPinyinOrStructureMethod(method)))
     {
         return TRUE;
     }
