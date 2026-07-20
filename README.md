@@ -78,8 +78,8 @@ payloads under `installer\stage`, runs Inno Setup, and writes release artifacts
 under `installer\output`:
 
 ```text
-installer\output\jyutping-v0.3.1-x64.exe
-installer\output\jyutping-v0.3.1-arm64.exe
+installer\output\jyutping-v0.1.0-x64.exe
+installer\output\jyutping-v0.1.0-arm64.exe
 installer\output\SHA256SUMS.txt
 ```
 
