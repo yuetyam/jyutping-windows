@@ -17,6 +17,10 @@ public:
     virtual void SetCandidateCommentFontSize(DWORD fontSize) = 0;
     virtual DWORD CurrentCandidatePageSize() const = 0;
     virtual void SetCandidatePageSize(DWORD pageSize) = 0;
+    virtual PunctuationForm CurrentPunctuationForm() const = 0;
+    virtual void SetPunctuationForm(PunctuationForm form) = 0;
+    virtual CharacterForm CurrentCharacterForm() const = 0;
+    virtual void SetCharacterForm(CharacterForm form) = 0;
     virtual CharacterVariant CurrentCharacterVariant() const = 0;
     virtual void SetCharacterVariant(CharacterVariant variant) = 0;
 };

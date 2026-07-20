@@ -1211,6 +1211,62 @@ void CCompositionProcessorEngine::SetCandidatePageSize(DWORD pageSize)
     }
 }
 
+PunctuationForm CCompositionProcessorEngine::CurrentPunctuationForm() const
+{
+    return _settings.punctuationForm;
+}
+
+void CCompositionProcessorEngine::SetPunctuationForm(PunctuationForm form)
+{
+    if (_settings.punctuationForm == form || _pTextService == nullptr)
+    {
+        return;
+    }
+
+    ITfThreadMgr* pThreadMgr = _pTextService->_GetThreadMgr();
+    if (pThreadMgr == nullptr)
+    {
+        return;
+    }
+
+    CCompartment CompartmentPunctuationForm(pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentPunctuationForm);
+    if (FAILED(CompartmentPunctuationForm._SetCompartmentBOOL(CantonesePunctuationFromPunctuationForm(form))))
+    {
+        return;
+    }
+
+    _settings.punctuationForm = form;
+    _settingsStore.SavePunctuationForm(form);
+}
+
+CharacterForm CCompositionProcessorEngine::CurrentCharacterForm() const
+{
+    return _settings.characterForm;
+}
+
+void CCompositionProcessorEngine::SetCharacterForm(CharacterForm form)
+{
+    if (_settings.characterForm == form || _pTextService == nullptr)
+    {
+        return;
+    }
+
+    ITfThreadMgr* pThreadMgr = _pTextService->_GetThreadMgr();
+    if (pThreadMgr == nullptr)
+    {
+        return;
+    }
+
+    CCompartment CompartmentCharacterForm(pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
+    if (FAILED(CompartmentCharacterForm._SetCompartmentBOOL(FullWidthFromCharacterForm(form))))
+    {
+        return;
+    }
+
+    _settings.characterForm = form;
+    _settingsStore.SaveCharacterForm(form);
+}
+
 DWORD CCompositionProcessorEngine::CurrentCandidateFontSize() const
 {
     return _settings.candidateFontSize;

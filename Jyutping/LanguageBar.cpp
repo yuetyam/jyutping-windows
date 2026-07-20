@@ -21,7 +21,13 @@ constexpr UINT MenuIdCandidateCommentFontSizeLast = MenuIdCandidateCommentFontSi
 constexpr UINT MenuIdCandidatePageSize = MenuIdCandidateCommentFontSizeLast + 1;
 constexpr UINT MenuIdCandidatePageSizeFirst = MenuIdCandidatePageSize + 1;
 constexpr UINT MenuIdCandidatePageSizeLast = MenuIdCandidatePageSizeFirst + 9;
-constexpr UINT MenuIdCharacterVariant = MenuIdCandidatePageSizeLast + 1;
+constexpr UINT MenuIdPunctuationForm = MenuIdCandidatePageSizeLast + 1;
+constexpr UINT MenuIdPunctuationFormCantonese = MenuIdPunctuationForm + 1;
+constexpr UINT MenuIdPunctuationFormEnglish = MenuIdPunctuationFormCantonese + 1;
+constexpr UINT MenuIdCharacterForm = MenuIdPunctuationFormEnglish + 1;
+constexpr UINT MenuIdCharacterFormHalfWidth = MenuIdCharacterForm + 1;
+constexpr UINT MenuIdCharacterFormFullWidth = MenuIdCharacterFormHalfWidth + 1;
+constexpr UINT MenuIdCharacterVariant = MenuIdCharacterFormFullWidth + 1;
 constexpr UINT MenuIdCharacterVariantTraditional = MenuIdCharacterVariant + 1;
 constexpr UINT MenuIdCharacterVariantHongKong = MenuIdCharacterVariantTraditional + 1;
 constexpr UINT MenuIdCharacterVariantTaiwan = MenuIdCharacterVariantHongKong + 1;
@@ -51,6 +57,16 @@ DWORD RadioFlagForVariant(CharacterVariant currentVariant, CharacterVariant item
     return currentVariant == itemVariant ? TF_LBMENUF_RADIOCHECKED : 0;
 }
 
+DWORD RadioFlagForPunctuationForm(PunctuationForm currentForm, PunctuationForm itemForm)
+{
+    return currentForm == itemForm ? TF_LBMENUF_RADIOCHECKED : 0;
+}
+
+DWORD RadioFlagForCharacterForm(CharacterForm currentForm, CharacterForm itemForm)
+{
+    return currentForm == itemForm ? TF_LBMENUF_RADIOCHECKED : 0;
+}
+
 UINT MenuIdForCharacterVariant(CharacterVariant variant)
 {
     switch (variant)
@@ -65,6 +81,16 @@ UINT MenuIdForCharacterVariant(CharacterVariant variant)
     default:
         return MenuIdCharacterVariantTraditional;
     }
+}
+
+UINT MenuIdForPunctuationForm(PunctuationForm form)
+{
+    return form == PunctuationForm::English ? MenuIdPunctuationFormEnglish : MenuIdPunctuationFormCantonese;
+}
+
+UINT MenuIdForCharacterForm(CharacterForm form)
+{
+    return form == CharacterForm::FullWidth ? MenuIdCharacterFormFullWidth : MenuIdCharacterFormHalfWidth;
 }
 
 UINT MenuIdForFontSize(UINT firstId, DWORD fontSize)
@@ -504,10 +530,21 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
     HMENU candidateNumberFontSizeMenuHandle = CreatePopupMenu();
     HMENU candidateCommentFontSizeMenuHandle = CreatePopupMenu();
     HMENU candidatePageSizeMenuHandle = CreatePopupMenu();
+    HMENU punctuationFormMenuHandle = CreatePopupMenu();
+    HMENU characterFormMenuHandle = CreatePopupMenu();
     HMENU characterVariantMenuHandle = CreatePopupMenu();
     if (menuHandle == nullptr || candidateFontSizeMenuHandle == nullptr || candidateNumberFontSizeMenuHandle == nullptr ||
-        candidateCommentFontSizeMenuHandle == nullptr || candidatePageSizeMenuHandle == nullptr || characterVariantMenuHandle == nullptr)
+        candidateCommentFontSizeMenuHandle == nullptr || candidatePageSizeMenuHandle == nullptr || punctuationFormMenuHandle == nullptr ||
+        characterFormMenuHandle == nullptr || characterVariantMenuHandle == nullptr)
     {
+        if (characterFormMenuHandle != nullptr)
+        {
+            DestroyMenu(characterFormMenuHandle);
+        }
+        if (punctuationFormMenuHandle != nullptr)
+        {
+            DestroyMenu(punctuationFormMenuHandle);
+        }
         if (candidateCommentFontSizeMenuHandle != nullptr)
         {
             DestroyMenu(candidateCommentFontSizeMenuHandle);
@@ -539,7 +576,7 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
         menuHandle,
         candidateFontSizeMenuHandle,
         MenuIdCandidateFontSizeFirst,
-        LoadMenuString(IDS_MENU_CANDIDATE_FONT_SIZE, L"Candidate Word Font Size"),
+        LoadMenuString(IDS_MENU_CANDIDATE_FONT_SIZE, L"Candidate Font Size"),
         _pSettingsMenuHandler->CurrentCandidateFontSize()) ||
         !AppendFontSizePopupMenu(
             menuHandle,
@@ -581,7 +618,46 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
         MenuIdForCandidatePageSize(_pSettingsMenuHandler->CurrentCandidatePageSize()),
         MF_BYCOMMAND);
 
-    std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variant");
+    std::wstring punctuationFormText = LoadMenuString(IDS_MENU_PUNCTUATION_FORM, L"Punctuation Form");
+    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(punctuationFormMenuHandle), punctuationFormText.c_str()))
+    {
+        DestroyMenu(punctuationFormMenuHandle);
+        DestroyMenu(characterFormMenuHandle);
+        DestroyMenu(characterVariantMenuHandle);
+        DestroyMenu(menuHandle);
+        return E_FAIL;
+    }
+
+    AppendPopupMenuItem(punctuationFormMenuHandle, MenuIdPunctuationFormCantonese, MF_STRING, IDS_MENU_PUNCTUATION_FORM_CANTONESE, L"Cantonese");
+    AppendPopupMenuItem(punctuationFormMenuHandle, MenuIdPunctuationFormEnglish, MF_STRING, IDS_MENU_PUNCTUATION_FORM_ENGLISH, L"English");
+
+    CheckMenuRadioItem(
+        punctuationFormMenuHandle,
+        MenuIdPunctuationFormCantonese,
+        MenuIdPunctuationFormEnglish,
+        MenuIdForPunctuationForm(_pSettingsMenuHandler->CurrentPunctuationForm()),
+        MF_BYCOMMAND);
+
+    std::wstring characterFormText = LoadMenuString(IDS_MENU_CHARACTER_FORM, L"Character Form");
+    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(characterFormMenuHandle), characterFormText.c_str()))
+    {
+        DestroyMenu(characterFormMenuHandle);
+        DestroyMenu(characterVariantMenuHandle);
+        DestroyMenu(menuHandle);
+        return E_FAIL;
+    }
+
+    AppendPopupMenuItem(characterFormMenuHandle, MenuIdCharacterFormHalfWidth, MF_STRING, IDS_MENU_CHARACTER_FORM_HALF_WIDTH, L"Half-width");
+    AppendPopupMenuItem(characterFormMenuHandle, MenuIdCharacterFormFullWidth, MF_STRING, IDS_MENU_CHARACTER_FORM_FULL_WIDTH, L"Full-width");
+
+    CheckMenuRadioItem(
+        characterFormMenuHandle,
+        MenuIdCharacterFormHalfWidth,
+        MenuIdCharacterFormFullWidth,
+        MenuIdForCharacterForm(_pSettingsMenuHandler->CurrentCharacterForm()),
+        MF_BYCOMMAND);
+
+    std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variants");
     if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(characterVariantMenuHandle), characterVariantText.c_str()))
     {
         DestroyMenu(characterVariantMenuHandle);
@@ -603,7 +679,7 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
         MF_BYCOMMAND);
 
     AppendMenuW(menuHandle, MF_SEPARATOR, MenuIdSeparator, nullptr);
-    AppendPopupMenuItem(menuHandle, MenuIdMoreSettings, MF_STRING | MF_GRAYED, IDS_MENU_MORE_SETTINGS, L"More Settings...");
+    AppendPopupMenuItem(menuHandle, MenuIdMoreSettings, MF_STRING | MF_GRAYED, IDS_MENU_MORE_SETTINGS, L"More Settings…");
 
     POINT popupPoint = PopupPointFromClick(pt, prcArea);
     HWND ownerWndHandle = GetActiveWindow();
@@ -717,7 +793,7 @@ STDAPI CLangBarItemButton::InitMenu(_In_ ITfMenu *pMenu)
         pMenu,
         MenuIdCandidateFontSize,
         MenuIdCandidateFontSizeFirst,
-        LoadMenuString(IDS_MENU_CANDIDATE_FONT_SIZE, L"Candidate Word Font Size"),
+        LoadMenuString(IDS_MENU_CANDIDATE_FONT_SIZE, L"Candidate Font Size"),
         _pSettingsMenuHandler->CurrentCandidateFontSize());
     if (FAILED(hr))
     {
@@ -773,8 +849,64 @@ STDAPI CLangBarItemButton::InitMenu(_In_ ITfMenu *pMenu)
         pCandidatePageSizeMenu->Release();
     }
 
+    PunctuationForm currentPunctuationForm = _pSettingsMenuHandler->CurrentPunctuationForm();
+    ITfMenu* pPunctuationFormMenu = nullptr;
+    hr = AddMenuItem(
+        pMenu,
+        MenuIdPunctuationForm,
+        TF_LBMENUF_SUBMENU,
+        LoadMenuString(IDS_MENU_PUNCTUATION_FORM, L"Punctuation Form"),
+        &pPunctuationFormMenu);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (pPunctuationFormMenu)
+    {
+        AddMenuItem(
+            pPunctuationFormMenu,
+            MenuIdPunctuationFormCantonese,
+            RadioFlagForPunctuationForm(currentPunctuationForm, PunctuationForm::Cantonese),
+            LoadMenuString(IDS_MENU_PUNCTUATION_FORM_CANTONESE, L"Cantonese"));
+        AddMenuItem(
+            pPunctuationFormMenu,
+            MenuIdPunctuationFormEnglish,
+            RadioFlagForPunctuationForm(currentPunctuationForm, PunctuationForm::English),
+            LoadMenuString(IDS_MENU_PUNCTUATION_FORM_ENGLISH, L"English"));
+        pPunctuationFormMenu->Release();
+    }
+
+    CharacterForm currentCharacterForm = _pSettingsMenuHandler->CurrentCharacterForm();
+    ITfMenu* pCharacterFormMenu = nullptr;
+    hr = AddMenuItem(
+        pMenu,
+        MenuIdCharacterForm,
+        TF_LBMENUF_SUBMENU,
+        LoadMenuString(IDS_MENU_CHARACTER_FORM, L"Character Form"),
+        &pCharacterFormMenu);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+
+    if (pCharacterFormMenu)
+    {
+        AddMenuItem(
+            pCharacterFormMenu,
+            MenuIdCharacterFormHalfWidth,
+            RadioFlagForCharacterForm(currentCharacterForm, CharacterForm::HalfWidth),
+            LoadMenuString(IDS_MENU_CHARACTER_FORM_HALF_WIDTH, L"Half-width"));
+        AddMenuItem(
+            pCharacterFormMenu,
+            MenuIdCharacterFormFullWidth,
+            RadioFlagForCharacterForm(currentCharacterForm, CharacterForm::FullWidth),
+            LoadMenuString(IDS_MENU_CHARACTER_FORM_FULL_WIDTH, L"Full-width"));
+        pCharacterFormMenu->Release();
+    }
+
     CharacterVariant currentVariant = _pSettingsMenuHandler->CurrentCharacterVariant();
-    std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variant");
+    std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variants");
 
     ITfMenu* pCharacterVariantMenu = nullptr;
     hr = AddMenuItem(
@@ -818,7 +950,7 @@ STDAPI CLangBarItemButton::InitMenu(_In_ ITfMenu *pMenu)
         pMenu,
         MenuIdMoreSettings,
         TF_LBMENUF_GRAYED,
-        LoadMenuString(IDS_MENU_MORE_SETTINGS, L"More Settings..."));
+        LoadMenuString(IDS_MENU_MORE_SETTINGS, L"More Settings…"));
 
     return S_OK;
 }
@@ -859,6 +991,18 @@ STDAPI CLangBarItemButton::OnMenuSelect(UINT wID)
 
     switch (wID)
     {
+    case MenuIdPunctuationFormCantonese:
+        _pSettingsMenuHandler->SetPunctuationForm(PunctuationForm::Cantonese);
+        break;
+    case MenuIdPunctuationFormEnglish:
+        _pSettingsMenuHandler->SetPunctuationForm(PunctuationForm::English);
+        break;
+    case MenuIdCharacterFormHalfWidth:
+        _pSettingsMenuHandler->SetCharacterForm(CharacterForm::HalfWidth);
+        break;
+    case MenuIdCharacterFormFullWidth:
+        _pSettingsMenuHandler->SetCharacterForm(CharacterForm::FullWidth);
+        break;
     case MenuIdCharacterVariantTraditional:
         _pSettingsMenuHandler->SetCharacterVariant(CharacterVariant::Traditional);
         break;

@@ -71,6 +71,10 @@ public:
     void SetCharacterVariant(CharacterVariant variant) override;
     DWORD CurrentCandidatePageSize() const override;
     void SetCandidatePageSize(DWORD pageSize) override;
+    PunctuationForm CurrentPunctuationForm() const override;
+    void SetPunctuationForm(PunctuationForm form) override;
+    CharacterForm CurrentCharacterForm() const override;
+    void SetCharacterForm(CharacterForm form) override;
     DWORD CurrentCandidateFontSize() const override;
     void SetCandidateFontSize(DWORD fontSize) override;
     DWORD CurrentCandidateNumberFontSize() const override;
