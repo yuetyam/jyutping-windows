@@ -34,6 +34,6 @@ BEGIN
     IDS_MENU_CHARACTER_VARIANT_HONG_KONG   "Traditional, HK"
     IDS_MENU_CHARACTER_VARIANT_TAIWAN      "Traditional, TW"
     IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  "Simplified"
-    IDS_MENU_MORE_SETTINGS                 "Jyutping v0.3.1"
+    IDS_MENU_MORE_SETTINGS                 "Jyutping v0.4.0"
     IDS_LANGBAR_INPUT_MODE_TOOLTIP         "Left-click to switch modes\nRight-click for more options"
 END
