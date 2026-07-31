@@ -289,11 +289,13 @@ BOOL CJyutping::_IsKeyboardDisabled()
     }
     else
     {
-        CCompartment CompartmentKeyboardDisabled(_pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_DISABLED);
+        CCompartment CompartmentKeyboardDisabled(pContext, _tfClientId, GUID_COMPARTMENT_KEYBOARD_DISABLED);
         CompartmentKeyboardDisabled._GetCompartmentBOOL(isDisabled);
 
-        CCompartment CompartmentEmptyContext(_pThreadMgr, _tfClientId, GUID_COMPARTMENT_EMPTYCONTEXT);
-        CompartmentEmptyContext._GetCompartmentBOOL(isDisabled);
+        BOOL isEmptyContext = FALSE;
+        CCompartment CompartmentEmptyContext(pContext, _tfClientId, GUID_COMPARTMENT_EMPTYCONTEXT);
+        CompartmentEmptyContext._GetCompartmentBOOL(isEmptyContext);
+        isDisabled = isDisabled || isEmptyContext;
     }
 
     if (pContext)

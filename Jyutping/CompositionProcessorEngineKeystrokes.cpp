@@ -406,7 +406,8 @@ BOOL CCompositionProcessorEngine::IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCH
         return FALSE;
     }
 
-    if (*pwch && !IsVirtualKeyKeystrokeComposition(uCode, pKeyState, FUNCTION_NONE))
+    BOOL hasActiveInput = fComposing || candidateMode != CANDIDATE_NONE;
+    if (hasActiveInput && *pwch && !IsVirtualKeyKeystrokeComposition(uCode, pKeyState, FUNCTION_NONE))
     {
         if (pKeyState)
         {
