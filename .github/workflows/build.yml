@@ -5,12 +5,14 @@ on:
     branches: [ master, develop ]
     paths:
       - 'Jyutping/**'
+      - 'preparing/**'
       - 'Jyutping.sln'
       - '.github/workflows/**'
   pull_request:
     branches: [ master, develop ]
     paths:
       - 'Jyutping/**'
+      - 'preparing/**'
       - 'Jyutping.sln'
       - '.github/workflows/**'
   workflow_dispatch:
@@ -19,6 +21,50 @@ permissions:
   contents: read
 
 jobs:
+  build_preparing:
+    name: Build Preparing
+    runs-on: windows-2025-vs2026
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+
+    - name: Build Preparing
+      run: cargo build --locked
+      working-directory: ./preparing
+
+  test_preparing:
+    name: Preparing Tests
+    needs: [ build_preparing ]
+    runs-on: windows-2025-vs2026
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+
+    - name: Test Preparing
+      run: cargo test --locked
+      working-directory: ./preparing
+
+  run_preparing:
+    name: Run Preparing
+    needs: [ test_preparing ]
+    runs-on: windows-2025-vs2026
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+
+    - name: Prepare database
+      shell: pwsh
+      run: |
+        $outputPath = Join-Path $env:RUNNER_TEMP 'desktop.sqlite3'
+        cargo run --locked --release -- $outputPath
+        if (-not (Test-Path -LiteralPath $outputPath -PathType Leaf) -or (Get-Item -LiteralPath $outputPath).Length -eq 0) {
+          throw 'Preparing did not produce a non-empty database.'
+        }
+      working-directory: ./preparing
+
   build:
     name: ${{ matrix.configuration }} ${{ matrix.platform }}
     strategy:
