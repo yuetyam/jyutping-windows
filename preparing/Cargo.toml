@@ -1,0 +1,7 @@
+[package]
+name = "preparing"
+version = "0.1.0"
+edition = "2024"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

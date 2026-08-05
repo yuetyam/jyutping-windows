@@ -485,10 +485,24 @@ $RECYCLE.BIN/
 *.lnk
 
 
-## Editors and Agents ##
+### macOS ###
+# General
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Thumbnails
+._*
+
+
+### Editors and Agents ###
 .claude/
 .codex/
 .copilot/
+
+
+### Rust & Cargo ###
+/preparing/target/
 
 
 ### Databases ###
