@@ -58,15 +58,24 @@ jobs:
     - name: Prepare database
       shell: pwsh
       run: |
-        $outputPath = Join-Path $env:RUNNER_TEMP 'desktop.sqlite3'
+        $outputPath = Join-Path $env:RUNNER_TEMP 'ime.sqlite3'
         cargo run --locked --release -- $outputPath
         if (-not (Test-Path -LiteralPath $outputPath -PathType Leaf) -or (Get-Item -LiteralPath $outputPath).Length -eq 0) {
           throw 'Preparing did not produce a non-empty database.'
         }
       working-directory: ./preparing
 
+    - name: Upload database
+      uses: actions/upload-artifact@v4
+      with:
+        name: core-ime-database
+        path: ${{ runner.temp }}\ime.sqlite3
+        if-no-files-found: error
+        retention-days: 1
+
   build:
     name: ${{ matrix.configuration }} ${{ matrix.platform }}
+    needs: [ run_preparing ]
     strategy:
       matrix:
         configuration: [ Debug, Release ]
@@ -78,6 +87,12 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v7
+
+    - name: Download database
+      uses: actions/download-artifact@v4
+      with:
+        name: core-ime-database
+        path: Jyutping/Resources
 
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v3
