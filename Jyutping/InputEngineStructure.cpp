@@ -1,4 +1,4 @@
-#include "InputEngine.h"
+#include "CoreImeEngine.h"
 
 #include <algorithm>
 
@@ -66,27 +66,30 @@ void Append(std::vector<ImeDatabase::StructureRow>& target, const std::vector<Im
     target.insert(target.end(), source.begin(), source.end());
 }
 
-std::vector<ImeDatabase::StructureRow> QueryStructureRows(const ImeDatabase& database, const std::wstring& text)
+std::vector<ImeDatabase::StructureRow> QueryStructureRows(
+    const ImeDatabase& database,
+    const std::vector<VirtualInputKey>& keys,
+    int64_t complexity)
 {
-    if (text.empty())
+    if (keys.empty())
     {
         return std::vector<ImeDatabase::StructureRow>();
     }
-    return database.QueryStructureBySpell(Ime::HashCode(text));
+    return database.QueryStructureBySpell(Ime::CombinedCode(keys), complexity);
 }
 
 std::vector<ImeDatabase::StructureRow> SearchStructureRows(
     const ImeDatabase& database,
-    const std::wstring& text,
+    const std::vector<VirtualInputKey>& keys,
     const Ime::Segmentation& segmentation)
 {
-    std::vector<ImeDatabase::StructureRow> result = QueryStructureRows(database, text);
-    size_t textLength = text.size();
+    std::vector<ImeDatabase::StructureRow> result;
+    size_t inputLength = keys.size();
     for (const Ime::Scheme& scheme : segmentation)
     {
-        if (Ime::SchemeLength(scheme) == textLength)
+        if (Ime::SchemeLength(scheme) == inputLength)
         {
-            Append(result, QueryStructureRows(database, Ime::SchemeOriginText(scheme)));
+            Append(result, QueryStructureRows(database, Ime::SchemeOriginKeys(scheme), Ime::SchemeComplexity(scheme)));
         }
     }
     return result;
@@ -251,7 +254,7 @@ std::wstring StructureMark(
 
 namespace Ime {
 
-std::vector<Lexicon> InputEngine::StructureReverseLookup(const std::vector<VirtualInputKey>& keys) const
+std::vector<Lexicon> CoreImeEngine::StructureReverseLookup(const std::vector<VirtualInputKey>& keys) const
 {
     if (!IsPrepared() || keys.empty())
     {
@@ -259,10 +262,10 @@ std::vector<Lexicon> InputEngine::StructureReverseLookup(const std::vector<Virtu
     }
 
     std::wstring inputText = TextFromKeys(keys);
-    std::wstring markFreeText = TextFromKeys(SyllableKeys(keys));
+    std::vector<VirtualInputKey> syllableKeys = SyllableKeys(keys);
     Segmentation segmentation = _segmenter.Segment(keys);
 
-    std::vector<ImeDatabase::StructureRow> rows = SearchStructureRows(_database, markFreeText, segmentation);
+    std::vector<ImeDatabase::StructureRow> rows = SearchStructureRows(_database, syllableKeys, segmentation);
     if (rows.empty())
     {
         return std::vector<Lexicon>();

@@ -1,6 +1,7 @@
 #include "ImeTypes.h"
 
 #include <algorithm>
+#include <bit>
 #include <cwctype>
 
 namespace {
@@ -441,26 +442,16 @@ std::wstring LatinLetterOnly(std::wstring_view text)
 
 int64_t Radix100Combined(const std::vector<int>& codes)
 {
-    if (codes.size() >= 10)
-    {
-        return 0;
-    }
-
-    int64_t result = 0;
+    uint64_t result = 0;
     for (int code : codes)
     {
-        result = result * 100 + code;
+        result = result * 100 + static_cast<uint64_t>(code);
     }
-    return result;
+    return std::bit_cast<int64_t>(result);
 }
 
 std::optional<int64_t> CharCodeFromText(std::wstring_view text)
 {
-    if (text.size() >= 10)
-    {
-        return std::nullopt;
-    }
-
     std::vector<int> codes;
     codes.reserve(text.size());
     for (WCHAR character : text)
@@ -477,11 +468,6 @@ std::optional<int64_t> CharCodeFromText(std::wstring_view text)
 
 std::optional<int64_t> AnchorsCodeFromText(std::wstring_view text)
 {
-    if (text.size() >= 10)
-    {
-        return std::nullopt;
-    }
-
     std::vector<int> codes;
     codes.reserve(text.size());
     for (WCHAR character : text)
@@ -669,33 +655,23 @@ std::wstring PreviewMarkNormalized(const std::vector<BasicInputEvent>& events)
 
 int64_t CombinedCode(const std::vector<VirtualInputKey>& keys)
 {
-    if (keys.size() >= 10)
-    {
-        return 0;
-    }
-
-    int64_t result = 0;
+    uint64_t result = 0;
     for (const VirtualInputKey& key : keys)
     {
-        result = result * 100 + key.code;
+        result = result * 100 + static_cast<uint64_t>(key.code);
     }
-    return result;
+    return std::bit_cast<int64_t>(result);
 }
 
 int64_t AnchorsCode(const std::vector<VirtualInputKey>& keys)
 {
-    if (keys.size() >= 10)
-    {
-        return 0;
-    }
-
-    int64_t result = 0;
+    uint64_t result = 0;
     for (const VirtualInputKey& key : keys)
     {
         const VirtualInputKey& inputKey = key.IsYLetterY() ? VirtualInputKey::letterJ : key;
-        result = result * 100 + inputKey.code;
+        result = result * 100 + static_cast<uint64_t>(inputKey.code);
     }
-    return result;
+    return std::bit_cast<int64_t>(result);
 }
 
 std::vector<VirtualInputKey> SyllableKeys(const std::vector<VirtualInputKey>& keys)
@@ -718,6 +694,26 @@ size_t SchemeLength(const Scheme& scheme)
     for (const Syllable& syllable : scheme)
     {
         result += syllable.alias.size();
+    }
+    return result;
+}
+
+int64_t SchemeComplexity(const Scheme& scheme)
+{
+    uint64_t result = 0;
+    for (const Syllable& syllable : scheme)
+    {
+        result = result * 10 + static_cast<uint64_t>(syllable.origin.size());
+    }
+    return std::bit_cast<int64_t>(result);
+}
+
+std::vector<VirtualInputKey> SchemeOriginKeys(const Scheme& scheme)
+{
+    std::vector<VirtualInputKey> result;
+    for (const Syllable& syllable : scheme)
+    {
+        result.insert(result.end(), syllable.origin.begin(), syllable.origin.end());
     }
     return result;
 }

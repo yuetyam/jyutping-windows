@@ -1,5 +1,7 @@
 #include "VirtualInputKey.h"
 
+#include <bit>
+
 const VirtualInputKey VirtualInputKey::number0(L'0', L"0", 10, '0');
 const VirtualInputKey VirtualInputKey::number1(L'1', L"1", 11, '1');
 const VirtualInputKey VirtualInputKey::number2(L'2', L"2", 12, '2');
@@ -298,33 +300,33 @@ BOOL VirtualInputKey::MatchInputKeyForCharacter(WCHAR character, _Out_ VirtualIn
 
 int64_t VirtualInputKey::CombinedCode(_In_reads_(count) const VirtualInputKey* pInputKeys, size_t count)
 {
-    if (pInputKeys == nullptr || count >= 10)
+    if (pInputKeys == nullptr)
     {
         return 0;
     }
 
-    int64_t combinedCode = 0;
+    uint64_t combinedCode = 0;
     for (size_t index = 0; index < count; index++)
     {
-        combinedCode = combinedCode * 100 + pInputKeys[index].code;
+        combinedCode = combinedCode * 100 + static_cast<uint64_t>(pInputKeys[index].code);
     }
-    return combinedCode;
+    return std::bit_cast<int64_t>(combinedCode);
 }
 
 int64_t VirtualInputKey::AnchorsCode(_In_reads_(count) const VirtualInputKey* pInputKeys, size_t count)
 {
-    if (pInputKeys == nullptr || count >= 10)
+    if (pInputKeys == nullptr)
     {
         return 0;
     }
 
-    int64_t combinedCode = 0;
+    uint64_t combinedCode = 0;
     for (size_t index = 0; index < count; index++)
     {
         VirtualInputKey inputKey = pInputKeys[index].IsYLetterY() ? letterJ : pInputKeys[index];
-        combinedCode = combinedCode * 100 + inputKey.code;
+        combinedCode = combinedCode * 100 + static_cast<uint64_t>(inputKey.code);
     }
-    return combinedCode;
+    return std::bit_cast<int64_t>(combinedCode);
 }
 
 const VirtualInputKey* VirtualInputKey::DigitSet()

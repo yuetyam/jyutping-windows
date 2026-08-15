@@ -137,13 +137,11 @@ private:
     const std::vector<VirtualInputKey>& CurrentInputKeys() const;
     Ime::ReverseLookupMethod CurrentReverseLookupMethod() const;
     std::vector<VirtualInputKey> ReverseLookupQueryKeys() const;
-    std::wstring ReverseLookupReadingText(const std::vector<Ime::Lexicon>& suggestions) const;
+    std::wstring ReverseLookupReadingText(const std::vector<Ime::Candidate>& suggestions) const;
     BOOL IsNonAlphabeticInputKey(UINT uCode) const;
-    const std::vector<Ime::Lexicon>& GetInputSuggestions();
+    const std::vector<Ime::Candidate>& GetInputSuggestions();
     std::optional<Ime::Lexicon> CandidateAt(UINT candidateIndex) const;
     CharacterStandard CurrentCharacterStandard() const;
-    std::wstring DisplayTextForCandidate(const Ime::Lexicon& suggestion) const;
-    std::wstring CommentTextForCandidate(const Ime::Lexicon& suggestion) const;
     void AppendInputEngineCandidates(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
 
 private:
@@ -220,7 +218,7 @@ private:
     BOOL _isInputEngineReady;
     std::wstring _cachedInputText;
     Ime::ReverseLookupMethod _cachedReverseLookupMethod;
-    std::vector<Ime::Lexicon> _cachedSuggestions;
+    std::vector<Ime::Candidate> _cachedSuggestions;
     std::vector<Ime::Lexicon> _selectedMemorySequence;
     std::vector<std::wstring> _candidateItemTextStorage;
     std::vector<std::wstring> _candidateItemCommentStorage;

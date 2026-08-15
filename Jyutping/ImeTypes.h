@@ -140,6 +140,8 @@ int64_t AnchorsCode(const std::vector<VirtualInputKey>& keys);
 std::vector<VirtualInputKey> SyllableKeys(const std::vector<VirtualInputKey>& keys);
 
 size_t SchemeLength(const Scheme& scheme);
+int64_t SchemeComplexity(const Scheme& scheme);
+std::vector<VirtualInputKey> SchemeOriginKeys(const Scheme& scheme);
 std::wstring SchemeAliasText(const Scheme& scheme);
 std::wstring SchemeOriginText(const Scheme& scheme);
 std::vector<VirtualInputKey> SchemeAliasAnchors(const Scheme& scheme);

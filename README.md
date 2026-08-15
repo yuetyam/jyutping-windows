@@ -40,9 +40,15 @@ Requirements:
 
 - Windows 11
 - Visual Studio 2026 with the C++ desktop toolchain and the Windows 11 SDK
-- `Jyutping\Resources\ime.sqlite3` (You can download from [here](https://github.com/yuetyam/jyutping-windows/releases/download/0.1.0/ime.sqlite3) )
+- Rust and Cargo for generating the CoreIME database
 
-Build from the repository root:
+Generate `Jyutping\Resources\ime.sqlite3` from the repository root:
+
+```powershell
+cargo run --release --manifest-path preparing\Cargo.toml
+```
+
+Then build from the repository root:
 
 ```powershell
 msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=x64
@@ -55,7 +61,7 @@ msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=ARM64EC
 msbuild Jyutping.sln /p:Configuration=Release /p:Platform=ARM64EC
 ```
 
-The build copies `Jyutping\Resources\ime.sqlite3` beside each built `Jyutping.dll`.
+The build copies `Jyutping\Resources\ime.sqlite3` beside each built `Jyutping.dll` and fails when the generated database is missing.
 
 ## Packaging
 

@@ -71,6 +71,9 @@
     <ClInclude Include="EnumDisplayAttributeInfo.h" />
     <ClInclude Include="GetTextExtentEditSession.h" />
     <ClInclude Include="Globals.h" />
+    <ClInclude Include="Candidate.h" />
+    <ClInclude Include="Converter.h" />
+    <ClInclude Include="CoreImeEngine.h" />
     <ClInclude Include="InputEngine.h" />
     <ClInclude Include="InputMemory.h" />
     <ClInclude Include="ImeDatabase.h" />
@@ -120,8 +123,11 @@
     <ClCompile Include="FunctionProviderSink.cpp" />
     <ClCompile Include="GetTextExtentEditSession.cpp" />
     <ClCompile Include="Globals.cpp" />
+    <ClCompile Include="Candidate.cpp" />
+    <ClCompile Include="Converter.cpp" />
     <ClCompile Include="InputEngineCangjie.cpp" />
     <ClCompile Include="InputEngine.cpp" />
+    <ClCompile Include="InputEngineFacade.cpp" />
     <ClCompile Include="InputMemory.cpp" />
     <ClCompile Include="InputEnginePinyin.cpp" />
     <ClCompile Include="InputEngineReverseLookup.cpp" />
@@ -464,7 +470,10 @@
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <Target Name="CopyImeDatabase" AfterTargets="Build" Condition="Exists('$(ProjectDir)Resources\ime.sqlite3')">
+  <Target Name="VerifyImeDatabase" BeforeTargets="PrepareForBuild">
+    <Error Condition="!Exists('$(ProjectDir)Resources\ime.sqlite3')" Text="Missing generated CoreIME database: $(ProjectDir)Resources\ime.sqlite3. Run cargo run --release --manifest-path preparing\Cargo.toml from the repository root." />
+  </Target>
+  <Target Name="CopyImeDatabase" AfterTargets="Build">
     <Copy SourceFiles="$(ProjectDir)Resources\ime.sqlite3" DestinationFiles="$(TargetDir)ime.sqlite3" SkipUnchangedFiles="true" />
   </Target>
   <ImportGroup Label="ExtensionTargets">

@@ -1,4 +1,4 @@
-#include "InputEngine.h"
+#include "CoreImeEngine.h"
 
 namespace {
 
@@ -17,16 +17,34 @@ std::vector<Ime::Lexicon> LexiconsFromRomanizations(
     return result;
 }
 
+void RemoveLastCodePoint(std::wstring& text)
+{
+    if (text.empty())
+    {
+        return;
+    }
+    if (text.size() >= 2 &&
+        text.back() >= 0xDC00 && text.back() <= 0xDFFF &&
+        text[text.size() - 2] >= 0xD800 && text[text.size() - 2] <= 0xDBFF)
+    {
+        text.resize(text.size() - 2);
+    }
+    else
+    {
+        text.pop_back();
+    }
+}
+
 } // namespace
 
 namespace Ime {
 
-std::vector<Lexicon> InputEngine::ReverseLookup(ReverseLookupMethod method, std::wstring_view input) const
+std::vector<Lexicon> CoreImeEngine::ReverseLookup(ReverseLookupMethod method, std::wstring_view input) const
 {
     return ReverseLookup(method, InputKeysFromText(input));
 }
 
-std::vector<Lexicon> InputEngine::ReverseLookup(ReverseLookupMethod method, const std::vector<VirtualInputKey>& keys) const
+std::vector<Lexicon> CoreImeEngine::ReverseLookup(ReverseLookupMethod method, const std::vector<VirtualInputKey>& keys) const
 {
     if (!IsPrepared() || keys.empty())
     {
@@ -48,7 +66,7 @@ std::vector<Lexicon> InputEngine::ReverseLookup(ReverseLookupMethod method, cons
     }
 }
 
-std::vector<Lexicon> InputEngine::ReverseLookupWord(const std::wstring& word, const std::wstring& input, std::optional<std::wstring> mark) const
+std::vector<Lexicon> CoreImeEngine::ReverseLookupWord(const std::wstring& word, const std::wstring& input, std::optional<std::wstring> mark) const
 {
     if (word.empty())
     {
@@ -82,7 +100,7 @@ std::vector<Lexicon> InputEngine::ReverseLookupWord(const std::wstring& word, co
                 matchedLength = leading.size();
                 break;
             }
-            leading.pop_back();
+            RemoveLastCodePoint(leading);
         }
 
         if (!matchedRomanization || matchedLength == 0)

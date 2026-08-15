@@ -7,8 +7,6 @@
 namespace {
 
 constexpr size_t maxSyllableKeyCount = 6;
-constexpr int64_t codeMaaMaa = 32203220;
-constexpr int64_t codeMaaMi = 32203228;
 
 struct SplitEdge
 {
@@ -27,26 +25,6 @@ struct SplitNode
 Ime::Segmentation SingleScheme(Ime::Syllable syllable)
 {
     return Ime::Segmentation{ Ime::Scheme{ std::move(syllable) } };
-}
-
-Ime::Segmentation MaaMaaScheme()
-{
-    return Ime::Segmentation{
-        Ime::Scheme{
-            Ime::Syllable(3220, 322020),
-            Ime::Syllable(3220, 322020)
-        }
-    };
-}
-
-Ime::Segmentation MaaMiScheme()
-{
-    return Ime::Segmentation{
-        Ime::Scheme{
-            Ime::Syllable(3220, 322020),
-            Ime::Syllable(3228, 3228)
-        }
-    };
 }
 
 std::vector<std::vector<SplitEdge>> SplitEdges(
@@ -93,87 +71,6 @@ Ime::Scheme SchemeAt(size_t nodeIndex, const std::vector<SplitNode>& nodes)
 
     std::reverse(syllables.begin(), syllables.end());
     return syllables;
-}
-
-bool NonLastOriginEndsWithA(const Ime::Scheme& scheme)
-{
-    if (scheme.size() <= 1)
-    {
-        return false;
-    }
-
-    for (size_t index = 0; index + 1 < scheme.size(); index++)
-    {
-        const std::vector<VirtualInputKey>& origin = scheme[index].origin;
-        if (!origin.empty() && origin.back() == VirtualInputKey::letterA)
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-int LongAEndingCount(const Ime::Scheme& scheme, int64_t Ime::Syllable::*codeMember)
-{
-    int count = 0;
-    int thirdLastCode = 0;
-    int secondLastCode = 0;
-    int lastCode = 0;
-
-    for (const Ime::Syllable& syllable : scheme)
-    {
-        int64_t syllableCode = syllable.*codeMember;
-        int64_t divisor = 1;
-        while ((syllableCode / divisor) >= 100)
-        {
-            divisor *= 100;
-        }
-
-        while (divisor > 0)
-        {
-            int keyCode = static_cast<int>(syllableCode / divisor);
-            if (secondLastCode == VirtualInputKey::letterA.code &&
-                lastCode == VirtualInputKey::letterA.code &&
-                keyCode == VirtualInputKey::letterM.code)
-            {
-                count++;
-            }
-            else if (thirdLastCode == VirtualInputKey::letterA.code &&
-                secondLastCode == VirtualInputKey::letterA.code &&
-                lastCode == VirtualInputKey::letterN.code &&
-                keyCode == VirtualInputKey::letterG.code)
-            {
-                count++;
-            }
-
-            syllableCode %= divisor;
-            divisor /= 100;
-            thirdLastCode = secondLastCode;
-            secondLastCode = lastCode;
-            lastCode = keyCode;
-        }
-    }
-    return count;
-}
-
-bool IsValidScheme(const Ime::Scheme& scheme)
-{
-    if (scheme.size() <= 1)
-    {
-        return true;
-    }
-
-    if (!NonLastOriginEndsWithA(scheme))
-    {
-        return true;
-    }
-
-    int originCount = LongAEndingCount(scheme, &Ime::Syllable::originCode);
-    if (originCount <= 0)
-    {
-        return true;
-    }
-    return originCount == LongAEndingCount(scheme, &Ime::Syllable::aliasCode);
 }
 
 } // namespace
@@ -250,16 +147,6 @@ Segmentation Segmenter::Segment(const std::vector<VirtualInputKey>& keys) const
             return SingleScheme(Syllable(32, 32));
         }
         return Segmentation();
-    case 4:
-        switch (CombinedCode(keys))
-        {
-        case codeMaaMaa:
-            return MaaMaaScheme();
-        case codeMaaMi:
-            return MaaMiScheme();
-        default:
-            break;
-        }
     default:
         break;
     }
@@ -317,19 +204,11 @@ Segmentation Segmenter::Segment(const std::vector<VirtualInputKey>& keys) const
     candidates.reserve(nodes.size());
     for (size_t nodeIndex = 0; nodeIndex < nodes.size(); nodeIndex++)
     {
-        Scheme scheme = SchemeAt(nodeIndex, nodes);
-        if (IsValidScheme(scheme))
-        {
-            candidates.push_back({ std::move(scheme), nodes[nodeIndex].length, nodes[nodeIndex].count });
-        }
+        candidates.push_back({ SchemeAt(nodeIndex, nodes), nodes[nodeIndex].length, nodes[nodeIndex].count });
     }
 
-    std::sort(candidates.begin(), candidates.end(), [](const Candidate& left, const Candidate& right)
+    std::stable_sort(candidates.begin(), candidates.end(), [](const Candidate& left, const Candidate& right)
     {
-        if (left.length == right.length)
-        {
-            return left.count < right.count;
-        }
         return left.length > right.length;
     });
 

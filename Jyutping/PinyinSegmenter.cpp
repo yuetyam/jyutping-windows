@@ -3,6 +3,7 @@
 #include "Logger.h"
 
 #include <algorithm>
+#include <bit>
 
 namespace {
 
@@ -107,11 +108,45 @@ size_t PinyinSchemeLength(const PinyinScheme& scheme)
     return result;
 }
 
+int64_t PinyinSchemeComplexity(const PinyinScheme& scheme)
+{
+    uint64_t result = 0;
+    for (const PinyinSyllable& syllable : scheme)
+    {
+        result = result * 10 + static_cast<uint64_t>(syllable.keys.size());
+    }
+    return std::bit_cast<int64_t>(result);
+}
+
+std::vector<VirtualInputKey> PinyinSchemeKeys(const PinyinScheme& scheme)
+{
+    std::vector<VirtualInputKey> result;
+    for (const PinyinSyllable& syllable : scheme)
+    {
+        result.insert(result.end(), syllable.keys.begin(), syllable.keys.end());
+    }
+    return result;
+}
+
 std::wstring PinyinSchemeText(const PinyinScheme& scheme)
 {
     std::wstring result;
     for (const PinyinSyllable& syllable : scheme)
     {
+        result.append(syllable.text);
+    }
+    return result;
+}
+
+std::wstring PinyinSchemeMark(const PinyinScheme& scheme)
+{
+    std::wstring result;
+    for (const PinyinSyllable& syllable : scheme)
+    {
+        if (!result.empty())
+        {
+            result.push_back(L' ');
+        }
         result.append(syllable.text);
     }
     return result;
@@ -211,12 +246,8 @@ PinyinSegmentation PinyinSegmenter::Segment(const std::vector<VirtualInputKey>& 
         candidates.push_back({ SchemeAt(nodeIndex, nodes), nodes[nodeIndex].length, nodes[nodeIndex].count });
     }
 
-    std::sort(candidates.begin(), candidates.end(), [](const Candidate& left, const Candidate& right)
+    std::stable_sort(candidates.begin(), candidates.end(), [](const Candidate& left, const Candidate& right)
     {
-        if (left.length == right.length)
-        {
-            return left.count < right.count;
-        }
         return left.length > right.length;
     });
 

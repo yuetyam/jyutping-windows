@@ -1,4 +1,4 @@
-#include "InputEngine.h"
+#include "CoreImeEngine.h"
 #include "CharacterStandard.h"
 #include "Logger.h"
 
@@ -215,76 +215,16 @@ std::vector<Ime::Lexicon> SymbolLexiconsFromRows(
     return result;
 }
 
-std::vector<Ime::Lexicon> MatchSymbols(const ImeDatabase& database, std::wstring_view text, const std::wstring& input)
+std::vector<Ime::Lexicon> MatchSymbols(
+    const ImeDatabase& database,
+    const std::vector<VirtualInputKey>& keys,
+    int64_t complexity,
+    const std::wstring& input)
 {
-    std::wstring queryText(text);
-    return SymbolLexiconsFromRows(database, database.QuerySymbolsBySpell(Ime::HashCode(queryText)), input);
-}
-
-bool MatchesSymbolTarget(const Ime::Lexicon& item, const Ime::Lexicon& symbol)
-{
-    return item.IsCantonese() &&
-        symbol.attached &&
-        item.text == *symbol.attached &&
-        item.romanization == symbol.romanization;
-}
-
-std::vector<Ime::Lexicon> MergeMemorySuggestions(
-    const std::vector<Ime::Lexicon>& memory,
-    const std::vector<Ime::Lexicon>& textMarks,
-    const std::vector<Ime::Lexicon>& symbols,
-    const std::vector<Ime::Lexicon>& queried)
-{
-    std::vector<Ime::Lexicon> idealMemory;
-    std::vector<Ime::Lexicon> notIdealMemory;
-    for (const Ime::Lexicon& item : memory)
-    {
-        if (item.IsIdealInputMemory())
-        {
-            idealMemory.push_back(item);
-        }
-        else if (item.IsNotIdealInputMemory())
-        {
-            notIdealMemory.push_back(item);
-        }
-    }
-
-    std::vector<Ime::Lexicon> chained;
-    chained.reserve(queried.size() + notIdealMemory.size());
-    for (const Ime::Lexicon& item : queried)
-    {
-        if (idealMemory.empty() || !item.IsCompound())
-        {
-            chained.push_back(item);
-        }
-    }
-
-    for (auto iterator = notIdealMemory.rbegin(); iterator != notIdealMemory.rend(); ++iterator)
-    {
-        auto insertPosition = std::find_if(chained.begin(), chained.end(), [&iterator](const Ime::Lexicon& item)
-        {
-            return item.inputCount <= iterator->inputCount;
-        });
-        chained.insert(insertPosition, *iterator);
-    }
-
-    std::vector<Ime::Lexicon> result;
-    Append(result, First(idealMemory, 3));
-    Append(result, textMarks);
-    Append(result, idealMemory);
-    Append(result, chained);
-    for (auto iterator = symbols.rbegin(); iterator != symbols.rend(); ++iterator)
-    {
-        auto insertPosition = std::find_if(result.begin(), result.end(), [&iterator](const Ime::Lexicon& item)
-        {
-            return MatchesSymbolTarget(item, *iterator);
-        });
-        if (insertPosition != result.end())
-        {
-            result.insert(insertPosition + 1, *iterator);
-        }
-    }
-    return Distinct(result);
+    return SymbolLexiconsFromRows(
+        database,
+        database.QuerySymbolsBySpell(Ime::CombinedCode(keys), complexity),
+        input);
 }
 
 std::vector<Ime::Lexicon> SortedByInputCount(std::vector<Ime::Lexicon> items)
@@ -421,7 +361,7 @@ const Ime::Lexicon* FindWithInputCount(const std::vector<Ime::Lexicon>& items, s
 
 namespace Ime {
 
-bool InputEngine::Prepare()
+bool CoreImeEngine::Prepare()
 {
     Global::Log(L"InputEngine prepare start");
     if (!_database.Open())
@@ -430,12 +370,6 @@ bool InputEngine::Prepare()
         return false;
     }
 
-    bool isMemoryReady = _inputMemory.Prepare();
-    if (!isMemoryReady)
-    {
-        Global::Log(L"InputEngine prepare: input memory is unavailable; continuing without memory suggestions");
-    }
-
     if (!_segmenter.Prepare(_database))
     {
         Global::Log(L"InputEngine prepare failed: Jyutping segmenter failed");
@@ -447,11 +381,11 @@ bool InputEngine::Prepare()
         return false;
     }
 
-    Global::Log(L"InputEngine prepare success: database=%s memory=%d", _database.Path().c_str(), isMemoryReady);
+    Global::Log(L"CoreImeEngine prepare success: database=%s", _database.Path().c_str());
     return true;
 }
 
-bool InputEngine::Prepare(_In_z_ PCWSTR databasePath)
+bool CoreImeEngine::Prepare(_In_z_ PCWSTR databasePath)
 {
     Global::Log(L"InputEngine prepare start: database=%s", databasePath ? databasePath : L"");
     if (!_database.Open(databasePath))
@@ -460,12 +394,6 @@ bool InputEngine::Prepare(_In_z_ PCWSTR databasePath)
         return false;
     }
 
-    bool isMemoryReady = _inputMemory.Prepare();
-    if (!isMemoryReady)
-    {
-        Global::Log(L"InputEngine prepare: input memory is unavailable; continuing without memory suggestions");
-    }
-
     if (!_segmenter.Prepare(_database))
     {
         Global::Log(L"InputEngine prepare failed: Jyutping segmenter failed");
@@ -477,51 +405,26 @@ bool InputEngine::Prepare(_In_z_ PCWSTR databasePath)
         return false;
     }
 
-    Global::Log(L"InputEngine prepare success: database=%s memory=%d", _database.Path().c_str(), isMemoryReady);
+    Global::Log(L"CoreImeEngine prepare success: database=%s", _database.Path().c_str());
     return true;
 }
 
-bool InputEngine::IsPrepared() const
+bool CoreImeEngine::IsPrepared() const
 {
     return _database.IsOpen() && _segmenter.IsPrepared() && _pinyinSegmenter.IsPrepared();
 }
 
-std::wstring InputEngine::ConvertText(std::wstring_view text, CharacterStandard standard) const
+std::wstring CoreImeEngine::ConvertText(std::wstring_view text, CharacterStandard standard) const
 {
     return Ime::ConvertText(_database, text, standard);
 }
 
-std::vector<Lexicon> InputEngine::Suggest(std::wstring_view input) const
+std::vector<Lexicon> CoreImeEngine::SearchPlainTexts(std::wstring_view input) const
 {
-    return Suggest(InputKeysFromText(input));
+    return SearchPlainTexts(InputKeysFromText(input));
 }
 
-std::vector<Lexicon> InputEngine::Suggest(const std::vector<VirtualInputKey>& keys) const
-{
-    std::vector<Lexicon> queried = SuggestFromLexicon(keys);
-    if (keys.empty() || !IsPrepared())
-    {
-        return queried;
-    }
-
-    std::vector<Lexicon> textMarks = SearchTextMarks(keys);
-    Segmentation segmentation = _segmenter.Segment(keys);
-    std::vector<Lexicon> symbols = SearchSymbols(keys, segmentation);
-    if (!_inputMemory.IsPrepared())
-    {
-        return MergeMemorySuggestions(std::vector<Lexicon>(), textMarks, symbols, queried);
-    }
-
-    std::vector<Lexicon> memory = _inputMemory.Suggest(keys, segmentation, _segmenter);
-    return MergeMemorySuggestions(memory, textMarks, symbols, queried);
-}
-
-std::vector<Lexicon> InputEngine::SearchTextMarks(std::wstring_view input) const
-{
-    return SearchTextMarks(InputKeysFromText(input));
-}
-
-std::vector<Lexicon> InputEngine::SearchTextMarks(const std::vector<VirtualInputKey>& keys) const
+std::vector<Lexicon> CoreImeEngine::SearchPlainTexts(const std::vector<VirtualInputKey>& keys) const
 {
     if (!IsPrepared() || keys.empty())
     {
@@ -529,18 +432,18 @@ std::vector<Lexicon> InputEngine::SearchTextMarks(const std::vector<VirtualInput
     }
 
     std::wstring text = TextFromKeys(keys);
-    std::vector<std::wstring> marks = _database.QueryTextMarksBySpell(HashCode(text));
+    std::vector<std::wstring> plainTexts = _database.QueryPlainTextsBySpell(CombinedCode(keys), keys.size());
 
     std::vector<Lexicon> result;
-    result.reserve(marks.size());
-    for (const std::wstring& mark : marks)
+    result.reserve(plainTexts.size());
+    for (const std::wstring& plainText : plainTexts)
     {
-        result.push_back(Lexicon::PlainText(text, mark));
+        result.push_back(Lexicon::PlainText(text, plainText));
     }
     return result;
 }
 
-std::vector<Lexicon> InputEngine::SearchSymbols(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation) const
+std::vector<Lexicon> CoreImeEngine::SearchSymbols(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation) const
 {
     if (!IsPrepared() || keys.empty())
     {
@@ -554,23 +457,36 @@ std::vector<Lexicon> InputEngine::SearchSymbols(const std::vector<VirtualInputKe
     }
 
     size_t syllableLength = syllableKeys.size();
-    std::wstring text = TextFromKeys(syllableKeys);
-    std::wstring input = (syllableLength == keys.size()) ? text : TextFromKeys(keys);
+    std::wstring input = TextFromKeys(keys);
 
-    std::vector<Lexicon> result = MatchSymbols(_database, text, input);
+    std::vector<Lexicon> result;
     for (const Scheme& scheme : segmentation)
     {
         if (SchemeLength(scheme) == syllableLength)
         {
-            Append(result, MatchSymbols(_database, SchemeOriginText(scheme), input));
+            Append(result, MatchSymbols(_database, SchemeOriginKeys(scheme), SchemeComplexity(scheme), input));
         }
     }
     return Distinct(result);
 }
 
-std::vector<Lexicon> InputEngine::SuggestFromLexicon(const std::vector<VirtualInputKey>& keys) const
+std::vector<Lexicon> CoreImeEngine::Suggest(const std::vector<VirtualInputKey>& keys, bool deepSearch) const
+{
+    return Suggest(keys, _segmenter.Segment(keys), deepSearch);
+}
+
+std::vector<Lexicon> CoreImeEngine::Suggest(
+    const std::vector<VirtualInputKey>& keys,
+    const Segmentation& segmentation,
+    bool deepSearch) const
 {
     if (!IsPrepared())
+    {
+        return std::vector<Lexicon>();
+    }
+
+    ImeDatabase::LexiconQuery lexiconQuery = _database.CreateLexiconQuery();
+    if (!lexiconQuery.IsValid())
     {
         return std::vector<Lexicon>();
     }
@@ -583,66 +499,105 @@ std::vector<Lexicon> InputEngine::SuggestFromLexicon(const std::vector<VirtualIn
         if (keys.front() == VirtualInputKey::letterA)
         {
             std::vector<Lexicon> result;
-            Append(result, SpellMatch(L"a", L"a", L"a"));
-            Append(result, SpellMatch(L"aa", L"a", L"a"));
-            Append(result, AnchorsMatch(keys, L"a"));
+            Append(result, SpellMatch(keys, 1, L"a", L"a", std::nullopt, &lexiconQuery));
+            Append(result, SpellMatch(
+                { VirtualInputKey::letterA, VirtualInputKey::letterA },
+                2,
+                L"a",
+                L"a",
+                std::nullopt,
+                &lexiconQuery));
+            Append(result, AnchorsMatch(keys, L"a", std::nullopt, &lexiconQuery));
             return result;
         }
         if (keys.front() == VirtualInputKey::letterO || keys.front() == VirtualInputKey::letterM)
         {
             std::wstring text = TextFromKeys(keys);
             std::vector<Lexicon> result;
-            Append(result, SpellMatch(text, text, text));
-            Append(result, AnchorsMatch(keys, text));
+            Append(result, SpellMatch(keys, 1, text, text, std::nullopt, &lexiconQuery));
+            Append(result, AnchorsMatch(keys, text, std::nullopt, &lexiconQuery));
             return result;
         }
-        return AnchorsMatch(keys);
+        return AnchorsMatch(keys, std::nullopt, std::nullopt, &lexiconQuery);
     default:
-        return Dispatch(keys, _segmenter.Segment(keys));
+        return Dispatch(keys, segmentation, deepSearch, lexiconQuery);
     }
 }
 
-bool InputEngine::Remember(const Lexicon& lexicon)
-{
-    return _inputMemory.Handle(lexicon);
-}
-
-bool InputEngine::Forget(const Lexicon& lexicon)
-{
-    return _inputMemory.Forget(lexicon);
-}
-
-bool InputEngine::DeleteAllMemory()
-{
-    bool result = _inputMemory.DeleteAll();
-    Global::Log(L"InputEngine delete all memory: result=%d", result);
-    return result;
-}
-
-Segmentation InputEngine::Segment(const std::vector<VirtualInputKey>& keys) const
+Segmentation CoreImeEngine::Segment(const std::vector<VirtualInputKey>& keys) const
 {
     return _segmenter.Segment(keys);
 }
 
-std::vector<Lexicon> InputEngine::Dispatch(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation) const
+std::vector<Emoji> CoreImeEngine::FetchEmojiSequence(std::optional<int> category) const
+{
+    std::vector<Emoji> result;
+    for (const ImeDatabase::SymbolRow& row : _database.QueryEmojiSequence())
+    {
+        if (category && row.category != *category)
+        {
+            continue;
+        }
+        std::optional<std::wstring> text = SymbolTextFromCodePoints(row.codePoint);
+        if (text)
+        {
+            result.push_back({ row.category, 10000 + row.rowId, row.unicodeVersion, *text, row.cantonese, row.romanization });
+        }
+    }
+    return result;
+}
+
+std::vector<Emoji> CoreImeEngine::FetchDefaultFrequentEmojis() const
+{
+    std::vector<Emoji> result;
+    for (const ImeDatabase::SymbolRow& row : _database.QueryDefaultFrequentEmojis())
+    {
+        std::optional<std::wstring> text = SymbolTextFromCodePoints(row.codePoint);
+        if (text)
+        {
+            result.push_back({ 0, 5000 + row.rowId, row.unicodeVersion, *text, row.cantonese, row.romanization });
+        }
+    }
+    return result;
+}
+
+const ImeDatabase& CoreImeEngine::Database() const
+{
+    return _database;
+}
+
+const Segmenter& CoreImeEngine::SegmenterForMemory() const
+{
+    return _segmenter;
+}
+
+std::vector<Lexicon> CoreImeEngine::Dispatch(
+    const std::vector<VirtualInputKey>& keys,
+    const Segmentation& segmentation,
+    bool deepSearch,
+    const ImeDatabase::LexiconQuery& lexiconQuery) const
 {
     std::vector<VirtualInputKey> syllableKeys = SyllableKeys(keys);
     std::wstring syllableText = TextFromKeys(syllableKeys);
     std::vector<Lexicon> lexicons;
 
     size_t aliasCount = FirstAliasCount(segmentation);
-    if (aliasCount == 0)
+    if (aliasCount == 0 && deepSearch)
     {
-        lexicons = ProcessSlices(syllableKeys, syllableText, std::nullopt);
+        lexicons = ProcessSlices(syllableKeys, syllableText, std::nullopt, lexiconQuery);
+    }
+    else if (aliasCount == 0)
+    {
+        lexicons = AnchorsMatch(syllableKeys, syllableText, std::nullopt, &lexiconQuery);
     }
     else if ((aliasCount == 1 && syllableKeys.size() > 1) || syllableKeys.size() != keys.size())
     {
-        lexicons = Search(syllableKeys, segmentation, std::nullopt);
-        Append(lexicons, ProcessSlices(syllableKeys, syllableText, std::nullopt));
+        lexicons = Search(syllableKeys, segmentation, std::nullopt, deepSearch, lexiconQuery);
+        Append(lexicons, ProcessSlices(syllableKeys, syllableText, std::nullopt, lexiconQuery));
     }
     else
     {
-        lexicons = Search(syllableKeys, segmentation, std::nullopt);
+        lexicons = Search(syllableKeys, segmentation, std::nullopt, deepSearch, lexiconQuery);
     }
 
     bool hasApostrophe = ContainsApostrophe(keys);
@@ -657,28 +612,31 @@ std::vector<Lexicon> InputEngine::Dispatch(const std::vector<VirtualInputKey>& k
     }
     if (hasApostrophe)
     {
-        return FilterApostropheSuggestions(keys, lexicons);
+        return FilterApostropheSuggestions(keys, lexicons, lexiconQuery);
     }
     return lexicons;
 }
 
-std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& keys, const Segmentation& segmentation, std::optional<int> limit) const
+std::vector<Lexicon> CoreImeEngine::Search(
+    const std::vector<VirtualInputKey>& keys,
+    const Segmentation& segmentation,
+    std::optional<int> limit,
+    bool deepSearch,
+    const ImeDatabase::LexiconQuery& lexiconQuery) const
 {
     size_t inputLength = keys.size();
     std::wstring text = TextFromKeys(keys);
 
-    std::vector<Lexicon> spellMatched = SpellMatch(text, text, std::nullopt, limit);
-    std::vector<Lexicon> anchorsMatched = AnchorsMatch(keys, text, limit);
-    std::vector<Lexicon> queried = Query(inputLength, segmentation, limit);
+    std::vector<Lexicon> anchorsMatched = AnchorsMatch(keys, text, limit, &lexiconQuery);
+    std::vector<Lexicon> queried = Query(inputLength, segmentation, limit, lexiconQuery);
 
     bool shouldMatchPrefixes = false;
-    if (inputLength > 2 && inputLength < 25)
+    if (deepSearch && inputLength > 2 && inputLength < 25)
     {
         shouldMatchPrefixes = keys.back() == VirtualInputKey::letterM || keys.front() == VirtualInputKey::letterM;
         if (!shouldMatchPrefixes)
         {
-            shouldMatchPrefixes = spellMatched.empty() &&
-                !ContainsInputCount(queried, inputLength) &&
+            shouldMatchPrefixes = !ContainsInputCount(queried, inputLength) &&
                 !ContainsSchemeLength(segmentation, inputLength);
         }
     }
@@ -689,7 +647,7 @@ std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& key
         int prefixesLimit = limit ? 200 : 500;
         for (const Scheme& scheme : segmentation)
         {
-            if (scheme.empty())
+            if (scheme.empty() || scheme.size() > 9)
             {
                 continue;
             }
@@ -711,7 +669,7 @@ std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& key
             std::wstring mark = SchemeMark(scheme) + L" " + TextFromKeys(tail);
             std::wstring tailAsAnchorText = TailAnchorText(tail);
 
-            for (const Lexicon& item : AnchorsMatch(conjoined, std::nullopt, prefixesLimit))
+            for (const Lexicon& item : AnchorsMatch(conjoined, std::nullopt, prefixesLimit, &lexiconQuery))
             {
                 std::wstring toneFreeRomanization = StrippedTones(item.romanization);
                 if (!StartsWith(toneFreeRomanization, schemeSyllableText))
@@ -733,7 +691,7 @@ std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& key
             }
 
             std::wstring syllables = schemeSyllableText + L" " + transformedTailText;
-            for (const Lexicon& item : AnchorsMatch(anchors, std::nullopt, prefixesLimit))
+            for (const Lexicon& item : AnchorsMatch(anchors, std::nullopt, prefixesLimit, &lexiconQuery))
             {
                 if (StartsWith(StrippedTones(item.romanization), syllables))
                 {
@@ -748,9 +706,13 @@ std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& key
     {
         for (size_t number = inputLength - 1; number > 0; number--)
         {
+            if (number > 9)
+            {
+                continue;
+            }
             std::vector<VirtualInputKey> leadingKeys = Prefix(keys, number);
             std::wstring leadingText = TextFromKeys(leadingKeys);
-            for (const Lexicon& item : AnchorsMatch(leadingKeys, leadingText, 300))
+            for (const Lexicon& item : AnchorsMatch(leadingKeys, leadingText, 300, &lexiconQuery))
             {
                 size_t tailStart = (item.inputCount > 0) ? item.inputCount - 1 : 0;
                 std::vector<VirtualInputKey> tail = DropFirst(keys, tailStart);
@@ -805,7 +767,6 @@ std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& key
     notIdealQueried = Distinct(Sorted(notIdealQueried));
 
     std::vector<Lexicon> fullInput;
-    Append(fullInput, spellMatched);
     Append(fullInput, idealQueried);
     Append(fullInput, anchorsMatched);
     Append(fullInput, prefixMatched);
@@ -823,11 +784,16 @@ std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& key
 
     if (fetched.empty())
     {
-        return ProcessSlices(keys, text, limit);
+        return deepSearch ?
+            ProcessSlices(keys, text, limit, lexiconQuery) : AnchorsMatch(keys, text, limit, &lexiconQuery);
     }
 
     size_t firstInputCount = fetched.front().inputCount;
     if (firstInputCount >= inputLength)
+    {
+        return fetched;
+    }
+    if (!deepSearch)
     {
         return fetched;
     }
@@ -836,7 +802,8 @@ std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& key
     for (size_t headLength : DistinctInputCounts(fetched))
     {
         std::vector<VirtualInputKey> tailKeys = DropFirst(keys, headLength);
-        std::vector<Lexicon> tailLexicons = Search(tailKeys, _segmenter.Segment(tailKeys), 50);
+        std::vector<Lexicon> tailLexicons =
+            Search(tailKeys, _segmenter.Segment(tailKeys), 50, deepSearch, lexiconQuery);
         const Lexicon* headLexicon = FindWithInputCount(fetched, headLength);
         if (tailLexicons.empty() || headLexicon == nullptr)
         {
@@ -854,7 +821,11 @@ std::vector<Lexicon> InputEngine::Search(const std::vector<VirtualInputKey>& key
     return concatenated;
 }
 
-std::vector<Lexicon> InputEngine::Query(size_t inputLength, const Segmentation& segmentation, std::optional<int> limit) const
+std::vector<Lexicon> CoreImeEngine::Query(
+    size_t inputLength,
+    const Segmentation& segmentation,
+    std::optional<int> limit,
+    const ImeDatabase::LexiconQuery& lexiconQuery) const
 {
     std::vector<Scheme> idealSchemes;
     for (const Scheme& scheme : segmentation)
@@ -870,7 +841,10 @@ std::vector<Lexicon> InputEngine::Query(size_t inputLength, const Segmentation& 
     {
         for (const Scheme& scheme : segmentation)
         {
-            Append(result, Perform(scheme, limit));
+            if (scheme.size() <= 9)
+            {
+                Append(result, Perform(scheme, limit, lexiconQuery));
+            }
         }
         return result;
     }
@@ -879,32 +853,42 @@ std::vector<Lexicon> InputEngine::Query(size_t inputLength, const Segmentation& 
     {
         if (scheme.size() == 1)
         {
-            Append(result, Perform(scheme, limit));
+            Append(result, Perform(scheme, limit, lexiconQuery));
         }
         else
         {
             for (size_t count = scheme.size(); count > 0; count--)
             {
-                Append(result, Perform(PrefixScheme(scheme, count), limit));
+                if (count <= 9)
+                {
+                    Append(result, Perform(PrefixScheme(scheme, count), limit, lexiconQuery));
+                }
             }
         }
     }
     return result;
 }
 
-std::vector<Lexicon> InputEngine::Perform(const Scheme& scheme, std::optional<int> limit) const
+std::vector<Lexicon> CoreImeEngine::Perform(
+    const Scheme& scheme,
+    std::optional<int> limit,
+    const ImeDatabase::LexiconQuery& lexiconQuery) const
 {
-    int64_t anchors = CombinedCode(SchemeOriginAnchors(scheme));
-    if (anchors <= 0)
-    {
-        return std::vector<Lexicon>();
-    }
-
-    int64_t spell = HashCode(SchemeOriginText(scheme));
-    return StrictMatch(anchors, spell, SchemeAliasText(scheme), SchemeMark(scheme), limit);
+    std::vector<VirtualInputKey> originKeys = SchemeOriginKeys(scheme);
+    return SpellMatch(
+        originKeys,
+        SchemeComplexity(scheme),
+        SchemeAliasText(scheme),
+        SchemeMark(scheme),
+        limit,
+        &lexiconQuery);
 }
 
-std::vector<Lexicon> InputEngine::ProcessSlices(const std::vector<VirtualInputKey>& keys, const std::wstring& text, std::optional<int> limit) const
+std::vector<Lexicon> CoreImeEngine::ProcessSlices(
+    const std::vector<VirtualInputKey>& keys,
+    const std::wstring& text,
+    std::optional<int> limit,
+    const ImeDatabase::LexiconQuery& lexiconQuery) const
 {
     int adjustedLimit = limit ? 100 : 300;
     size_t inputLength = keys.size();
@@ -916,13 +900,19 @@ std::vector<Lexicon> InputEngine::ProcessSlices(const std::vector<VirtualInputKe
         std::vector<VirtualInputKey> leadingKeys = Prefix(keys, leadingLength);
         std::wstring leadingText = TextFromKeys(leadingKeys);
 
-        for (const Lexicon& item : SpellMatch(leadingText, leadingText, std::nullopt, limit))
+        for (const Lexicon& item : SpellMatch(
+            leadingKeys,
+            static_cast<int64_t>(leadingKeys.size()),
+            leadingText,
+            std::nullopt,
+            limit,
+            &lexiconQuery))
         {
             result.push_back(Modify(item, keys, text, inputLength));
         }
 
         std::vector<Lexicon> anchorsMatched;
-        for (const Lexicon& item : AnchorsMatch(leadingKeys, leadingText, adjustedLimit))
+        for (const Lexicon& item : AnchorsMatch(leadingKeys, leadingText, adjustedLimit, &lexiconQuery))
         {
             anchorsMatched.push_back(Modify(item, keys, text, inputLength));
         }
@@ -936,7 +926,7 @@ std::vector<Lexicon> InputEngine::ProcessSlices(const std::vector<VirtualInputKe
     return Sorted(Distinct(result));
 }
 
-std::vector<Lexicon> InputEngine::FilterToneSuggestions(const std::vector<VirtualInputKey>& keys, const std::vector<Lexicon>& lexicons) const
+std::vector<Lexicon> CoreImeEngine::FilterToneSuggestions(const std::vector<VirtualInputKey>& keys, const std::vector<Lexicon>& lexicons) const
 {
     std::wstring inputText = TextFromKeys(keys);
     std::wstring toneInput = NonSyllableInputText(keys);
@@ -1028,7 +1018,7 @@ std::vector<Lexicon> InputEngine::FilterToneSuggestions(const std::vector<Virtua
     return SortedByInputCount(qualified);
 }
 
-std::vector<Lexicon> InputEngine::FilterApostropheAndToneSuggestions(const std::vector<VirtualInputKey>& keys, const std::vector<Lexicon>& lexicons) const
+std::vector<Lexicon> CoreImeEngine::FilterApostropheAndToneSuggestions(const std::vector<VirtualInputKey>& keys, const std::vector<Lexicon>& lexicons) const
 {
     std::wstring inputText = TextFromKeys(keys);
     std::wstring text = ToneConverted(inputText);
@@ -1044,7 +1034,10 @@ std::vector<Lexicon> InputEngine::FilterApostropheAndToneSuggestions(const std::
     return qualified;
 }
 
-std::vector<Lexicon> InputEngine::FilterApostropheSuggestions(const std::vector<VirtualInputKey>& keys, const std::vector<Lexicon>& lexicons) const
+std::vector<Lexicon> CoreImeEngine::FilterApostropheSuggestions(
+    const std::vector<VirtualInputKey>& keys,
+    const std::vector<Lexicon>& lexicons,
+    const ImeDatabase::LexiconQuery& lexiconQuery) const
 {
     if (keys.empty() || keys.front().IsApostrophe())
     {
@@ -1192,7 +1185,7 @@ std::vector<Lexicon> InputEngine::FilterApostropheSuggestions(const std::vector<
 
     size_t anchorCount = anchorKeys.size();
     std::vector<Lexicon> anchorsMatched;
-    for (const Lexicon& item : AnchorsMatch(anchorKeys))
+    for (const Lexicon& item : AnchorsMatch(anchorKeys, std::nullopt, std::nullopt, &lexiconQuery))
     {
         std::vector<std::wstring> syllables = Split(item.romanization, L' ');
         if (syllables.size() != anchorCount || textParts.size() != anchorCount)
@@ -1221,31 +1214,43 @@ std::vector<Lexicon> InputEngine::FilterApostropheSuggestions(const std::vector<
     return anchorsMatched;
 }
 
-std::vector<Lexicon> InputEngine::AnchorsMatch(const std::vector<VirtualInputKey>& keys, std::optional<std::wstring> input, std::optional<int> limit) const
+std::vector<Lexicon> CoreImeEngine::AnchorsMatch(
+    const std::vector<VirtualInputKey>& keys,
+    std::optional<std::wstring> input,
+    std::optional<int> limit,
+    const ImeDatabase::LexiconQuery* lexiconQuery) const
 {
-    int64_t code = AnchorsCode(keys);
-    if (code <= 0)
+    if (keys.empty() || keys.size() > 9)
     {
         return std::vector<Lexicon>();
     }
 
+    int64_t code = AnchorsCode(keys);
     std::wstring text = input.value_or(TextFromKeys(keys));
-    return LexiconsFromRows(_database.QueryLexiconByAnchors(code, QueryLimit(limit, 100)), text, text);
+    std::vector<ImeDatabase::LexiconRow> rows = lexiconQuery ?
+        lexiconQuery->QueryByAnchors(code, keys.size(), QueryLimit(limit, 100)) :
+        _database.QueryLexiconByAnchors(code, keys.size(), QueryLimit(limit, 100));
+    return LexiconsFromRows(rows, text, text);
 }
 
-std::vector<Lexicon> InputEngine::SpellMatch(std::wstring_view text, std::wstring input, std::optional<std::wstring> mark, std::optional<int> limit) const
+std::vector<Lexicon> CoreImeEngine::SpellMatch(
+    const std::vector<VirtualInputKey>& keys,
+    int64_t complexity,
+    std::wstring input,
+    std::optional<std::wstring> mark,
+    std::optional<int> limit,
+    const ImeDatabase::LexiconQuery* lexiconQuery) const
 {
-    std::wstring queryText(text);
-    return LexiconsFromRows(_database.QueryLexiconBySpell(HashCode(queryText), QueryLimit(limit, -1)), input, mark);
+    std::vector<ImeDatabase::LexiconRow> rows = lexiconQuery ?
+        lexiconQuery->QueryBySpell(CombinedCode(keys), complexity, QueryLimit(limit, -1)) :
+        _database.QueryLexiconBySpell(CombinedCode(keys), complexity, QueryLimit(limit, -1));
+    return LexiconsFromRows(
+        rows,
+        input,
+        mark);
 }
 
-std::vector<Lexicon> InputEngine::StrictMatch(int64_t anchors, int64_t spell, std::wstring input, std::optional<std::wstring> mark, std::optional<int> limit) const
-{
-    std::vector<ImeDatabase::LexiconRow> rows = _database.QueryLexiconStrict(spell, anchors, QueryLimit(limit, -1));
-    return LexiconsFromRows(rows, input, mark);
-}
-
-Lexicon InputEngine::Modify(const Lexicon& item, const std::vector<VirtualInputKey>& keys, const std::wstring& text, size_t inputLength) const
+Lexicon CoreImeEngine::Modify(const Lexicon& item, const std::vector<VirtualInputKey>& keys, const std::wstring& text, size_t inputLength) const
 {
     if (inputLength <= 1 || item.inputCount == inputLength)
     {

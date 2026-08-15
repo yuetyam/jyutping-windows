@@ -167,6 +167,15 @@
     <ClInclude Include="InputEngine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="Candidate.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Converter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CoreImeEngine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="InputMemory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -326,6 +335,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="InputEngine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Candidate.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Converter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="InputEngineFacade.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="InputMemory.cpp">

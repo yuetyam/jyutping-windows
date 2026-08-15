@@ -27,7 +27,10 @@ using PinyinScheme = std::vector<PinyinSyllable>;
 using PinyinSegmentation = std::vector<PinyinScheme>;
 
 size_t PinyinSchemeLength(const PinyinScheme& scheme);
+int64_t PinyinSchemeComplexity(const PinyinScheme& scheme);
+std::vector<VirtualInputKey> PinyinSchemeKeys(const PinyinScheme& scheme);
 std::wstring PinyinSchemeText(const PinyinScheme& scheme);
+std::wstring PinyinSchemeMark(const PinyinScheme& scheme);
 
 class PinyinSegmenter
 {

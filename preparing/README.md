@@ -10,11 +10,11 @@ Run it from this directory:
 cargo run --release
 ```
 
-By default, the completed database is written atomically to`../Jyutping/Resources/desktop.sqlite3`.
+By default, the completed database is written atomically to `../Jyutping/Resources/ime.sqlite3`.
 Pass a path after `--` to write it elsewhere:
 
 ```sh
-cargo run --release -- /path/to/desktop.sqlite3
+cargo run --release -- /path/to/ime.sqlite3
 ```
 
 The project has no third-party Rust dependencies.

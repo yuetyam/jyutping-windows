@@ -1,6 +1,7 @@
-#include "InputEngine.h"
+#include "CoreImeEngine.h"
 
 #include <algorithm>
+#include <bit>
 #include <utility>
 
 namespace {
@@ -10,11 +11,11 @@ struct ShapeLexicon
     std::wstring text;
     std::wstring input;
     std::wstring mark;
-    int complex = 0;
+    int64_t complex = 0;
     int64_t number = 0;
 
     ShapeLexicon() = default;
-    ShapeLexicon(std::wstring inputText, std::wstring userInput, std::wstring inputMark, int inputComplex, int64_t inputNumber) :
+    ShapeLexicon(std::wstring inputText, std::wstring userInput, std::wstring inputMark, int64_t inputComplex, int64_t inputNumber) :
         text(std::move(inputText)),
         input(std::move(userInput)),
         mark(std::move(inputMark)),
@@ -82,23 +83,17 @@ std::optional<StrokeKey> StrokeKeyFromInputKey(const VirtualInputKey& key)
     }
 }
 
-std::optional<std::vector<StrokeKey>> StrokeKeysFromInputKeys(const std::vector<VirtualInputKey>& keys)
+std::vector<StrokeKey> StrokeKeysFromInputKeys(const std::vector<VirtualInputKey>& keys)
 {
-    if (keys.empty())
-    {
-        return std::nullopt;
-    }
-
     std::vector<StrokeKey> result;
     result.reserve(keys.size());
     for (const VirtualInputKey& key : keys)
     {
         std::optional<StrokeKey> strokeKey = StrokeKeyFromInputKey(key);
-        if (!strokeKey)
+        if (strokeKey)
         {
-            return std::nullopt;
+            result.push_back(*strokeKey);
         }
-        result.push_back(*strokeKey);
     }
     return result;
 }
@@ -153,19 +148,19 @@ std::wstring StrokeGlobPattern(const std::vector<StrokeKey>& strokeKeys)
 
 int64_t DecimalCombined(const std::vector<StrokeKey>& strokeKeys)
 {
-    int64_t result = 0;
+    uint64_t result = 0;
     for (const StrokeKey& key : strokeKeys)
     {
-        result = result * 10 + key.code;
+        result = result * 10 + static_cast<uint64_t>(key.code);
     }
-    return result;
+    return std::bit_cast<int64_t>(result);
 }
 
 std::vector<ShapeLexicon> ShapeLexiconsFromRows(
     const std::vector<ImeDatabase::ShapeRow>& rows,
     const std::wstring& input,
     const std::wstring& mark,
-    std::optional<int> complexOverride = std::nullopt)
+    std::optional<int64_t> complexOverride = std::nullopt)
 {
     std::vector<ShapeLexicon> result;
     result.reserve(rows.size());
@@ -205,38 +200,30 @@ void Append(std::vector<ShapeLexicon>& target, const std::vector<ShapeLexicon>& 
 
 namespace Ime {
 
-std::vector<Lexicon> InputEngine::StrokeReverseLookup(const std::vector<VirtualInputKey>& keys) const
+std::vector<Lexicon> CoreImeEngine::StrokeReverseLookup(const std::vector<VirtualInputKey>& keys) const
 {
     if (!IsPrepared() || keys.empty())
     {
         return std::vector<Lexicon>();
     }
 
-    std::optional<std::vector<StrokeKey>> strokeKeys = StrokeKeysFromInputKeys(keys);
-    if (!strokeKeys)
-    {
-        return std::vector<Lexicon>();
-    }
+    std::vector<StrokeKey> strokeKeys = StrokeKeysFromInputKeys(keys);
 
-    std::wstring input = StrokeInputText(*strokeKeys);
-    std::wstring mark = StrokeMark(*strokeKeys);
-    std::wstring pattern = StrokeGlobPattern(*strokeKeys);
-    bool hasWildcard = ContainsWildcard(*strokeKeys);
+    std::wstring input = StrokeInputText(strokeKeys);
+    std::wstring mark = StrokeMark(strokeKeys);
+    std::wstring pattern = StrokeGlobPattern(strokeKeys);
+    bool hasWildcard = ContainsWildcard(strokeKeys);
 
     std::vector<ShapeLexicon> shapes;
     if (hasWildcard)
     {
-        Append(shapes, ShapeLexiconsFromRows(_database.QueryStrokeByPattern(pattern, false, 100), input, mark));
-    }
-    else if (strokeKeys->size() >= 19)
-    {
-        std::vector<ImeDatabase::ShapeRow> exactRows = _database.QueryStrokeBySpell(HashCode(input));
-        Append(shapes, ShapeLexiconsFromRows(exactRows, input, mark, static_cast<int>(strokeKeys->size())));
+        Append(shapes, ShapeLexiconsFromRows(_database.QueryStrokeByPattern(pattern, true, 100), input, mark));
     }
     else
     {
-        std::vector<ImeDatabase::ShapeRow> exactRows = _database.QueryStrokeByCode(DecimalCombined(*strokeKeys));
-        Append(shapes, ShapeLexiconsFromRows(exactRows, input, mark, static_cast<int>(strokeKeys->size())));
+        std::vector<ImeDatabase::ShapeRow> exactRows =
+            _database.QueryStrokeByCode(DecimalCombined(strokeKeys), static_cast<int64_t>(strokeKeys.size()));
+        Append(shapes, ShapeLexiconsFromRows(exactRows, input, mark, static_cast<int64_t>(strokeKeys.size())));
     }
 
     Append(shapes, ShapeLexiconsFromRows(_database.QueryStrokeByPattern(pattern + L"*", false, 100), input, mark));

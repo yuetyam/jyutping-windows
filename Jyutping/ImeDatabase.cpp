@@ -127,6 +127,12 @@ std::vector<ImeDatabase::PinyinLexiconRow> ReadPinyinRows(sqlite3_stmt* statemen
     return rows;
 }
 
+void ResetStatement(sqlite3_stmt* statement)
+{
+    sqlite3_reset(statement);
+    sqlite3_clear_bindings(statement);
+}
+
 std::vector<ImeDatabase::ShapeRow> ReadShapeRows(sqlite3_stmt* statement, const ImeDatabase* database, _In_z_ PCWSTR operation)
 {
     std::vector<ImeDatabase::ShapeRow> rows;
@@ -136,7 +142,7 @@ std::vector<ImeDatabase::ShapeRow> ReadShapeRows(sqlite3_stmt* statement, const 
         rows.push_back({
             sqlite3_column_int64(statement, 0),
             ColumnText(statement, 1),
-            sqlite3_column_int(statement, 2)
+            sqlite3_column_int64(statement, 2)
         });
     }
 
@@ -154,11 +160,12 @@ std::vector<ImeDatabase::SymbolRow> ReadSymbolRows(sqlite3_stmt* statement, cons
     while ((result = sqlite3_step(statement)) == SQLITE_ROW)
     {
         rows.push_back({
-            sqlite3_column_int(statement, 0),
+            sqlite3_column_int64(statement, 0),
             sqlite3_column_int(statement, 1),
-            ColumnText(statement, 2),
+            sqlite3_column_int(statement, 2),
             ColumnText(statement, 3),
-            ColumnText(statement, 4)
+            ColumnText(statement, 4),
+            ColumnText(statement, 5)
         });
     }
 
@@ -226,6 +233,178 @@ ImeDatabase::ImeDatabase() : _database(nullptr)
 ImeDatabase::~ImeDatabase()
 {
     Close();
+}
+
+ImeDatabase::LexiconQuery::LexiconQuery() :
+    _database(nullptr),
+    _anchorsStatement(nullptr),
+    _spellStatement(nullptr)
+{
+}
+
+ImeDatabase::LexiconQuery::LexiconQuery(
+    const ImeDatabase* database,
+    sqlite3_stmt* anchorsStatement,
+    sqlite3_stmt* spellStatement) :
+    _database(database),
+    _anchorsStatement(anchorsStatement),
+    _spellStatement(spellStatement)
+{
+}
+
+ImeDatabase::LexiconQuery::~LexiconQuery()
+{
+    sqlite3_finalize(_anchorsStatement);
+    sqlite3_finalize(_spellStatement);
+}
+
+ImeDatabase::LexiconQuery::LexiconQuery(LexiconQuery&& other) noexcept :
+    _database(other._database),
+    _anchorsStatement(other._anchorsStatement),
+    _spellStatement(other._spellStatement)
+{
+    other._database = nullptr;
+    other._anchorsStatement = nullptr;
+    other._spellStatement = nullptr;
+}
+
+ImeDatabase::LexiconQuery& ImeDatabase::LexiconQuery::operator=(LexiconQuery&& other) noexcept
+{
+    if (this != &other)
+    {
+        sqlite3_finalize(_anchorsStatement);
+        sqlite3_finalize(_spellStatement);
+        _database = other._database;
+        _anchorsStatement = other._anchorsStatement;
+        _spellStatement = other._spellStatement;
+        other._database = nullptr;
+        other._anchorsStatement = nullptr;
+        other._spellStatement = nullptr;
+    }
+    return *this;
+}
+
+bool ImeDatabase::LexiconQuery::IsValid() const
+{
+    return _database != nullptr && _anchorsStatement != nullptr && _spellStatement != nullptr;
+}
+
+std::vector<ImeDatabase::LexiconRow> ImeDatabase::LexiconQuery::QueryByAnchors(
+    int64_t anchors,
+    size_t charCount,
+    int limit) const
+{
+    if (!IsValid())
+    {
+        return std::vector<LexiconRow>();
+    }
+    ResetStatement(_anchorsStatement);
+    sqlite3_bind_int64(_anchorsStatement, 1, anchors);
+    sqlite3_bind_int64(_anchorsStatement, 2, static_cast<int64_t>(charCount));
+    sqlite3_bind_int64(_anchorsStatement, 3, NormalizeLimit(limit));
+    return ReadLexiconRows(_anchorsStatement, _database, L"query lexicon by anchors");
+}
+
+std::vector<ImeDatabase::LexiconRow> ImeDatabase::LexiconQuery::QueryBySpell(
+    int64_t spell,
+    int64_t complexity,
+    int limit) const
+{
+    if (!IsValid())
+    {
+        return std::vector<LexiconRow>();
+    }
+    ResetStatement(_spellStatement);
+    sqlite3_bind_int64(_spellStatement, 1, spell);
+    sqlite3_bind_int64(_spellStatement, 2, complexity);
+    sqlite3_bind_int64(_spellStatement, 3, NormalizeLimit(limit));
+    return ReadLexiconRows(_spellStatement, _database, L"query lexicon by spell");
+}
+
+ImeDatabase::PinyinQuery::PinyinQuery() :
+    _database(nullptr),
+    _anchorsStatement(nullptr),
+    _spellStatement(nullptr)
+{
+}
+
+ImeDatabase::PinyinQuery::PinyinQuery(
+    const ImeDatabase* database,
+    sqlite3_stmt* anchorsStatement,
+    sqlite3_stmt* spellStatement) :
+    _database(database),
+    _anchorsStatement(anchorsStatement),
+    _spellStatement(spellStatement)
+{
+}
+
+ImeDatabase::PinyinQuery::~PinyinQuery()
+{
+    sqlite3_finalize(_anchorsStatement);
+    sqlite3_finalize(_spellStatement);
+}
+
+ImeDatabase::PinyinQuery::PinyinQuery(PinyinQuery&& other) noexcept :
+    _database(other._database),
+    _anchorsStatement(other._anchorsStatement),
+    _spellStatement(other._spellStatement)
+{
+    other._database = nullptr;
+    other._anchorsStatement = nullptr;
+    other._spellStatement = nullptr;
+}
+
+ImeDatabase::PinyinQuery& ImeDatabase::PinyinQuery::operator=(PinyinQuery&& other) noexcept
+{
+    if (this != &other)
+    {
+        sqlite3_finalize(_anchorsStatement);
+        sqlite3_finalize(_spellStatement);
+        _database = other._database;
+        _anchorsStatement = other._anchorsStatement;
+        _spellStatement = other._spellStatement;
+        other._database = nullptr;
+        other._anchorsStatement = nullptr;
+        other._spellStatement = nullptr;
+    }
+    return *this;
+}
+
+bool ImeDatabase::PinyinQuery::IsValid() const
+{
+    return _database != nullptr && _anchorsStatement != nullptr && _spellStatement != nullptr;
+}
+
+std::vector<ImeDatabase::PinyinLexiconRow> ImeDatabase::PinyinQuery::QueryByAnchors(
+    int64_t anchors,
+    size_t charCount,
+    int limit) const
+{
+    if (!IsValid())
+    {
+        return std::vector<PinyinLexiconRow>();
+    }
+    ResetStatement(_anchorsStatement);
+    sqlite3_bind_int64(_anchorsStatement, 1, anchors);
+    sqlite3_bind_int64(_anchorsStatement, 2, static_cast<int64_t>(charCount));
+    sqlite3_bind_int64(_anchorsStatement, 3, NormalizeLimit(limit));
+    return ReadPinyinRows(_anchorsStatement, _database, L"query pinyin by anchors");
+}
+
+std::vector<ImeDatabase::PinyinLexiconRow> ImeDatabase::PinyinQuery::QueryBySpell(
+    int64_t spell,
+    int64_t complexity,
+    int limit) const
+{
+    if (!IsValid())
+    {
+        return std::vector<PinyinLexiconRow>();
+    }
+    ResetStatement(_spellStatement);
+    sqlite3_bind_int64(_spellStatement, 1, spell);
+    sqlite3_bind_int64(_spellStatement, 2, complexity);
+    sqlite3_bind_int64(_spellStatement, 3, NormalizeLimit(limit));
+    return ReadPinyinRows(_spellStatement, _database, L"query pinyin by spell");
 }
 
 ImeDatabase::VariantLookup::VariantLookup() :
@@ -363,9 +542,10 @@ const std::wstring& ImeDatabase::Path() const
     return _path;
 }
 
-std::vector<ImeDatabase::LexiconRow> ImeDatabase::QueryLexiconByAnchors(int64_t anchors, int limit) const
+std::vector<ImeDatabase::LexiconRow> ImeDatabase::QueryLexiconByAnchors(int64_t anchors, size_t charCount, int limit) const
 {
-    static constexpr WCHAR sql[] = L"SELECT rowid, word, romanization FROM core_lexicon WHERE anchors = ? ORDER BY rowid LIMIT ?;";
+    static constexpr WCHAR sql[] =
+        L"SELECT rowid, word, romanization FROM lexicon_core WHERE anchors = ? AND char_count = ? ORDER BY rowid LIMIT ?;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))
@@ -374,14 +554,16 @@ std::vector<ImeDatabase::LexiconRow> ImeDatabase::QueryLexiconByAnchors(int64_t 
     }
 
     sqlite3_bind_int64(statement.Get(), 1, anchors);
-    sqlite3_bind_int64(statement.Get(), 2, NormalizeLimit(limit));
+    sqlite3_bind_int64(statement.Get(), 2, static_cast<int64_t>(charCount));
+    sqlite3_bind_int64(statement.Get(), 3, NormalizeLimit(limit));
 
     return ReadLexiconRows(statement.Get(), this, L"query lexicon by anchors");
 }
 
-std::vector<ImeDatabase::LexiconRow> ImeDatabase::QueryLexiconBySpell(int64_t spell, int limit) const
+std::vector<ImeDatabase::LexiconRow> ImeDatabase::QueryLexiconBySpell(int64_t spell, int64_t complexity, int limit) const
 {
-    static constexpr WCHAR sql[] = L"SELECT rowid, word, romanization FROM core_lexicon WHERE spell = ? ORDER BY rowid LIMIT ?;";
+    static constexpr WCHAR sql[] =
+        L"SELECT rowid, word, romanization FROM lexicon_core WHERE spell = ? AND complexity = ? ORDER BY rowid LIMIT ?;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))
@@ -390,31 +572,33 @@ std::vector<ImeDatabase::LexiconRow> ImeDatabase::QueryLexiconBySpell(int64_t sp
     }
 
     sqlite3_bind_int64(statement.Get(), 1, spell);
-    sqlite3_bind_int64(statement.Get(), 2, NormalizeLimit(limit));
+    sqlite3_bind_int64(statement.Get(), 2, complexity);
+    sqlite3_bind_int64(statement.Get(), 3, NormalizeLimit(limit));
 
     return ReadLexiconRows(statement.Get(), this, L"query lexicon by spell");
 }
 
-std::vector<ImeDatabase::LexiconRow> ImeDatabase::QueryLexiconStrict(int64_t spell, int64_t anchors, int limit) const
+ImeDatabase::LexiconQuery ImeDatabase::CreateLexiconQuery() const
 {
-    static constexpr WCHAR sql[] = L"SELECT rowid, word, romanization FROM core_lexicon WHERE spell = ? AND anchors = ? ORDER BY rowid LIMIT ?;";
+    static constexpr WCHAR anchorsSql[] =
+        L"SELECT rowid, word, romanization FROM lexicon_core WHERE anchors = ? AND char_count = ? ORDER BY rowid LIMIT ?;";
+    static constexpr WCHAR spellSql[] =
+        L"SELECT rowid, word, romanization FROM lexicon_core WHERE spell = ? AND complexity = ? ORDER BY rowid LIMIT ?;";
 
-    Statement statement;
-    if (!Prepare(sql, statement.Out()))
+    sqlite3_stmt* anchorsStatement = nullptr;
+    sqlite3_stmt* spellStatement = nullptr;
+    if (!Prepare(anchorsSql, &anchorsStatement) || !Prepare(spellSql, &spellStatement))
     {
-        return std::vector<LexiconRow>();
+        sqlite3_finalize(anchorsStatement);
+        sqlite3_finalize(spellStatement);
+        return LexiconQuery();
     }
-
-    sqlite3_bind_int64(statement.Get(), 1, spell);
-    sqlite3_bind_int64(statement.Get(), 2, anchors);
-    sqlite3_bind_int64(statement.Get(), 3, NormalizeLimit(limit));
-
-    return ReadLexiconRows(statement.Get(), this, L"query strict lexicon");
+    return LexiconQuery(this, anchorsStatement, spellStatement);
 }
 
 std::vector<ImeDatabase::SyllableRow> ImeDatabase::QuerySyllables() const
 {
-    static constexpr WCHAR sql[] = L"SELECT alias_code, origin_code, alias, origin FROM core_syllable_table;";
+    static constexpr WCHAR sql[] = L"SELECT alias_code, origin_code, alias, origin FROM syllable_core_table;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))
@@ -441,9 +625,10 @@ std::vector<ImeDatabase::SyllableRow> ImeDatabase::QuerySyllables() const
     return rows;
 }
 
-std::vector<ImeDatabase::PinyinLexiconRow> ImeDatabase::QueryPinyinBySpell(int64_t spell, int limit) const
+std::vector<ImeDatabase::PinyinLexiconRow> ImeDatabase::QueryPinyinBySpell(int64_t spell, int64_t complexity, int limit) const
 {
-    static constexpr WCHAR sql[] = L"SELECT rowid, word, romanization FROM pinyin_lexicon WHERE spell = ? ORDER BY rowid LIMIT ?;";
+    static constexpr WCHAR sql[] =
+        L"SELECT rowid, word, romanization FROM pinyin_lexicon WHERE spell = ? AND complexity = ? ORDER BY rowid LIMIT ?;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))
@@ -452,13 +637,15 @@ std::vector<ImeDatabase::PinyinLexiconRow> ImeDatabase::QueryPinyinBySpell(int64
     }
 
     sqlite3_bind_int64(statement.Get(), 1, spell);
-    sqlite3_bind_int64(statement.Get(), 2, NormalizeLimit(limit));
+    sqlite3_bind_int64(statement.Get(), 2, complexity);
+    sqlite3_bind_int64(statement.Get(), 3, NormalizeLimit(limit));
     return ReadPinyinRows(statement.Get(), this, L"query pinyin by spell");
 }
 
-std::vector<ImeDatabase::PinyinLexiconRow> ImeDatabase::QueryPinyinByAnchors(int64_t anchors, int limit) const
+std::vector<ImeDatabase::PinyinLexiconRow> ImeDatabase::QueryPinyinByAnchors(int64_t anchors, size_t charCount, int limit) const
 {
-    static constexpr WCHAR sql[] = L"SELECT rowid, word, romanization FROM pinyin_lexicon WHERE anchors = ? ORDER BY rowid LIMIT ?;";
+    static constexpr WCHAR sql[] =
+        L"SELECT rowid, word, romanization FROM pinyin_lexicon WHERE anchors = ? AND char_count = ? ORDER BY rowid LIMIT ?;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))
@@ -467,13 +654,32 @@ std::vector<ImeDatabase::PinyinLexiconRow> ImeDatabase::QueryPinyinByAnchors(int
     }
 
     sqlite3_bind_int64(statement.Get(), 1, anchors);
-    sqlite3_bind_int64(statement.Get(), 2, NormalizeLimit(limit));
+    sqlite3_bind_int64(statement.Get(), 2, static_cast<int64_t>(charCount));
+    sqlite3_bind_int64(statement.Get(), 3, NormalizeLimit(limit));
     return ReadPinyinRows(statement.Get(), this, L"query pinyin by anchors");
+}
+
+ImeDatabase::PinyinQuery ImeDatabase::CreatePinyinQuery() const
+{
+    static constexpr WCHAR anchorsSql[] =
+        L"SELECT rowid, word, romanization FROM pinyin_lexicon WHERE anchors = ? AND char_count = ? ORDER BY rowid LIMIT ?;";
+    static constexpr WCHAR spellSql[] =
+        L"SELECT rowid, word, romanization FROM pinyin_lexicon WHERE spell = ? AND complexity = ? ORDER BY rowid LIMIT ?;";
+
+    sqlite3_stmt* anchorsStatement = nullptr;
+    sqlite3_stmt* spellStatement = nullptr;
+    if (!Prepare(anchorsSql, &anchorsStatement) || !Prepare(spellSql, &spellStatement))
+    {
+        sqlite3_finalize(anchorsStatement);
+        sqlite3_finalize(spellStatement);
+        return PinyinQuery();
+    }
+    return PinyinQuery(this, anchorsStatement, spellStatement);
 }
 
 std::vector<ImeDatabase::PinyinSyllableRow> ImeDatabase::QueryPinyinSyllables() const
 {
-    static constexpr WCHAR sql[] = L"SELECT code, syllable FROM pinyin_syllable_table ORDER BY code;";
+    static constexpr WCHAR sql[] = L"SELECT code, syllable FROM syllable_pinyin_table ORDER BY code;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))
@@ -568,9 +774,9 @@ std::vector<ImeDatabase::ShapeRow> ImeDatabase::QueryQuickByPrefix(CangjieVarian
     return ReadShapeRows(statement.Get(), this, L"query quick by prefix");
 }
 
-std::vector<ImeDatabase::ShapeRow> ImeDatabase::QueryStrokeByCode(int64_t code) const
+std::vector<ImeDatabase::ShapeRow> ImeDatabase::QueryStrokeByCode(int64_t code, int64_t complex) const
 {
-    static constexpr WCHAR sql[] = L"SELECT rowid, word, complex FROM stroke_table WHERE code = ? ORDER BY rowid;";
+    static constexpr WCHAR sql[] = L"SELECT rowid, word, complex FROM stroke_table WHERE code = ? AND complex = ? ORDER BY rowid;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))
@@ -579,21 +785,8 @@ std::vector<ImeDatabase::ShapeRow> ImeDatabase::QueryStrokeByCode(int64_t code) 
     }
 
     sqlite3_bind_int64(statement.Get(), 1, code);
+    sqlite3_bind_int64(statement.Get(), 2, complex);
     return ReadShapeRows(statement.Get(), this, L"query stroke by code");
-}
-
-std::vector<ImeDatabase::ShapeRow> ImeDatabase::QueryStrokeBySpell(int64_t spell) const
-{
-    static constexpr WCHAR sql[] = L"SELECT rowid, word, complex FROM stroke_table WHERE spell = ? ORDER BY rowid;";
-
-    Statement statement;
-    if (!Prepare(sql, statement.Out()))
-    {
-        return std::vector<ShapeRow>();
-    }
-
-    sqlite3_bind_int64(statement.Get(), 1, spell);
-    return ReadShapeRows(statement.Get(), this, L"query stroke by spell");
 }
 
 std::vector<ImeDatabase::ShapeRow> ImeDatabase::QueryStrokeByPattern(const std::wstring& pattern, bool isLike, int limit) const
@@ -614,9 +807,10 @@ std::vector<ImeDatabase::ShapeRow> ImeDatabase::QueryStrokeByPattern(const std::
     return ReadShapeRows(statement.Get(), this, L"query stroke by pattern");
 }
 
-std::vector<ImeDatabase::StructureRow> ImeDatabase::QueryStructureBySpell(int64_t spell) const
+std::vector<ImeDatabase::StructureRow> ImeDatabase::QueryStructureBySpell(int64_t spell, int64_t complexity, int limit) const
 {
-    static constexpr WCHAR sql[] = L"SELECT word, romanization FROM structure_table WHERE spell = ?;";
+    static constexpr WCHAR sql[] =
+        L"SELECT word, romanization FROM structure_table WHERE spell = ? AND complexity = ? ORDER BY rowid LIMIT ?;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))
@@ -625,6 +819,8 @@ std::vector<ImeDatabase::StructureRow> ImeDatabase::QueryStructureBySpell(int64_
     }
 
     sqlite3_bind_int64(statement.Get(), 1, spell);
+    sqlite3_bind_int64(statement.Get(), 2, complexity);
+    sqlite3_bind_int64(statement.Get(), 3, NormalizeLimit(limit));
 
     std::vector<StructureRow> rows;
     int result = SQLITE_OK;
@@ -643,9 +839,10 @@ std::vector<ImeDatabase::StructureRow> ImeDatabase::QueryStructureBySpell(int64_
     return rows;
 }
 
-std::vector<std::wstring> ImeDatabase::QueryTextMarksBySpell(int64_t spell) const
+std::vector<std::wstring> ImeDatabase::QueryPlainTextsBySpell(int64_t spell, size_t letterCount) const
 {
-    static constexpr WCHAR sql[] = L"SELECT mark FROM mark_table WHERE spell = ? ORDER BY rowid;";
+    static constexpr WCHAR sql[] =
+        L"SELECT word FROM plain_text_table WHERE spell = ? AND letter_count = ? ORDER BY rowid;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))
@@ -654,6 +851,7 @@ std::vector<std::wstring> ImeDatabase::QueryTextMarksBySpell(int64_t spell) cons
     }
 
     sqlite3_bind_int64(statement.Get(), 1, spell);
+    sqlite3_bind_int64(statement.Get(), 2, static_cast<int64_t>(letterCount));
 
     std::vector<std::wstring> marks;
     int result = SQLITE_OK;
@@ -664,15 +862,16 @@ std::vector<std::wstring> ImeDatabase::QueryTextMarksBySpell(int64_t spell) cons
 
     if (result != SQLITE_DONE)
     {
-        LogError(L"query text marks by spell", result);
+        LogError(L"query plain texts by spell", result);
     }
     return marks;
 }
 
-std::vector<ImeDatabase::SymbolRow> ImeDatabase::QuerySymbolsBySpell(int64_t spell) const
+std::vector<ImeDatabase::SymbolRow> ImeDatabase::QuerySymbolsBySpell(int64_t spell, int64_t complexity) const
 {
     static constexpr WCHAR sql[] =
-        L"SELECT category, unicode_version, code_point, cantonese, romanization FROM symbol_table WHERE spell = ? ORDER BY rowid;";
+        L"SELECT rowid, category, unicode_version, code_point, cantonese, romanization "
+        L"FROM symbol_table WHERE spell = ? AND complexity = ? ORDER BY rowid;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))
@@ -681,8 +880,37 @@ std::vector<ImeDatabase::SymbolRow> ImeDatabase::QuerySymbolsBySpell(int64_t spe
     }
 
     sqlite3_bind_int64(statement.Get(), 1, spell);
+    sqlite3_bind_int64(statement.Get(), 2, complexity);
 
     return ReadSymbolRows(statement.Get(), this, L"query symbols by spell");
+}
+
+std::vector<ImeDatabase::SymbolRow> ImeDatabase::QueryEmojiSequence() const
+{
+    static constexpr WCHAR sql[] =
+        L"SELECT rowid, category, unicode_version, code_point, cantonese, romanization "
+        L"FROM symbol_table WHERE category > 0 AND category < 9 ORDER BY rowid;";
+
+    Statement statement;
+    if (!Prepare(sql, statement.Out()))
+    {
+        return std::vector<SymbolRow>();
+    }
+    return ReadSymbolRows(statement.Get(), this, L"query emoji sequence");
+}
+
+std::vector<ImeDatabase::SymbolRow> ImeDatabase::QueryDefaultFrequentEmojis() const
+{
+    static constexpr WCHAR sql[] =
+        L"SELECT rowid, category, unicode_version, code_point, cantonese, romanization "
+        L"FROM symbol_table WHERE category = 0 ORDER BY rowid;";
+
+    Statement statement;
+    if (!Prepare(sql, statement.Out()))
+    {
+        return std::vector<SymbolRow>();
+    }
+    return ReadSymbolRows(statement.Get(), this, L"query default frequent emojis");
 }
 
 std::optional<std::wstring> ImeDatabase::QueryEmojiSkinTarget(const std::wstring& source) const
@@ -712,7 +940,7 @@ std::optional<std::wstring> ImeDatabase::QueryEmojiSkinTarget(const std::wstring
 
 std::vector<std::wstring> ImeDatabase::LookupRomanizationsForWord(const std::wstring& word) const
 {
-    static constexpr WCHAR sql[] = L"SELECT romanization FROM core_lexicon WHERE word = ? ORDER BY rowid;";
+    static constexpr WCHAR sql[] = L"SELECT romanization FROM lexicon_core WHERE word = ? ORDER BY rowid;";
 
     Statement statement;
     if (!Prepare(sql, statement.Out()))

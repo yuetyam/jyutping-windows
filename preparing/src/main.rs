@@ -7,7 +7,7 @@ use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn Error>> {
         let manifest_directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let output_path = parse_output_path()?.unwrap_or_else(|| manifest_directory.join("../Jyutping/Resources/desktop.sqlite3"));
+        let output_path = parse_output_path()?.unwrap_or_else(|| manifest_directory.join("../Jyutping/Resources/ime.sqlite3"));
 
         generator::generate(&manifest_directory.join("res"), &output_path)?;
         println!("Created {}", output_path.canonicalize()?.display());

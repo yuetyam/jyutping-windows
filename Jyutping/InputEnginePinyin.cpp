@@ -1,4 +1,4 @@
-#include "InputEngine.h"
+#include "CoreImeEngine.h"
 
 #include <algorithm>
 
@@ -256,28 +256,29 @@ const PinyinLexicon* PinyinFindWithInputCount(const std::vector<PinyinLexicon>& 
 }
 
 std::vector<PinyinLexicon> PinyinRowsBySpell(
-    const ImeDatabase& database,
-    std::wstring_view text,
+    const ImeDatabase::PinyinQuery& query,
+    const std::vector<VirtualInputKey>& keys,
+    int64_t complexity,
+    std::optional<std::wstring> input,
+    std::optional<std::wstring> mark,
     std::optional<int> limit)
 {
-    std::wstring queryText(text);
-    return PinyinLexiconsFromRows(database.QueryPinyinBySpell(Ime::HashCode(queryText), QueryLimit(limit, -1)), queryText, std::nullopt);
+    std::wstring inputText = input.value_or(Ime::TextFromKeys(keys));
+    return PinyinLexiconsFromRows(
+        query.QueryBySpell(Ime::CombinedCode(keys), complexity, QueryLimit(limit, -1)),
+        inputText,
+        mark);
 }
 
 std::vector<PinyinLexicon> PinyinRowsByAnchors(
-    const ImeDatabase& database,
+    const ImeDatabase::PinyinQuery& query,
     const std::vector<VirtualInputKey>& keys,
     std::optional<std::wstring> input = std::nullopt,
     std::optional<int> limit = std::nullopt)
 {
     int64_t code = Ime::CombinedCode(keys);
-    if (code <= 0)
-    {
-        return std::vector<PinyinLexicon>();
-    }
-
     std::wstring text = input.value_or(Ime::TextFromKeys(keys));
-    return PinyinLexiconsFromRows(database.QueryPinyinByAnchors(code, QueryLimit(limit, 100)), text, text);
+    return PinyinLexiconsFromRows(query.QueryByAnchors(code, keys.size(), QueryLimit(limit, 100)), text, text);
 }
 
 std::wstring TailAnchorsText(const std::vector<VirtualInputKey>& keys)
@@ -336,7 +337,7 @@ PinyinLexicon Modify(const PinyinLexicon& item, const std::wstring& text, size_t
 }
 
 std::vector<PinyinLexicon> PinyinQuery(
-    const ImeDatabase& database,
+    const ImeDatabase::PinyinQuery& query,
     size_t inputLength,
     const Ime::PinyinSegmentation& segmentation,
     std::optional<int> limit)
@@ -355,7 +356,13 @@ std::vector<PinyinLexicon> PinyinQuery(
     {
         for (const Ime::PinyinScheme& scheme : segmentation)
         {
-            Append(result, PinyinRowsBySpell(database, Ime::PinyinSchemeText(scheme), limit));
+            Append(result, PinyinRowsBySpell(
+                query,
+                Ime::PinyinSchemeKeys(scheme),
+                Ime::PinyinSchemeComplexity(scheme),
+                Ime::PinyinSchemeText(scheme),
+                Ime::PinyinSchemeMark(scheme),
+                limit));
         }
         return result;
     }
@@ -364,13 +371,26 @@ std::vector<PinyinLexicon> PinyinQuery(
     {
         if (scheme.size() == 1)
         {
-            Append(result, PinyinRowsBySpell(database, Ime::PinyinSchemeText(scheme), limit));
+            Append(result, PinyinRowsBySpell(
+                query,
+                Ime::PinyinSchemeKeys(scheme),
+                Ime::PinyinSchemeComplexity(scheme),
+                Ime::PinyinSchemeText(scheme),
+                Ime::PinyinSchemeMark(scheme),
+                limit));
         }
         else
         {
             for (size_t count = scheme.size(); count > 0; count--)
             {
-                Append(result, PinyinRowsBySpell(database, Ime::PinyinSchemeText(PrefixPinyinScheme(scheme, count)), limit));
+                Ime::PinyinScheme slice = PrefixPinyinScheme(scheme, count);
+                Append(result, PinyinRowsBySpell(
+                    query,
+                    Ime::PinyinSchemeKeys(slice),
+                    Ime::PinyinSchemeComplexity(slice),
+                    Ime::PinyinSchemeText(slice),
+                    Ime::PinyinSchemeMark(slice),
+                    limit));
             }
         }
     }
@@ -378,7 +398,7 @@ std::vector<PinyinLexicon> PinyinQuery(
 }
 
 std::vector<PinyinLexicon> ProcessPinyinSlices(
-    const ImeDatabase& database,
+    const ImeDatabase::PinyinQuery& query,
     const std::vector<VirtualInputKey>& keys,
     const std::wstring& text,
     std::optional<int> limit)
@@ -392,13 +412,19 @@ std::vector<PinyinLexicon> ProcessPinyinSlices(
         std::vector<VirtualInputKey> leadingKeys = DropLast(keys, number);
         std::wstring leadingText = Ime::TextFromKeys(leadingKeys);
 
-        for (const PinyinLexicon& item : PinyinRowsBySpell(database, leadingText, limit))
+        for (const PinyinLexicon& item : PinyinRowsBySpell(
+            query,
+            leadingKeys,
+            static_cast<int64_t>(leadingKeys.size()),
+            leadingText,
+            std::nullopt,
+            limit))
         {
             result.push_back(Modify(item, text, inputLength));
         }
 
         std::vector<PinyinLexicon> anchorsMatched;
-        for (const PinyinLexicon& item : PinyinRowsByAnchors(database, leadingKeys, leadingText, adjustedLimit))
+        for (const PinyinLexicon& item : PinyinRowsByAnchors(query, leadingKeys, leadingText, adjustedLimit))
         {
             anchorsMatched.push_back(Modify(item, text, inputLength));
         }
@@ -410,7 +436,7 @@ std::vector<PinyinLexicon> ProcessPinyinSlices(
 }
 
 std::vector<PinyinLexicon> PinyinSearch(
-    const ImeDatabase& database,
+    const ImeDatabase::PinyinQuery& query,
     const Ime::PinyinSegmenter& segmenter,
     const std::vector<VirtualInputKey>& keys,
     const Ime::PinyinSegmentation& segmentation,
@@ -419,12 +445,10 @@ std::vector<PinyinLexicon> PinyinSearch(
     size_t inputLength = keys.size();
     std::wstring text = Ime::TextFromKeys(keys);
 
-    std::vector<PinyinLexicon> spellMatched = PinyinRowsBySpell(database, text, limit);
-    std::vector<PinyinLexicon> anchorsMatched = PinyinRowsByAnchors(database, keys, text, limit);
-    std::vector<PinyinLexicon> queried = PinyinQuery(database, inputLength, segmentation, limit);
+    std::vector<PinyinLexicon> anchorsMatched = PinyinRowsByAnchors(query, keys, text, limit);
+    std::vector<PinyinLexicon> queried = PinyinQuery(query, inputLength, segmentation, limit);
 
-    bool shouldMatchPrefixes = spellMatched.empty() &&
-        !PinyinContainsInputCount(queried, inputLength) &&
+    bool shouldMatchPrefixes = !PinyinContainsInputCount(queried, inputLength) &&
         !ContainsSchemeLength(segmentation, inputLength);
 
     std::vector<PinyinLexicon> prefixMatched;
@@ -463,7 +487,7 @@ std::vector<PinyinLexicon> PinyinSearch(
             std::wstring mark = schemeMark + L" " + Ime::TextFromKeys(tail);
             std::wstring tailAnchorsText = TailAnchorsText(tail);
 
-            for (const PinyinLexicon& item : PinyinRowsByAnchors(database, conjoined, std::nullopt, prefixesLimit))
+            for (const PinyinLexicon& item : PinyinRowsByAnchors(query, conjoined, std::nullopt, prefixesLimit))
             {
                 if (!StartsWith(item.pinyin, schemeMark))
                 {
@@ -475,7 +499,7 @@ std::vector<PinyinLexicon> PinyinSearch(
                 }
             }
 
-            for (const PinyinLexicon& item : PinyinRowsByAnchors(database, anchors, std::nullopt, prefixesLimit))
+            for (const PinyinLexicon& item : PinyinRowsByAnchors(query, anchors, std::nullopt, prefixesLimit))
             {
                 if (StartsWith(item.pinyin, mark))
                 {
@@ -492,7 +516,7 @@ std::vector<PinyinLexicon> PinyinSearch(
         {
             std::vector<VirtualInputKey> leadingKeys = DropLast(keys, number);
             std::wstring leadingText = Ime::TextFromKeys(leadingKeys);
-            for (const PinyinLexicon& item : PinyinRowsByAnchors(database, leadingKeys, leadingText, 300))
+            for (const PinyinLexicon& item : PinyinRowsByAnchors(query, leadingKeys, leadingText, 300))
             {
                 if (StartsWith(Ime::StrippedSpaces(item.pinyin), text))
                 {
@@ -533,7 +557,6 @@ std::vector<PinyinLexicon> PinyinSearch(
     notIdealQueried = PinyinDistinct(PinyinSorted(notIdealQueried));
 
     std::vector<PinyinLexicon> fullInput;
-    Append(fullInput, spellMatched);
     Append(fullInput, idealQueried);
     Append(fullInput, anchorsMatched);
     Append(fullInput, prefixMatched);
@@ -551,7 +574,7 @@ std::vector<PinyinLexicon> PinyinSearch(
 
     if (fetched.empty())
     {
-        return ProcessPinyinSlices(database, keys, text, limit);
+        return ProcessPinyinSlices(query, keys, text, limit);
     }
 
     size_t firstInputCount = fetched.front().inputCount;
@@ -564,7 +587,8 @@ std::vector<PinyinLexicon> PinyinSearch(
     for (size_t headLength : PinyinDistinctInputCounts(fetched))
     {
         std::vector<VirtualInputKey> tailKeys = DropFirst(keys, headLength);
-        std::vector<PinyinLexicon> tailLexicons = PinyinSearch(database, segmenter, tailKeys, segmenter.Segment(tailKeys), 50);
+        std::vector<PinyinLexicon> tailLexicons =
+            PinyinSearch(query, segmenter, tailKeys, segmenter.Segment(tailKeys), 50);
         const PinyinLexicon* headLexicon = PinyinFindWithInputCount(fetched, headLength);
         if (tailLexicons.empty() || headLexicon == nullptr)
         {
@@ -723,7 +747,7 @@ std::vector<PinyinLexicon> FilterPinyinSyllableSeparators(
 
 namespace Ime {
 
-std::vector<Lexicon> InputEngine::PinyinReverseLookup(const std::vector<VirtualInputKey>& keys) const
+std::vector<Lexicon> CoreImeEngine::PinyinReverseLookup(const std::vector<VirtualInputKey>& keys) const
 {
     if (keys.empty())
     {
@@ -737,15 +761,21 @@ std::vector<Lexicon> InputEngine::PinyinReverseLookup(const std::vector<VirtualI
         return std::vector<Lexicon>();
     }
 
+    ImeDatabase::PinyinQuery pinyinQuery = _database.CreatePinyinQuery();
+    if (!pinyinQuery.IsValid())
+    {
+        return std::vector<Lexicon>();
+    }
+
     std::vector<PinyinLexicon> pinyinLexicons;
     PinyinSegmentation segmentation = _pinyinSegmenter.Segment(searchKeys);
     if (segmentation.empty())
     {
-        pinyinLexicons = ProcessPinyinSlices(_database, searchKeys, TextFromKeys(searchKeys), std::nullopt);
+        pinyinLexicons = ProcessPinyinSlices(pinyinQuery, searchKeys, TextFromKeys(searchKeys), std::nullopt);
     }
     else
     {
-        pinyinLexicons = PinyinSearch(_database, _pinyinSegmenter, searchKeys, segmentation, std::nullopt);
+        pinyinLexicons = PinyinSearch(pinyinQuery, _pinyinSegmenter, searchKeys, segmentation, std::nullopt);
     }
 
     if (hasSeparators)

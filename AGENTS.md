@@ -12,6 +12,7 @@ This project is a Windows Input Method Editor for Cantonese Jyutping romanizatio
 Build from the repository root:
 
 ```powershell
+cargo run --release --manifest-path preparing\Cargo.toml
 msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=x64
 msbuild Jyutping.sln /p:Configuration=Release /p:Platform=x64
 msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=Win32
@@ -22,7 +23,7 @@ msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=ARM64EC
 msbuild Jyutping.sln /p:Configuration=Release /p:Platform=ARM64EC
 ```
 
-The build links against `d2d1.lib`, `dwrite.lib`, `shlwapi.lib`, and `winsqlite3.lib`, and copies `Jyutping\Resources\ime.sqlite3` into the target output after build.
+The build links against `d2d1.lib`, `dwrite.lib`, `shlwapi.lib`, and `winsqlite3.lib`, and copies the generated `Jyutping\Resources\ime.sqlite3` into the target output after build.
 
 ## Packaging
 - Packaging requires Inno Setup 7. `installer\Build-Installers.ps1` searches `Program Files\Inno Setup 7\ISCC.exe` first, then Inno Setup 6, then `ISCC.exe` on `PATH`.

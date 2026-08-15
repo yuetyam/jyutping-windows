@@ -1,4 +1,4 @@
-#include "InputEngine.h"
+#include "CoreImeEngine.h"
 
 #include <algorithm>
 #include <utility>
@@ -10,11 +10,11 @@ struct ShapeLexicon
     std::wstring text;
     std::wstring input;
     std::wstring mark;
-    int complex = 0;
+    int64_t complex = 0;
     int64_t number = 0;
 
     ShapeLexicon() = default;
-    ShapeLexicon(std::wstring inputText, std::wstring userInput, std::wstring inputMark, int inputComplex, int64_t inputNumber) :
+    ShapeLexicon(std::wstring inputText, std::wstring userInput, std::wstring inputMark, int64_t inputComplex, int64_t inputNumber) :
         text(std::move(inputText)),
         input(std::move(userInput)),
         mark(std::move(inputMark)),
@@ -109,7 +109,7 @@ std::vector<ShapeLexicon> ShapeLexiconsFromRows(
     const std::vector<ImeDatabase::ShapeRow>& rows,
     const std::wstring& input,
     const std::wstring& mark,
-    std::optional<int> complexOverride = std::nullopt)
+    std::optional<int64_t> complexOverride = std::nullopt)
 {
     std::vector<ShapeLexicon> result;
     result.reserve(rows.size());
@@ -149,12 +149,12 @@ void Append(std::vector<ShapeLexicon>& target, const std::vector<ShapeLexicon>& 
 
 namespace Ime {
 
-std::vector<Lexicon> InputEngine::CangjieReverseLookup(std::wstring_view input, CangjieVariant variant) const
+std::vector<Lexicon> CoreImeEngine::CangjieReverseLookup(std::wstring_view input, CangjieVariant variant) const
 {
     return CangjieReverseLookup(InputKeysFromText(input), variant);
 }
 
-std::vector<Lexicon> InputEngine::CangjieReverseLookup(const std::vector<VirtualInputKey>& keys, CangjieVariant variant) const
+std::vector<Lexicon> CoreImeEngine::CangjieReverseLookup(const std::vector<VirtualInputKey>& keys, CangjieVariant variant) const
 {
     if (!IsPrepared() || keys.empty())
     {
@@ -174,7 +174,14 @@ std::vector<Lexicon> InputEngine::CangjieReverseLookup(const std::vector<Virtual
         std::vector<ImeDatabase::ShapeRow> exactRows = IsQuickVariant(variant) ?
             _database.QueryQuickByExactCode(variant, *code) :
             _database.QueryCangjieByExactCode(variant, *code);
-        Append(shapes, ShapeLexiconsFromRows(exactRows, text, *mark, static_cast<int>(text.size())));
+        if (IsQuickVariant(variant))
+        {
+            std::erase_if(exactRows, [inputLength = static_cast<int64_t>(text.size())](const ImeDatabase::ShapeRow& row)
+            {
+                return row.complex != inputLength;
+            });
+        }
+        Append(shapes, ShapeLexiconsFromRows(exactRows, text, *mark, static_cast<int64_t>(text.size())));
     }
 
     std::vector<ImeDatabase::ShapeRow> prefixRows = IsQuickVariant(variant) ?
