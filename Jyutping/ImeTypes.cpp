@@ -310,16 +310,6 @@ bool IsCantoneseToneDigit(WCHAR character)
     return L'1' <= character && character <= L'6';
 }
 
-int32_t HashCode(std::wstring_view text)
-{
-    uint32_t result = 0;
-    for (WCHAR character : text)
-    {
-        result = result * 31u + static_cast<uint16_t>(character);
-    }
-    return static_cast<int32_t>(result);
-}
-
 std::wstring ToneConverted(std::wstring_view text)
 {
     std::wstring result;

@@ -116,7 +116,6 @@ bool IsUppercaseBasicLatinLetter(WCHAR character);
 bool IsBasicLatinLetter(WCHAR character);
 bool IsCantoneseToneDigit(WCHAR character);
 
-int32_t HashCode(std::wstring_view text);
 std::wstring ToneConverted(std::wstring_view text);
 std::wstring MarkFormatted(std::wstring_view text);
 std::wstring StrippedTones(std::wstring_view text);

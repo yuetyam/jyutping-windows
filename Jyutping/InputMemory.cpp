@@ -5,7 +5,9 @@
 #include <winsqlite/winsqlite3.h>
 
 #include <algorithm>
+#include <bit>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <optional>
 #include <string>
@@ -223,23 +225,6 @@ std::vector<T> Distinct(const std::vector<T>& items)
     return result;
 }
 
-std::vector<MemoryLexicon> SortedMemory(std::vector<MemoryLexicon> items)
-{
-    std::sort(items.begin(), items.end(), [](const MemoryLexicon& left, const MemoryLexicon& right)
-    {
-        if (left.inputCount != right.inputCount)
-        {
-            return left.inputCount > right.inputCount;
-        }
-        if (left.frequency != right.frequency)
-        {
-            return left.frequency > right.frequency;
-        }
-        return left.latest > right.latest;
-    });
-    return items;
-}
-
 std::vector<MemoryLexicon> RegularSorted(const std::vector<MemoryLexicon>& items, bool isOrdered = false)
 {
     std::vector<MemoryLexicon> frequencyPreferred = items;
@@ -313,12 +298,6 @@ MemoryLexicon ReplacedInput(const MemoryLexicon& item, std::wstring input)
     return MemoryLexicon(item.word, item.romanization, item.frequency, item.latest, input, item.mark);
 }
 
-std::wstring ReplaceYWithJ(std::wstring text)
-{
-    std::replace(text.begin(), text.end(), L'y', L'j');
-    return text;
-}
-
 std::wstring TailAnchorText(const std::vector<VirtualInputKey>& keys)
 {
     std::wstring result;
@@ -381,20 +360,77 @@ size_t CountApostrophes(const std::vector<VirtualInputKey>& keys)
     return static_cast<size_t>(std::count(keys.begin(), keys.end(), VirtualInputKey::apostrophe));
 }
 
-std::wstring RomanizationAnchorText(std::wstring_view romanization)
+size_t UnicodeScalarCount(std::wstring_view text)
 {
-    std::vector<std::wstring> syllables = Split(romanization, L' ');
-
-    std::wstring result;
-    result.reserve(syllables.size());
-    for (const std::wstring& syllable : syllables)
+    size_t count = 0;
+    for (size_t index = 0; index < text.size(); index++)
     {
-        if (!syllable.empty())
+        WCHAR character = text[index];
+        if (0xD800 <= character && character <= 0xDBFF && index + 1 < text.size())
         {
-            result.push_back(syllable.front());
+            WCHAR next = text[index + 1];
+            if (0xDC00 <= next && next <= 0xDFFF)
+            {
+                index++;
+            }
+        }
+        count++;
+    }
+    return count;
+}
+
+struct MemorySerialFields
+{
+    int64_t charCount = 0;
+    int64_t letterCount = 0;
+    int64_t complexity = 0;
+    int64_t anchors = 0;
+    int64_t spell = 0;
+};
+
+MemorySerialFields DeriveSerialFields(std::wstring_view word, std::wstring_view romanization)
+{
+    std::wstring toneFreeRomanization;
+    std::wstring letters;
+    toneFreeRomanization.reserve(romanization.size());
+    letters.reserve(romanization.size());
+    for (WCHAR character : romanization)
+    {
+        if (character < L'0' || character > L'9')
+        {
+            toneFreeRomanization.push_back(character);
+        }
+        if (Ime::IsLowercaseBasicLatinLetter(character))
+        {
+            letters.push_back(character);
         }
     }
-    return result;
+
+    std::vector<std::wstring> phones = Split(toneFreeRomanization, L' ');
+    uint64_t complexity = 0;
+    std::vector<VirtualInputKey> anchorKeys;
+    anchorKeys.reserve(phones.size());
+    for (const std::wstring& phone : phones)
+    {
+        complexity = complexity * 10 + static_cast<uint64_t>(phone.size());
+        if (!phone.empty())
+        {
+            VirtualInputKey key = VirtualInputKey::letterA;
+            if (VirtualInputKey::MatchInputKeyForCharacter(phone.front(), &key))
+            {
+                anchorKeys.push_back(key);
+            }
+        }
+    }
+
+    std::vector<VirtualInputKey> spellKeys = Ime::InputKeysFromText(letters);
+    return MemorySerialFields{
+        static_cast<int64_t>(UnicodeScalarCount(word)),
+        static_cast<int64_t>(spellKeys.size()),
+        std::bit_cast<int64_t>(complexity),
+        Ime::CombinedCode(anchorKeys),
+        Ime::CombinedCode(spellKeys)
+    };
 }
 
 std::vector<MemoryLexicon> ReadMemoryRows(sqlite3_stmt* statement, sqlite3* database, _In_z_ PCWSTR operation, const std::wstring& input, const std::optional<std::wstring>& mark)
@@ -433,103 +469,108 @@ bool PrepareMemoryStatement(sqlite3* database, _In_z_ PCWSTR sql, Statement& sta
     return true;
 }
 
-std::vector<MemoryLexicon> ShortcutMatch(sqlite3* database, std::wstring_view text, const std::wstring& input, int64_t limit = 100)
+std::vector<MemoryLexicon> AnchorsMatch(
+    sqlite3* database,
+    sqlite3_stmt* statement,
+    const std::vector<VirtualInputKey>& keys,
+    const std::optional<std::wstring>& input = std::nullopt,
+    int64_t limit = 100)
 {
-    static constexpr WCHAR sql[] =
-        L"SELECT word, romanization, frequency, latest FROM core_memory WHERE shortcut = ? ORDER BY frequency DESC LIMIT ?;";
-
-    Statement statement;
-    if (!PrepareMemoryStatement(database, sql, statement))
+    if (statement == nullptr)
     {
         return std::vector<MemoryLexicon>();
     }
 
-    std::wstring queryText = ReplaceYWithJ(std::wstring(text));
-    sqlite3_bind_int64(statement.Get(), 1, Ime::HashCode(queryText));
-    sqlite3_bind_int64(statement.Get(), 2, limit);
-    return ReadMemoryRows(statement.Get(), database, L"query memory shortcut", input, input);
+    sqlite3_reset(statement);
+    sqlite3_clear_bindings(statement);
+    sqlite3_bind_int64(statement, 1, Ime::AnchorsCode(keys));
+    sqlite3_bind_int64(statement, 2, static_cast<int64_t>(keys.size()));
+    sqlite3_bind_int64(statement, 3, limit);
+    std::wstring userInput = input.value_or(Ime::TextFromKeys(keys));
+    return ReadMemoryRows(statement, database, L"query memory anchors", userInput, userInput);
 }
 
-std::vector<MemoryLexicon> SpellMatch(sqlite3* database, std::wstring_view text, const std::wstring& input, std::optional<std::wstring> mark = std::nullopt, int64_t limit = 100)
+std::vector<MemoryLexicon> SpellMatch(
+    sqlite3* database,
+    sqlite3_stmt* statement,
+    const std::vector<VirtualInputKey>& keys,
+    int64_t complexity,
+    const std::optional<std::wstring>& input = std::nullopt,
+    const std::optional<std::wstring>& mark = std::nullopt,
+    int64_t limit = 100)
 {
-    static constexpr WCHAR sql[] =
-        L"SELECT word, romanization, frequency, latest FROM core_memory WHERE spell = ? ORDER BY frequency DESC LIMIT ?;";
-
-    Statement statement;
-    if (!PrepareMemoryStatement(database, sql, statement))
+    if (statement == nullptr)
     {
         return std::vector<MemoryLexicon>();
     }
 
-    sqlite3_bind_int64(statement.Get(), 1, Ime::HashCode(text));
-    sqlite3_bind_int64(statement.Get(), 2, limit);
-    return ReadMemoryRows(statement.Get(), database, L"query memory spell", input, mark);
+    sqlite3_reset(statement);
+    sqlite3_clear_bindings(statement);
+    sqlite3_bind_int64(statement, 1, Ime::CombinedCode(keys));
+    sqlite3_bind_int64(statement, 2, static_cast<int64_t>(keys.size()));
+    sqlite3_bind_int64(statement, 3, complexity);
+    sqlite3_bind_int64(statement, 4, limit);
+    std::wstring userInput = input.value_or(Ime::TextFromKeys(keys));
+    return ReadMemoryRows(statement, database, L"query memory spell", userInput, mark);
 }
 
-std::vector<MemoryLexicon> StrictMatch(sqlite3* database, int32_t spell, int32_t shortcut, const std::wstring& input, std::optional<std::wstring> mark = std::nullopt, int64_t limit = 100)
+std::vector<MemoryLexicon> Perform(sqlite3* database, sqlite3_stmt* statement, const Ime::Scheme& scheme, int64_t limit = 5)
 {
-    static constexpr WCHAR sql[] =
-        L"SELECT word, romanization, frequency, latest FROM core_memory WHERE spell = ? AND shortcut = ? ORDER BY frequency DESC LIMIT ?;";
-
-    Statement statement;
-    if (!PrepareMemoryStatement(database, sql, statement))
-    {
-        return std::vector<MemoryLexicon>();
-    }
-
-    sqlite3_bind_int64(statement.Get(), 1, spell);
-    sqlite3_bind_int64(statement.Get(), 2, shortcut);
-    sqlite3_bind_int64(statement.Get(), 3, limit);
-    return ReadMemoryRows(statement.Get(), database, L"query memory strict", input, mark);
+    return SpellMatch(
+        database,
+        statement,
+        Ime::SchemeOriginKeys(scheme),
+        Ime::SchemeComplexity(scheme),
+        Ime::SchemeAliasText(scheme),
+        Ime::SchemeMark(scheme),
+        limit);
 }
 
-std::vector<MemoryLexicon> Perform(sqlite3* database, const Ime::Scheme& scheme, int64_t limit = 5)
+std::vector<MemoryLexicon> Query(
+    sqlite3* database,
+    sqlite3_stmt* statement,
+    const Ime::Segmentation& segmentation,
+    const std::vector<Ime::Scheme>& idealSchemes)
 {
-    int32_t spell = Ime::HashCode(Ime::SchemeOriginText(scheme));
-    int32_t shortcut = Ime::HashCode(Ime::SchemeOriginAnchorsText(scheme));
-    return StrictMatch(database, spell, shortcut, Ime::SchemeAliasText(scheme), Ime::SchemeMark(scheme), limit);
-}
-
-std::vector<Ime::Lexicon> Query(sqlite3* database, const Ime::Segmentation& segmentation, const std::vector<Ime::Scheme>& idealSchemes)
-{
-    if (segmentation.empty())
-    {
-        return std::vector<Ime::Lexicon>();
-    }
-
     std::vector<MemoryLexicon> queried;
     if (idealSchemes.empty())
     {
         for (const Ime::Scheme& scheme : segmentation)
         {
-            Append(queried, Perform(database, scheme));
+            Append(queried, Perform(database, statement, scheme));
         }
     }
     else
     {
         for (const Ime::Scheme& scheme : idealSchemes)
         {
-            if (scheme.size() <= 1)
+            for (size_t count = scheme.size(); count > 0; count--)
             {
-                continue;
-            }
-            for (size_t count = scheme.size() - 1; count > 0; count--)
-            {
-                Append(queried, Perform(database, PrefixScheme(scheme, count)));
+                int64_t limit = (count == scheme.size()) ? 20 : 5;
+                Append(queried, Perform(database, statement, PrefixScheme(scheme, count), limit));
             }
         }
     }
-
-    return ToLexicons(First(PeculiarSorted(queried), 6), -2);
+    return queried;
 }
 
 std::vector<Ime::Lexicon> Search(sqlite3* database, const std::vector<VirtualInputKey>& keys, const Ime::Segmentation& segmentation, const Ime::Segmenter& segmenter)
 {
+    static constexpr WCHAR anchorsSql[] =
+        L"SELECT word, romanization, frequency, latest FROM memory2608 WHERE anchors = ? AND char_count = ? ORDER BY frequency DESC LIMIT ?;";
+    static constexpr WCHAR spellSql[] =
+        L"SELECT word, romanization, frequency, latest FROM memory2608 WHERE spell = ? AND letter_count = ? AND complexity = ? ORDER BY frequency DESC LIMIT ?;";
+
+    Statement anchorsStatement;
+    Statement spellStatement;
+    if (!PrepareMemoryStatement(database, anchorsSql, anchorsStatement) ||
+        !PrepareMemoryStatement(database, spellSql, spellStatement))
+    {
+        return std::vector<Ime::Lexicon>();
+    }
+
     size_t inputLength = keys.size();
     std::wstring text = Ime::TextFromKeys(keys);
-
-    std::vector<MemoryLexicon> fullMatched = SpellMatch(database, text, text);
-
     std::vector<Ime::Scheme> idealSchemes;
     for (const Ime::Scheme& scheme : segmentation)
     {
@@ -539,38 +580,40 @@ std::vector<Ime::Lexicon> Search(sqlite3* database, const std::vector<VirtualInp
         }
     }
 
+    std::vector<MemoryLexicon> queried = Query(database, spellStatement.Get(), segmentation, idealSchemes);
     std::vector<MemoryLexicon> idealQueried;
-    for (const Ime::Scheme& scheme : idealSchemes)
+    std::vector<MemoryLexicon> notIdealQueried;
+    for (const MemoryLexicon& item : queried)
     {
-        int32_t spell = Ime::HashCode(Ime::SchemeOriginText(scheme));
-        int32_t shortcut = Ime::HashCode(Ime::SchemeOriginAnchorsText(scheme));
-        Append(idealQueried, StrictMatch(database, spell, shortcut, text, Ime::SchemeMark(scheme)));
+        if (item.inputCount >= inputLength)
+        {
+            idealQueried.push_back(item);
+        }
+        else
+        {
+            notIdealQueried.push_back(item);
+        }
     }
 
-    std::vector<Ime::Lexicon> queried = Query(database, segmentation, idealSchemes);
-    if (!fullMatched.empty() || !idealQueried.empty())
+    std::vector<Ime::Lexicon> ideal = ToLexicons(RegularSorted(idealQueried), -1);
+    std::vector<Ime::Lexicon> notIdeal = ToLexicons(PeculiarSorted(notIdealQueried), -2);
+    std::vector<MemoryLexicon> anchorsMatched = AnchorsMatch(
+        database,
+        anchorsStatement.Get(),
+        keys,
+        std::nullopt,
+        queried.empty() ? 20 : 5);
+    std::vector<Ime::Lexicon> anchors = ToLexicons(RegularSorted(anchorsMatched, true), -1);
+    if (!ideal.empty() || !anchors.empty())
     {
-        std::vector<MemoryLexicon> ideal;
-        Append(ideal, fullMatched);
-        Append(ideal, idealQueried);
-
-        std::vector<Ime::Lexicon> result = ToLexicons(RegularSorted(ideal), -1);
-        Append(result, queried);
-        return result;
-    }
-
-    int64_t shortcutLimit = (segmentation.empty() || segmentation.front().empty()) ? 100 : 5;
-    std::vector<MemoryLexicon> shortcuts = ShortcutMatch(database, text, text, shortcutLimit);
-    if (!shortcuts.empty())
-    {
-        std::vector<Ime::Lexicon> result = ToLexicons(RegularSorted(shortcuts, true), -1);
-        Append(result, queried);
-        return result;
+        Append(ideal, anchors);
+        Append(ideal, notIdeal);
+        return ideal;
     }
 
     if (inputLength <= 2 || inputLength >= 25)
     {
-        return queried;
+        return notIdeal;
     }
 
     bool shouldPartiallyMatch = idealSchemes.empty() ||
@@ -578,13 +621,14 @@ std::vector<Ime::Lexicon> Search(sqlite3* database, const std::vector<VirtualInp
         keys.front() == VirtualInputKey::letterM;
     if (!shouldPartiallyMatch)
     {
-        return queried;
+        return notIdeal;
     }
 
+    static constexpr size_t maximumCharCount = 9;
     std::vector<MemoryLexicon> prefixMatched;
     for (const Ime::Scheme& scheme : segmentation)
     {
-        if (scheme.empty())
+        if (scheme.empty() || scheme.size() > maximumCharCount)
         {
             continue;
         }
@@ -599,19 +643,15 @@ std::vector<Ime::Lexicon> Search(sqlite3* database, const std::vector<VirtualInp
         std::vector<VirtualInputKey> conjoined = schemeAnchors;
         conjoined.insert(conjoined.end(), tail.begin(), tail.end());
 
-        std::wstring conjoinedText = Ime::TextFromKeys(conjoined);
         std::wstring schemeSyllableText = Ime::SchemeSyllableText(scheme);
         std::wstring mark = Ime::SchemeMark(scheme) + L" " + Ime::TextFromKeys(tail);
         std::wstring tailAsAnchorText = TailAnchorText(tail);
 
-        for (const MemoryLexicon& item : ShortcutMatch(database, conjoinedText, conjoinedText))
+        for (const MemoryLexicon& item : AnchorsMatch(database, anchorsStatement.Get(), conjoined))
         {
             std::wstring toneFreeRomanization = Ime::StrippedTones(item.romanization);
-            if (!StartsWith(toneFreeRomanization, schemeSyllableText))
-            {
-                continue;
-            }
-            if (SuffixAnchorText(toneFreeRomanization, schemeSyllableText.size()) == tailAsAnchorText)
+            if (StartsWith(toneFreeRomanization, schemeSyllableText) &&
+                SuffixAnchorText(toneFreeRomanization, schemeSyllableText.size()) == tailAsAnchorText)
             {
                 prefixMatched.push_back(ReplacedInputAndMark(item, text, mark));
             }
@@ -625,11 +665,10 @@ std::vector<Ime::Lexicon> Search(sqlite3* database, const std::vector<VirtualInp
             transformedTailText.push_back(key.character);
         }
 
-        std::wstring anchorsText = Ime::TextFromKeys(schemeAnchors);
-        anchorsText.append(tail.front().text);
-
+        std::vector<VirtualInputKey> anchorsKeys = schemeAnchors;
+        anchorsKeys.push_back(tail.front());
         std::wstring syllableText = schemeSyllableText + L" " + transformedTailText;
-        for (const MemoryLexicon& item : ShortcutMatch(database, anchorsText, anchorsText))
+        for (const MemoryLexicon& item : AnchorsMatch(database, anchorsStatement.Get(), anchorsKeys))
         {
             if (StartsWith(Ime::StrippedTones(item.romanization), syllableText))
             {
@@ -641,9 +680,12 @@ std::vector<Ime::Lexicon> Search(sqlite3* database, const std::vector<VirtualInp
     std::vector<MemoryLexicon> gainedMatched;
     for (size_t number = inputLength - 1; number > 0; number--)
     {
-        std::vector<VirtualInputKey> leadingKeys = Prefix(keys, number);
-        std::wstring leadingText = Ime::TextFromKeys(leadingKeys);
-        for (const MemoryLexicon& item : ShortcutMatch(database, leadingText, leadingText))
+        if (number > maximumCharCount)
+        {
+            continue;
+        }
+
+        for (const MemoryLexicon& item : AnchorsMatch(database, anchorsStatement.Get(), Prefix(keys, number)))
         {
             size_t tailStart = (item.inputCount > 0) ? item.inputCount - 1 : 0;
             std::vector<VirtualInputKey> tail = DropFirst(keys, tailStart);
@@ -684,7 +726,7 @@ std::vector<Ime::Lexicon> Search(sqlite3* database, const std::vector<VirtualInp
     Append(partial, gainedMatched);
 
     std::vector<Ime::Lexicon> result = ToLexicons(First(PeculiarSorted(partial), 5), -1);
-    Append(result, queried);
+    Append(result, notIdeal);
     return result;
 }
 
@@ -845,7 +887,7 @@ std::vector<Ime::Lexicon> FilterApostropheSuggestions(const std::vector<VirtualI
 
 bool FindMemoryEntry(sqlite3* database, const std::wstring& word, const std::wstring& romanization, int64_t& id, int64_t& frequency)
 {
-    static constexpr WCHAR sql[] = L"SELECT id, frequency FROM core_memory WHERE word = ? AND romanization = ? LIMIT 1;";
+    static constexpr WCHAR sql[] = L"SELECT id, frequency FROM memory2608 WHERE word = ? AND romanization = ? LIMIT 1;";
 
     Statement statement;
     if (!PrepareMemoryStatement(database, sql, statement))
@@ -873,7 +915,7 @@ bool FindMemoryEntry(sqlite3* database, const std::wstring& word, const std::wst
 
 bool UpdateMemoryEntry(sqlite3* database, int64_t id, int64_t frequency)
 {
-    static constexpr WCHAR sql[] = L"UPDATE core_memory SET frequency = ?, latest = ? WHERE id = ?;";
+    static constexpr WCHAR sql[] = L"UPDATE memory2608 SET frequency = ?, latest = ? WHERE id = ?;";
 
     Statement statement;
     if (!PrepareMemoryStatement(database, sql, statement))
@@ -897,7 +939,8 @@ bool UpdateMemoryEntry(sqlite3* database, int64_t id, int64_t frequency)
 bool InsertMemoryEntry(sqlite3* database, const Ime::Lexicon& lexicon)
 {
     static constexpr WCHAR sql[] =
-        L"INSERT INTO core_memory (word, romanization, frequency, latest, shortcut, spell) VALUES (?, ?, ?, ?, ?, ?);";
+        L"INSERT INTO memory2608 (word, romanization, frequency, latest, char_count, letter_count, complexity, anchors, spell) "
+        L"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
     Statement statement;
     if (!PrepareMemoryStatement(database, sql, statement))
@@ -905,15 +948,17 @@ bool InsertMemoryEntry(sqlite3* database, const Ime::Lexicon& lexicon)
         return false;
     }
 
-    std::wstring anchorText = RomanizationAnchorText(lexicon.romanization);
-    std::wstring spellText = Ime::LatinLetterOnly(lexicon.romanization);
+    MemorySerialFields fields = DeriveSerialFields(lexicon.text, lexicon.romanization);
 
     BindText(statement.Get(), 1, lexicon.text);
     BindText(statement.Get(), 2, lexicon.romanization);
     sqlite3_bind_int64(statement.Get(), 3, 1);
     sqlite3_bind_int64(statement.Get(), 4, CurrentTimeMilliseconds());
-    sqlite3_bind_int64(statement.Get(), 5, Ime::HashCode(anchorText));
-    sqlite3_bind_int64(statement.Get(), 6, Ime::HashCode(spellText));
+    sqlite3_bind_int64(statement.Get(), 5, fields.charCount);
+    sqlite3_bind_int64(statement.Get(), 6, fields.letterCount);
+    sqlite3_bind_int64(statement.Get(), 7, fields.complexity);
+    sqlite3_bind_int64(statement.Get(), 8, fields.anchors);
+    sqlite3_bind_int64(statement.Get(), 9, fields.spell);
 
     int result = sqlite3_step(statement.Get());
     if (result != SQLITE_DONE)
@@ -922,6 +967,177 @@ bool InsertMemoryEntry(sqlite3* database, const Ime::Lexicon& lexicon)
         return false;
     }
     return true;
+}
+
+bool ExecuteDatabaseStatement(sqlite3* database, _In_z_ PCWSTR sql, _In_z_ PCWSTR operation)
+{
+    Statement statement;
+    if (!PrepareMemoryStatement(database, sql, statement))
+    {
+        return false;
+    }
+
+    int result = sqlite3_step(statement.Get());
+    if (result != SQLITE_DONE)
+    {
+        LogSqliteError(database, operation, result);
+        return false;
+    }
+    return true;
+}
+
+std::optional<int64_t> UserVersion(sqlite3* database)
+{
+    Statement statement;
+    if (!PrepareMemoryStatement(database, L"PRAGMA user_version;", statement))
+    {
+        return std::nullopt;
+    }
+
+    int result = sqlite3_step(statement.Get());
+    if (result != SQLITE_ROW)
+    {
+        LogSqliteError(database, L"read user version", result);
+        return std::nullopt;
+    }
+    return sqlite3_column_int64(statement.Get(), 0);
+}
+
+std::optional<bool> LegacyTableExists(sqlite3* database)
+{
+    static constexpr WCHAR sql[] =
+        L"SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'core_memory' LIMIT 1;";
+
+    Statement statement;
+    if (!PrepareMemoryStatement(database, sql, statement))
+    {
+        return std::nullopt;
+    }
+
+    int result = sqlite3_step(statement.Get());
+    if (result == SQLITE_ROW)
+    {
+        return true;
+    }
+    if (result == SQLITE_DONE)
+    {
+        return false;
+    }
+
+    LogSqliteError(database, L"check legacy memory table", result);
+    return std::nullopt;
+}
+
+bool MigrateLegacyMemory(sqlite3* database)
+{
+    static constexpr WCHAR selectSql[] =
+        L"SELECT word, romanization, frequency, latest FROM core_memory ORDER BY rowid;";
+    static constexpr WCHAR insertSql[] =
+        L"INSERT OR IGNORE INTO memory2608 "
+        L"(word, romanization, frequency, latest, char_count, letter_count, complexity, anchors, spell) "
+        L"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+
+    Statement selectStatement;
+    Statement insertStatement;
+    if (!PrepareMemoryStatement(database, selectSql, selectStatement) ||
+        !PrepareMemoryStatement(database, insertSql, insertStatement))
+    {
+        return false;
+    }
+
+    int result = SQLITE_OK;
+    while ((result = sqlite3_step(selectStatement.Get())) == SQLITE_ROW)
+    {
+        std::wstring word = ColumnText(selectStatement.Get(), 0);
+        std::wstring romanization = ColumnText(selectStatement.Get(), 1);
+        int64_t frequency = sqlite3_column_int64(selectStatement.Get(), 2);
+        int64_t latest = sqlite3_column_int64(selectStatement.Get(), 3);
+        MemorySerialFields fields = DeriveSerialFields(word, romanization);
+
+        sqlite3_reset(insertStatement.Get());
+        sqlite3_clear_bindings(insertStatement.Get());
+        BindText(insertStatement.Get(), 1, word);
+        BindText(insertStatement.Get(), 2, romanization);
+        sqlite3_bind_int64(insertStatement.Get(), 3, frequency);
+        sqlite3_bind_int64(insertStatement.Get(), 4, latest);
+        sqlite3_bind_int64(insertStatement.Get(), 5, fields.charCount);
+        sqlite3_bind_int64(insertStatement.Get(), 6, fields.letterCount);
+        sqlite3_bind_int64(insertStatement.Get(), 7, fields.complexity);
+        sqlite3_bind_int64(insertStatement.Get(), 8, fields.anchors);
+        sqlite3_bind_int64(insertStatement.Get(), 9, fields.spell);
+
+        int insertResult = sqlite3_step(insertStatement.Get());
+        if (insertResult != SQLITE_DONE)
+        {
+            LogSqliteError(database, L"migrate legacy memory row", insertResult);
+            return false;
+        }
+    }
+
+    if (result != SQLITE_DONE)
+    {
+        LogSqliteError(database, L"read legacy memory rows", result);
+        return false;
+    }
+    return true;
+}
+
+bool PrepareMemorySchema(sqlite3* database)
+{
+    static constexpr PCWSTR schemaStatements[] =
+    {
+        L"CREATE TABLE IF NOT EXISTS memory2608 (id INTEGER PRIMARY KEY AUTOINCREMENT, word TEXT NOT NULL, romanization TEXT NOT NULL, frequency INTEGER NOT NULL, latest INTEGER NOT NULL, char_count INTEGER NOT NULL, letter_count INTEGER NOT NULL, complexity INTEGER NOT NULL, anchors INTEGER NOT NULL, spell INTEGER NOT NULL, UNIQUE (word, romanization));",
+        L"CREATE INDEX IF NOT EXISTS ix2608_frequency ON memory2608 (frequency);",
+        L"CREATE INDEX IF NOT EXISTS ix2608_anchors ON memory2608 (anchors, char_count, frequency DESC);",
+        L"CREATE INDEX IF NOT EXISTS ix2608_spell ON memory2608 (spell, letter_count, complexity, frequency DESC);",
+        L"CREATE INDEX IF NOT EXISTS ix2608_word ON memory2608 (word, frequency DESC);"
+    };
+
+    if (!ExecuteDatabaseStatement(database, L"BEGIN IMMEDIATE;", L"begin memory migration"))
+    {
+        return false;
+    }
+
+    bool succeeded = true;
+    for (PCWSTR sql : schemaStatements)
+    {
+        if (!ExecuteDatabaseStatement(database, sql, L"create refined memory schema"))
+        {
+            succeeded = false;
+            break;
+        }
+    }
+
+    std::optional<int64_t> version;
+    if (succeeded)
+    {
+        version = UserVersion(database);
+        succeeded = version.has_value();
+    }
+
+    if (succeeded && *version < 2608)
+    {
+        std::optional<bool> hasLegacyTable = LegacyTableExists(database);
+        succeeded = hasLegacyTable.has_value();
+        if (succeeded && *hasLegacyTable)
+        {
+            succeeded = MigrateLegacyMemory(database);
+        }
+        if (succeeded)
+        {
+            succeeded = ExecuteDatabaseStatement(database, L"PRAGMA user_version = 2608;", L"set memory user version");
+        }
+    }
+
+    if (succeeded)
+    {
+        succeeded = ExecuteDatabaseStatement(database, L"COMMIT;", L"commit memory migration");
+    }
+    if (!succeeded)
+    {
+        ExecuteDatabaseStatement(database, L"ROLLBACK;", L"roll back memory migration");
+    }
+    return succeeded;
 }
 
 } // namespace
@@ -977,22 +1193,10 @@ bool InputMemory::Prepare()
 
     sqlite3_busy_timeout(_database, 250);
 
-    static constexpr PCWSTR statements[] =
+    if (!PrepareMemorySchema(_database))
     {
-        L"CREATE TABLE IF NOT EXISTS core_memory (id INTEGER PRIMARY KEY AUTOINCREMENT, word TEXT NOT NULL, romanization TEXT NOT NULL, frequency INTEGER NOT NULL, latest INTEGER NOT NULL, shortcut INTEGER NOT NULL, spell INTEGER NOT NULL, UNIQUE (word, romanization));",
-        L"CREATE INDEX IF NOT EXISTS ix_core_memory_frequency ON core_memory (frequency);",
-        L"CREATE INDEX IF NOT EXISTS ix_core_memory_shortcut ON core_memory (shortcut, frequency DESC);",
-        L"CREATE INDEX IF NOT EXISTS ix_core_memory_spell ON core_memory (spell, frequency DESC);",
-        L"CREATE INDEX IF NOT EXISTS ix_core_memory_strict ON core_memory (spell, shortcut, frequency DESC);"
-    };
-
-    for (PCWSTR sql : statements)
-    {
-        if (!Execute(sql))
-        {
-            Close();
-            return false;
-        }
+        Close();
+        return false;
     }
 
     _isPrepared = true;
@@ -1039,7 +1243,7 @@ bool InputMemory::Forget(const Lexicon& lexicon)
         return false;
     }
 
-    static constexpr WCHAR sql[] = L"DELETE FROM core_memory WHERE word = ? AND romanization = ?;";
+    static constexpr WCHAR sql[] = L"DELETE FROM memory2608 WHERE word = ? AND romanization = ?;";
 
     Statement statement;
     if (!PrepareMemoryStatement(_database, sql, statement))
@@ -1061,7 +1265,7 @@ bool InputMemory::Forget(const Lexicon& lexicon)
 
 bool InputMemory::DeleteAll()
 {
-    bool result = IsPrepared() && Execute(L"DELETE FROM core_memory;");
+    bool result = IsPrepared() && Execute(L"DELETE FROM memory2608;");
     Global::Log(L"InputMemory delete all: result=%d", result);
     return result;
 }
