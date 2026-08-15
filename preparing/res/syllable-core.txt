@@ -9,6 +9,7 @@ ap	ap
 ar	aa
 au	au
 ba	baa
+be	be
 bo	bo
 ca	caa
 ce	ce
@@ -84,12 +85,14 @@ ang	ang
 baa	baa
 bai	bai
 bak	bak
+bam	bam
 ban	ban
 bar	baa
 bat	bat
 bau	bau
 bay	bei
 bei	bei
+bek	bek
 ben	ban
 bik	bik
 bin	bin
@@ -150,6 +153,7 @@ day	dei
 dei	dei
 dek	dek
 den	dan
+deu	deu
 dik	dik
 dim	dim
 din	din
@@ -174,6 +178,7 @@ fat	fat
 fau	fau
 fei	fei
 fen	fan
+fit	fit
 fok	fok
 foo	fu
 for	fo
@@ -192,6 +197,7 @@ gau	gau
 gay	gei
 gei	gei
 gen	gan
+gep	gep
 gik	gik
 gim	gim
 gin	gin
@@ -309,6 +315,7 @@ lau	lau
 lay	lei
 lei	lei
 lek	lek
+lem	lem
 len	lan
 lik	lik
 lim	lim
@@ -386,6 +393,7 @@ pay	pei
 pei	pei
 pek	pek
 pen	pan
+pet	pet
 pik	pik
 pin	pin
 pit	pit
@@ -528,6 +536,7 @@ zuk	zuk
 zum	zam
 zup	zap
 zyu	zyu
+aang	aang
 baai	baai
 baak	baak
 baan	baan
@@ -634,6 +643,8 @@ dyut	dyut
 faai	faai
 faan	faan
 faat	faat
+fang	fang
+fing	fing
 fong	fong
 foon	fun
 foot	fut
@@ -695,7 +706,11 @@ huet	hyut
 hung	hung
 hyun	hyun
 hyut	hyut
+jaai	jaai
 jaak	jaak
+jaam	jaam
+jaap	jaap
+jaau	jaau
 jeng	jeng
 jeoi	jeoi
 jeok	joek
@@ -714,8 +729,10 @@ jung	jung
 jyun	jyun
 jyut	jyut
 kaai	kaai
+kaat	kaat
 kaau	kaau
 kang	kang
+keng	keng
 keoi	keoi
 keok	koek
 keoy	keoi
@@ -806,6 +823,7 @@ ngap	ngap
 ngat	ngat
 ngau	ngau
 ngen	ngan
+ngit	ngit
 ngoi	ngoi
 ngok	ngok
 ngon	ngon
@@ -935,7 +953,11 @@ wang	wang
 wing	wing
 wong	wong
 woon	wun
+yaai	jaai
 yaak	jaak
+yaam	jaam
+yaap	jaap
+yaau	jaau
 yeng	jeng
 yeoi	jeoi
 yeok	joek

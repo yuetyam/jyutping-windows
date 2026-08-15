@@ -28,6 +28,7 @@ api	API
 apk	APK
 appkit	AppKit
 apple	Apple
+appleid	Apple ID
 appletv	Apple TV
 appstore	App Store
 arkts	ArkTS
@@ -152,19 +153,17 @@ foxconn	Foxconn
 fps	FPS
 freebsd	FreeBSD
 fsr	FSR
-fujifilm	Fujifilm
 gboard	Gboard
 gdp	GDP
 gemini	Gemini
 git	Git
-githu	GitHub
 github	GitHub
-gitli	GitLib
 gitlib	GitLib
 gmail	Gmail
 gmail	gmail.com
 gnu	GNU
 gnupg	GnuPG
+golang	Golang
 goldengate	Golden Gate
 goodnotes	Goodnotes
 google	Google
@@ -198,6 +197,7 @@ hi	Hi
 hidpi	HiDPI
 hifi	Hi-Fi
 hires	Hi-Res
+homebrew	Homebrew
 homekit	HomeKit
 homepod	HomePod
 homepodmini	HomePod mini
@@ -280,6 +280,8 @@ macbook	MacBook
 macbookair	MacBook Air
 macbookneo	MacBook Neo
 macbookpro	MacBook Pro
+macintosh	Macintosh
+macintoshhd	Macintosh HD
 macmini	Mac mini
 macos	macOS
 macosx	Mac OS X
@@ -306,12 +308,8 @@ mcp	MCP
 medium	medium
 metalfx	MetalFX
 microled	microLED
-micros	Microsoft
-microso	Microsoft
-microsof	Microsoft
 microsoft	Microsoft
 miniled	miniLED
-misans	MiSans
 monterey	Monterey
 musickit	MusicKit
 myos	MyOS
@@ -529,6 +527,7 @@ widgetkit	WidgetKit
 wifi	Wi-Fi
 windows	Windows
 winui	WinUI
+woff	WOFF
 word	Word
 word	word
 wordpress	WordPress
@@ -602,6 +601,7 @@ adhd	ADHD
 agent	agent
 agents	agents
 auth	auth
+bb	BB
 bbc	BBC
 bbq	BBQ
 boomer	boomer
@@ -611,6 +611,7 @@ codebase	codebase
 codebases	codebases
 genz	Gen Z
 goodman	Goodman
+io	io
 lgbt	LGBT
 lgbtq	LGBTQ
 lgbtqia	LGBTQIA
@@ -6676,7 +6677,6 @@ architectural	architectural
 louisville	louisville
 depend	depend
 differ	differ
-macintosh	macintosh
 movements	movements
 ranging	ranging
 monica	monica
@@ -14966,7 +14966,6 @@ expire	expire
 flair	flair
 fossils	fossils
 fugitive	fugitive
-gpa	gpa
 greenwich	greenwich
 gujarat	gujarat
 hah	hah

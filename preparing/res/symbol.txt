@@ -542,9 +542,6 @@
 1	170000	1FAEA	咩話	me1 waa2
 1	170000	1FAEA	不知所措	bat1 zi1 so2 cou3
 1	170000	1FAEA	慌張	fong1 zoeng1
-1	170000	1FAEA	驚	geng1
-1	170000	1FAEA	驚怕	ging1 paa3
-1	170000	1FAEA	害怕	hoi6 paa3
 1	170000	1FAEA	尷尬	gaam1 gaai3
 1	170000	1FAEA	彷徨	pong4 wong4
 1	170000	1FAEA	無所適從	mou4 so2 sik1 cung4
@@ -552,11 +549,8 @@
 1	170000	1FAEA	懵	mung2
 1	170000	1FAEA	好懵	hou2 mung2
 1	170000	1FAEA	震驚	zan3 ging1
-1	170000	1FAEA	奇怪	kei4 gwaai3
-1	170000	1FAEA	難以置信	naan4 ji5 zi3 seon3
 1	170000	1FAEA	困惑	kwan3 waak6
 1	170000	1FAEA	大鑊	daai6 wok6
-1	170000	1FAEA	乖巧	gwaai1 haau2
 1	110000	1F634	睏覺	kwan3 gaau3
 1	110000	1F634	睏覺	fan3 gaau3
 1	110000	1F634	睏覺	han3 gaau3
@@ -804,7 +798,6 @@
 1	110000	1F44C	可	ho2
 1	110000	1F44C	得	dak1
 1	110000	1F90C	捏	nip6
-1	110000	1F90C	意大利手勢	ji3 daai6 lei6 sau2 sai3
 1	110000	1F90F	捏	nip6
 1	140000	1FAF3	覆手	fuk1 sau2
 1	140000	1FAF3	𢫏	kam2
@@ -1647,7 +1640,6 @@
 1	110000	1F6B6.200D.2640.FE0F	行路	haang4 lou6
 1	110000	1F6B6.200D.2640.FE0F	步行	bou6 hang4
 1	110000	1F6B6.200D.2640.FE0F	向左行	hoeng3 zo2 haang4
-1	110000	1F6B6.200D.2640.FE0F	行	haang4
 1	110000	1F6B6	中性行人	zung1 sing3 hang4 jan4
 1	110000	1F6B6.200D.2642.FE0F	男行人	naam4 hang4 jan4
 1	110000	1F6B6.200D.2642.FE0F	男路人	naam4 lou6 jan4
@@ -1658,7 +1650,6 @@
 1	110000	1F6B6.200D.2642.FE0F	行路	haang4 lou6
 1	110000	1F6B6.200D.2642.FE0F	步行	bou6 hang4
 1	110000	1F6B6.200D.2642.FE0F	向左行	hoeng3 zo2 haang4
-1	110000	1F6B6.200D.2642.FE0F	行	haang4
 1	150100	1F6B6.200D.2640.FE0F.200D.27A1.FE0F	女行人	neoi5 hang4 jan4
 1	150100	1F6B6.200D.2640.FE0F.200D.27A1.FE0F	女路人	neoi5 lou6 jan4
 1	150100	1F6B6.200D.2640.FE0F.200D.27A1.FE0F	行人女	hang4 jan4 neoi5
@@ -1668,7 +1659,6 @@
 1	150100	1F6B6.200D.2640.FE0F.200D.27A1.FE0F	行路	haang4 lou6
 1	150100	1F6B6.200D.2640.FE0F.200D.27A1.FE0F	步行	bou6 hang4
 1	150100	1F6B6.200D.2640.FE0F.200D.27A1.FE0F	向右行	hoeng3 jau6 haang4
-1	150100	1F6B6.200D.2640.FE0F.200D.27A1.FE0F	行	haang4
 1	150100	1F6B6.200D.27A1.FE0F	中性行人	zung1 sing3 hang4 jan4
 1	150100	1F6B6.200D.2642.FE0F.200D.27A1.FE0F	男行人	naam4 hang4 jan4
 1	150100	1F6B6.200D.2642.FE0F.200D.27A1.FE0F	男路人	naam4 lou6 jan4
@@ -1679,7 +1669,6 @@
 1	150100	1F6B6.200D.2642.FE0F.200D.27A1.FE0F	行路	haang4 lou6
 1	150100	1F6B6.200D.2642.FE0F.200D.27A1.FE0F	步行	bou6 hang4
 1	150100	1F6B6.200D.2642.FE0F.200D.27A1.FE0F	向右行	hoeng3 jau6 haang4
-1	150100	1F6B6.200D.2642.FE0F.200D.27A1.FE0F	行	haang4
 1	110000	1F469.200D.1F9AF	女盲人	neoi5 maang4 jan4
 1	110000	1F469.200D.1F9AF	盲人女	maang4 jan4 neoi5
 1	110000	1F469.200D.1F9AF	盲女	maang4 neoi5
@@ -3688,7 +3677,6 @@
 4	110000	1F3AF	一語中的	jat1 jyu5 zung3 dik1
 4	110000	1F3AF	正中紅心	zing3 zung3 hung4 sam1
 4	110000	1F3AF	正中	zing3 zung3
-4	110000	1F3AF	中	zung3
 4	110000	1F3AF	中肯	zung3 hang2
 4	110000	1F3AF	正正係	zing3 zing3 hai6
 4	110000	1F3AF	目標	muk6 biu1
@@ -5504,11 +5492,7 @@
 7	110000	1F0CF	打牌	daa2 paai4
 7	110000	1F3B4	花紙牌	faa1 zi2 paai4
 7	110000	1F3B4	遊戲牌	jau4 hei3 paai4
-7	110000	1F004	麻雀	maa4 zoek2
-7	110000	1F004	麻雀	maa4 zoek3
-7	110000	1F004	麻將	maa4 zoeng3
 7	110000	1F004	紅中	hung4 zung1
-7	110000	1F004	中	zung1
 7	110000	1F550	一點正	jat1 dim2 zing3
 7	110000	1F550	一點鐘	jat1 dim2 zung1
 7	110000	1F550	一點	jat1 dim2
@@ -5661,6 +5645,7 @@
 8	110000	1F1EA.1F1F7	厄立特里亞	ak1 laap6 dak6 lei5 aa3
 8	110000	1F1EA.1F1EA	愛沙尼亞	oi3 saa1 nei4 aa3
 8	110000	1F1F8.1F1FF	斯威士蘭	si1 wai1 si6 laan4
+8	110000	1F1F8.1F1FF	史瓦帝尼	si2 ngaa5 dai3 nei4
 8	110000	1F1EA.1F1F9	埃塞俄比亞	oi1 coi3 ngo4 bei2 aa3
 8	110000	1F1EA.1F1FA	歐盟	au1 mang4
 8	110000	1F1EA.1F1FA	歐洲聯盟	au1 zau1 lyun4 mang4
@@ -5709,6 +5694,7 @@
 8	110000	1F1EE.1F1F2	馬恩島	maa5 jan1 dou2
 8	110000	1F1EE.1F1F1	以色列	ji5 sik1 lit6
 8	110000	1F1EE.1F1F9	意大利	ji3 daai6 lei6
+8	110000	1F1EE.1F1F9	義大利	ji6 daai6 lei6
 8	110000	1F1EF.1F1F2	牙買加	ngaa4 maai5 gaa1
 8	110000	1F1EF.1F1F5	日本	jat6 bun2
 8	110000	1F1EF.1F1F5	日本國	jat6 bun2 gwok3
@@ -6108,24 +6094,18 @@
 10	110000	5382	廠字邊	cong2 zi6 bin1
 10	110000	5382	廠字旁	cong2 zi6 pong4
 10	110000	5382	廠字頭	cong2 zi6 tau4
-10	110000	393	大寫伽瑪	daai6 se2 gaa1 maa5
-10	110000	393	伽瑪	gaa1 maa5
-10	110000	3B3	小寫伽瑪	siu2 se2 gaa1 maa5
-10	110000	3B3	伽瑪	gaa1 maa5
-10	110000	3A0	大寫派	daai6 se2 paai3
-10	110000	3A0	派	paai3
 10	110000	3A0	連乘符號	lin4 sing4 fu4 hou6
 10	110000	3A0	連乘	lin4 sing4
 10	110000	3A0	求積符號	kau4 zik1 fu4 hou6
 10	110000	3A0	求積	kau4 zik1
-10	110000	3C0	小寫派	siu2 se2 paai3
-10	110000	3C0	派	paai3
-10	110000	3C0	圓周率	jyun4 zau1 leot6
-10	110000	3C0	圓周率	jyun4 zau1 leot2
 10	110000	3A3	累加符號	leoi5 gaa1 fu4 hou6
 10	110000	3A3	累加	leoi5 gaa1
 10	110000	3A3	求和符號	kau4 wo4 fu4 hou6
 10	110000	3A3	求和	kau4 wo4
+10	110000	3B3	伽瑪	gaa1 maa5
+10	110000	3C0	派	paai3
+10	110000	3C0	圓周率	jyun4 zau1 leot6
+10	110000	3C0	圓周率	jyun4 zau1 leot2
 10	110000	2318	命令	ming6 ling6
 10	110000	2325	選項	syun2 hong6
 10	110000	2387	轉換鍵	zyun2 wun6 gin6
@@ -6220,15 +6200,13 @@
 10	110000	1F029	冬	dung1
 10	110000	1F02A	百搭	baak3 daap3
 10	110000	1F02B	麻雀背面	maa4 zoek3 bui3 min6
-10	110000	1F02B	麻雀	maa4 zoek2
-10	110000	1F02B	麻雀	maa4 zoek3
 10	110000	F8FF	蘋果	ping4 gwo2
-10	110000	262E	和平	wo4 ping4
-10	110000	262E	和平標誌	wo4 ping4 biu1 zi3
-10	110000	262F	陰陽	jam1 joeng4
-10	110000	262F	太極	taai3 gik6
-10	110000	262F	兩儀	loeng5 ji4
-10	110000	262F	道教	dou6 gaau3
+10	110000	262E.FE0E	和平	wo4 ping4
+10	110000	262E.FE0E	和平標誌	wo4 ping4 biu1 zi3
+10	110000	262F.FE0E	陰陽	jam1 joeng4
+10	110000	262F.FE0E	太極	taai3 gik6
+10	110000	262F.FE0E	兩儀	loeng5 ji4
+10	110000	262F.FE0E	道教	dou6 gaau3
 10	110000	2742	青天白日	cing1 tin1 baak6 jat6
 10	110000	2122	商標	soeng1 biu1
 10	110000	2120	服務商標	fuk6 mou6 soeng1 biu1
@@ -6323,9 +6301,9 @@
 10	110000	2715	錯	co3
 10	110000	2715	誤	ng6
 10	110000	2715	唔啱	m4 ngaam1
-10	110000	2611	勾選	ngau1 syun2
-10	110000	2611	剔選	tik1 syun2
-10	110000	2611	選擇	syun2 zaak6
+10	110000	2611.FE0E	勾選	ngau1 syun2
+10	110000	2611.FE0E	剔選	tik1 syun2
+10	110000	2611.FE0E	選擇	syun2 zaak6
 10	110000	2612	叉選	caa1 syun2
 10	110000	2612	交叉	gaau1 caa1
 10	110000	2612	交叉	kaau1 caa1
