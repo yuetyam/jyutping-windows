@@ -74,6 +74,7 @@
     <ClInclude Include="Candidate.h" />
     <ClInclude Include="Converter.h" />
     <ClInclude Include="CoreImeEngine.h" />
+    <ClInclude Include="ExtraEntry.h" />
     <ClInclude Include="InputEngine.h" />
     <ClInclude Include="InputMemory.h" />
     <ClInclude Include="ImeDatabase.h" />
@@ -125,6 +126,7 @@
     <ClCompile Include="Globals.cpp" />
     <ClCompile Include="Candidate.cpp" />
     <ClCompile Include="Converter.cpp" />
+    <ClCompile Include="ExtraEntry.cpp" />
     <ClCompile Include="InputEngineCangjie.cpp" />
     <ClCompile Include="InputEngine.cpp" />
     <ClCompile Include="InputEngineFacade.cpp" />

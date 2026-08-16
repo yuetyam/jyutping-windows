@@ -1,10 +1,13 @@
 #include "CoreImeEngine.h"
 #include "CharacterStandard.h"
+#include "ExtraEntry.h"
 #include "Logger.h"
 
 #include <algorithm>
 
 namespace {
+
+constexpr size_t MaxCharCount = 9;
 
 int QueryLimit(std::optional<int> limit, int defaultLimit)
 {
@@ -584,11 +587,13 @@ std::vector<Lexicon> CoreImeEngine::Dispatch(
     size_t aliasCount = FirstAliasCount(segmentation);
     if (aliasCount == 0 && deepSearch)
     {
-        lexicons = ProcessSlices(syllableKeys, syllableText, std::nullopt, lexiconQuery);
+        lexicons = ExtraEntry::Search(keys);
+        Append(lexicons, ProcessSlices(syllableKeys, syllableText, std::nullopt, lexiconQuery));
     }
     else if (aliasCount == 0)
     {
-        lexicons = AnchorsMatch(syllableKeys, syllableText, std::nullopt, &lexiconQuery);
+        lexicons = ExtraEntry::Search(keys);
+        Append(lexicons, AnchorsMatch(syllableKeys, syllableText, std::nullopt, &lexiconQuery));
     }
     else if ((aliasCount == 1 && syllableKeys.size() > 1) || syllableKeys.size() != keys.size())
     {
@@ -647,7 +652,7 @@ std::vector<Lexicon> CoreImeEngine::Search(
         int prefixesLimit = limit ? 200 : 500;
         for (const Scheme& scheme : segmentation)
         {
-            if (scheme.empty() || scheme.size() > 9)
+            if (scheme.empty() || scheme.size() > MaxCharCount)
             {
                 continue;
             }
@@ -706,7 +711,7 @@ std::vector<Lexicon> CoreImeEngine::Search(
     {
         for (size_t number = inputLength - 1; number > 0; number--)
         {
-            if (number > 9)
+            if (number > MaxCharCount)
             {
                 continue;
             }
@@ -768,6 +773,10 @@ std::vector<Lexicon> CoreImeEngine::Search(
 
     std::vector<Lexicon> fullInput;
     Append(fullInput, idealQueried);
+    if (idealQueried.empty())
+    {
+        Append(fullInput, ExtraEntry::Search(keys));
+    }
     Append(fullInput, anchorsMatched);
     Append(fullInput, prefixMatched);
     Append(fullInput, gainedMatched);
@@ -841,7 +850,7 @@ std::vector<Lexicon> CoreImeEngine::Query(
     {
         for (const Scheme& scheme : segmentation)
         {
-            if (scheme.size() <= 9)
+            if (scheme.size() <= MaxCharCount)
             {
                 Append(result, Perform(scheme, limit, lexiconQuery));
             }
@@ -859,7 +868,7 @@ std::vector<Lexicon> CoreImeEngine::Query(
         {
             for (size_t count = scheme.size(); count > 0; count--)
             {
-                if (count <= 9)
+                if (count <= MaxCharCount)
                 {
                     Append(result, Perform(PrefixScheme(scheme, count), limit, lexiconQuery));
                 }
@@ -894,29 +903,20 @@ std::vector<Lexicon> CoreImeEngine::ProcessSlices(
     size_t inputLength = keys.size();
     std::vector<Lexicon> result;
 
-    for (size_t number = 0; number < inputLength; number++)
+    for (size_t leadingLength = inputLength; leadingLength > 0; leadingLength--)
     {
-        size_t leadingLength = inputLength - number;
-        std::vector<VirtualInputKey> leadingKeys = Prefix(keys, leadingLength);
-        std::wstring leadingText = TextFromKeys(leadingKeys);
-
-        for (const Lexicon& item : SpellMatch(
-            leadingKeys,
-            static_cast<int64_t>(leadingKeys.size()),
-            leadingText,
-            std::nullopt,
-            limit,
-            &lexiconQuery))
+        if (leadingLength > MaxCharCount)
         {
-            result.push_back(Modify(item, keys, text, inputLength));
+            continue;
         }
+        std::vector<VirtualInputKey> leadingKeys = Prefix(keys, leadingLength);
 
         std::vector<Lexicon> anchorsMatched;
-        for (const Lexicon& item : AnchorsMatch(leadingKeys, leadingText, adjustedLimit, &lexiconQuery))
+        for (const Lexicon& item : AnchorsMatch(leadingKeys, std::nullopt, adjustedLimit, &lexiconQuery))
         {
             anchorsMatched.push_back(Modify(item, keys, text, inputLength));
         }
-        anchorsMatched = First(Sorted(anchorsMatched), 72);
+        anchorsMatched = First(Sorted(anchorsMatched), 50);
         for (const Lexicon& item : anchorsMatched)
         {
             result.push_back(item);
@@ -1220,7 +1220,7 @@ std::vector<Lexicon> CoreImeEngine::AnchorsMatch(
     std::optional<int> limit,
     const ImeDatabase::LexiconQuery* lexiconQuery) const
 {
-    if (keys.empty() || keys.size() > 9)
+    if (keys.empty() || keys.size() > MaxCharCount)
     {
         return std::vector<Lexicon>();
     }

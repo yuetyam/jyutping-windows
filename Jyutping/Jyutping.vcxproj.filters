@@ -164,6 +164,9 @@
     <ClInclude Include="ImeTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ExtraEntry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="InputEngine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -332,6 +335,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ImeTypes.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ExtraEntry.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="InputEngine.cpp">
