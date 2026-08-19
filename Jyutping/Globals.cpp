@@ -521,15 +521,29 @@ BOOL UpdateModifiers(WPARAM wParam, LPARAM lParam)
         break;
     }
 
-    if (!(sksMenu & 0x8000))
+    // TSF may offer the chord key without first offering its modifier key.
+    // Keep the generic modifier flags synchronized with the keyboard state.
+    if (sksMenu & 0x8000)
+    {
+        ModifiersValue |= TF_MOD_ALT;
+    }
+    else
     {
         ModifiersValue &= ~TF_MOD_ALLALT;
     }
-    if (!(sksCtrl & 0x8000))
+    if (sksCtrl & 0x8000)
+    {
+        ModifiersValue |= TF_MOD_CONTROL;
+    }
+    else
     {
         ModifiersValue &= ~TF_MOD_ALLCONTROL;
     }
-    if (!(sksShft & 0x8000))
+    if (sksShft & 0x8000)
+    {
+        ModifiersValue |= TF_MOD_SHIFT;
+    }
+    else
     {
         ModifiersValue &= ~TF_MOD_ALLSHIFT;
     }
