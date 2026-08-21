@@ -817,26 +817,22 @@ void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsE
     }
     else if (IsEqualGUID(rguid, _PreservedKey_CharacterVariantTraditional.Guid))
     {
-        _settings.characterVariant = CharacterVariant::Traditional;
-        _settingsStore.SaveCharacterVariant(_settings.characterVariant);
+        SetCharacterVariant(CharacterVariant::Traditional);
         *pIsEaten = TRUE;
     }
     else if (IsEqualGUID(rguid, _PreservedKey_CharacterVariantHongKong.Guid))
     {
-        _settings.characterVariant = CharacterVariant::HongKong;
-        _settingsStore.SaveCharacterVariant(_settings.characterVariant);
+        SetCharacterVariant(CharacterVariant::HongKong);
         *pIsEaten = TRUE;
     }
     else if (IsEqualGUID(rguid, _PreservedKey_CharacterVariantTaiwan.Guid))
     {
-        _settings.characterVariant = CharacterVariant::Taiwan;
-        _settingsStore.SaveCharacterVariant(_settings.characterVariant);
+        SetCharacterVariant(CharacterVariant::Taiwan);
         *pIsEaten = TRUE;
     }
     else if (IsEqualGUID(rguid, _PreservedKey_CharacterVariantSimplified.Guid))
     {
-        _settings.characterVariant = CharacterVariant::Simplified;
-        _settingsStore.SaveCharacterVariant(_settings.characterVariant);
+        SetCharacterVariant(CharacterVariant::Simplified);
         *pIsEaten = TRUE;
     }
     else
