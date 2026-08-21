@@ -60,6 +60,8 @@ public:
     void OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsEaten, _In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
     BOOL ShouldHandleInputMethodModePreservedKey(REFGUID rguid);
     HRESULT ToggleInputMethodMode(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
+    HRESULT SetInputMethodMode(InputMethodMode mode);
+    InputMethodMode CurrentInputMethodMode() const { return _settings.inputMethodMode; }
     BOOL IsCharacterVariantPreservedKey(REFGUID rguid) const;
 
     BOOL IsCharacterFormConvertible(WCHAR wch);

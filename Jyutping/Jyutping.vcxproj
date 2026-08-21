@@ -62,6 +62,7 @@
     <ClInclude Include="JyutpingBaseStructure.h" />
     <ClInclude Include="JyutpingStructureArray.h" />
     <ClInclude Include="Localization.h" />
+    <ClInclude Include="OptionsView.h" />
     <ClInclude Include="PinyinSegmenter.h" />
     <ClInclude Include="SearchCandidateProvider.h" />
     <ClInclude Include="Segmenter.h" />
@@ -102,6 +103,7 @@
     <ClCompile Include="ButtonWindow.cpp" />
     <ClCompile Include="CandidateListUIPresenter.cpp" />
     <ClCompile Include="CandidateWindow.cpp" />
+    <ClCompile Include="OptionsView.cpp" />
     <ClCompile Include="CharacterStandard.cpp" />
     <ClCompile Include="Compartment.cpp" />
     <ClCompile Include="Composition.cpp" />

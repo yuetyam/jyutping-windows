@@ -871,6 +871,23 @@ HRESULT CCompositionProcessorEngine::ToggleInputMethodMode(_In_ ITfThreadMgr *pT
     return S_OK;
 }
 
+HRESULT CCompositionProcessorEngine::SetInputMethodMode(InputMethodMode mode)
+{
+    if (_pTextService == nullptr)
+    {
+        return E_UNEXPECTED;
+    }
+    CCompartment keyboardOpen(_pTextService->_GetThreadMgr(), _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
+    HRESULT hr = keyboardOpen._SetCompartmentBOOL(KeyboardOpenFromInputMethodMode(mode));
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    _settings.inputMethodMode = mode;
+    _settingsStore.SaveInputMethodMode(mode);
+    return S_OK;
+}
+
 BOOL CCompositionProcessorEngine::IsCharacterVariantPreservedKey(REFGUID rguid) const
 {
     return IsEqualGUID(rguid, _PreservedKey_CharacterVariantTraditional.Guid) ||

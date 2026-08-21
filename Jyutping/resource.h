@@ -51,6 +51,8 @@
 #define IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  54
 #define IDS_MENU_MORE_SETTINGS                 55
 #define IDS_LANGBAR_INPUT_MODE_TOOLTIP         56
+#define IDS_OPTIONS_INPUT_MODE_CANTONESE       57
+#define IDS_OPTIONS_INPUT_MODE_ABC             58
 #define IDR_VERSION                            1
 
 // Next default values for new objects

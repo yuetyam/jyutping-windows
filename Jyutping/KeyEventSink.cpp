@@ -49,6 +49,12 @@ BOOL IsPageNavigationFunction(KEYSTROKE_FUNCTION function)
     return function == FUNCTION_MOVE_PAGE_UP || function == FUNCTION_MOVE_PAGE_DOWN;
 }
 
+BOOL IsOptionsShortcut(UINT code)
+{
+    return code == VK_OEM_3 &&
+        Global::CheckModifiers(Global::ModifiersValue, TF_MOD_CONTROL | TF_MOD_SHIFT);
+}
+
 } // namespace
 
 // Because the code mostly works with VKeys, here map a WCHAR back to a VKKey for certain
@@ -145,6 +151,16 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
         {
             *pwch = wch;
         }
+    }
+
+    if (IsOptionsShortcut(*pCodeOut))
+    {
+        return TRUE;
+    }
+
+    if (_optionsMode)
+    {
+        return TRUE;
     }
 
     // In ABC mode, don't eat keys, with the exception of touch keyboard special keys.
@@ -341,6 +357,11 @@ STDAPI CJyutping::OnTestKeyDown(ITfContext *pContext, WPARAM wParam, LPARAM lPar
     UINT code = 0;
     *pIsEaten = _IsKeyEaten(pContext, (UINT)wParam, &code, &wch, &KeystrokeState);
 
+    if (IsOptionsShortcut(code) || _optionsMode)
+    {
+        *pIsEaten = TRUE;
+    }
+
     if (KeystrokeState.Category == CATEGORY_INVOKE_COMPOSITION_EDIT_SESSION)
     {
         //
@@ -365,6 +386,18 @@ STDAPI CJyutping::OnTestKeyDown(ITfContext *pContext, WPARAM wParam, LPARAM lPar
 STDAPI CJyutping::OnKeyDown(ITfContext *pContext, WPARAM wParam, LPARAM lParam, BOOL *pIsEaten)
 {
     Global::UpdateModifiers(wParam, lParam);
+
+    UINT rawCode = static_cast<UINT>(wParam);
+    if (IsOptionsShortcut(rawCode))
+    {
+        *pIsEaten = pContext != nullptr && !_IsKeyboardDisabled() && SUCCEEDED(ToggleOptionsMode(pContext));
+        return S_OK;
+    }
+    if (_optionsMode)
+    {
+        *pIsEaten = _HandleOptionsKey(pContext, rawCode);
+        return S_OK;
+    }
 
     _KEYSTROKE_STATE KeystrokeState;
     WCHAR wch = '\0';

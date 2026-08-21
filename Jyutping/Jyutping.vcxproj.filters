@@ -194,6 +194,9 @@
     <ClInclude Include="Localization.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="OptionsView.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ActiveLanguageProfileNotifySink.cpp">
@@ -206,6 +209,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CandidateWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="OptionsView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CharacterStandard.cpp">

@@ -894,6 +894,96 @@ HRESULT CCandidateListUIPresenter::_StartCandidateList(TfClientId tfClientId, _I
     return hr;
 }
 
+HRESULT CCandidateListUIPresenter::_StartOptions(_In_ ITfContext *pContextDocument, TfEditCookie ec)
+{
+    if (pContextDocument == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    ITfRange* pRange = nullptr;
+    TF_SELECTION selection = {};
+    ULONG fetched = 0;
+    HRESULT hr = pContextDocument->GetSelection(ec, TF_DEFAULT_SELECTION, 1, &selection, &fetched);
+    if (SUCCEEDED(hr) && fetched == 1 && selection.range != nullptr)
+    {
+        pRange = selection.range;
+    }
+
+    if (pRange != nullptr)
+    {
+        hr = _StartLayout(pContextDocument, ec, pRange);
+        pRange->Release();
+    }
+    if (FAILED(hr) || fetched != 1)
+    {
+        return FAILED(hr) ? hr : E_FAIL;
+    }
+
+    hr = BeginUIElement();
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    hr = MakeCandidateWindow(pContextDocument);
+    if (FAILED(hr))
+    {
+        EndUIElement();
+        return hr;
+    }
+    Show(_isShowMode);
+
+    RECT textExtent = {};
+    if (SUCCEEDED(_GetTextExt(&textExtent)))
+    {
+        _LayoutChangeNotification(&textExtent);
+    }
+    return S_OK;
+}
+
+void CCandidateListUIPresenter::_EnterOptions(_In_reads_(10) const COptionsView::Row* rows, UINT selection)
+{
+    if (_pCandidateWnd != nullptr)
+    {
+        _pCandidateWnd->_SetOptions(rows, 10, selection);
+        _pCandidateWnd->_Show(TRUE);
+    }
+}
+
+void CCandidateListUIPresenter::_ExitOptions()
+{
+    if (_pCandidateWnd != nullptr)
+    {
+        _pCandidateWnd->_ClearOptions();
+    }
+}
+
+BOOL CCandidateListUIPresenter::_IsOptionsMode() const
+{
+    return _pCandidateWnd != nullptr && _pCandidateWnd->_IsOptionsMode();
+}
+
+UINT CCandidateListUIPresenter::_GetOptionsSelection() const
+{
+    return _pCandidateWnd != nullptr ? _pCandidateWnd->_GetOptionsSelection() : 0;
+}
+
+void CCandidateListUIPresenter::_MoveOptionsSelection(int offset)
+{
+    if (_pCandidateWnd != nullptr)
+    {
+        _pCandidateWnd->_MoveOptionsSelection(offset);
+    }
+}
+
+void CCandidateListUIPresenter::_SetOptionsSelection(UINT selection)
+{
+    if (_pCandidateWnd != nullptr)
+    {
+        _pCandidateWnd->_SetOptionsSelection(selection);
+    }
+}
+
 //+---------------------------------------------------------------------------
 //
 // _EndCandidateList
@@ -1240,6 +1330,11 @@ VOID CCandidateListUIPresenter::_LayoutDestroyNotification()
 
 HRESULT CCandidateListUIPresenter::_CandidateChangeNotification(_In_ enum CANDWND_ACTION action)
 {
+    if (action == CAND_OPTION_SELECT)
+    {
+        return _pTextService->_HandleOptionsSelection(_GetOptionsSelection());
+    }
+
     TfClientId tfClientId = _pTextService->_GetClientId();
 
     _KEYSTROKE_STATE KeyState;

@@ -36,4 +36,6 @@ BEGIN
     IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  "Simplified"
     IDS_MENU_MORE_SETTINGS                 "Jyutping v0.5.0"
     IDS_LANGBAR_INPUT_MODE_TOOLTIP         "Left-click to switch modes\nRight-click for more options"
+    IDS_OPTIONS_INPUT_MODE_CANTONESE       "Cantonese Mode"
+    IDS_OPTIONS_INPUT_MODE_ABC             "ABC Mode"
 END

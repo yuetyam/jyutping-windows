@@ -3,6 +3,7 @@
 #include "KeyHandlerEditSession.h"
 #include "JyutpingBaseStructure.h"
 #include "VirtualInputKey.h"
+#include "OptionsView.h"
 
 #include <string>
 #include <vector>
@@ -131,6 +132,13 @@ public:
     CCompositionProcessorEngine* GetCompositionProcessorEngine() { return (_pCompositionProcessorEngine); };
     void RefreshCandidateListAfterCharacterVariantChange();
     void RefreshCandidateWindowFontSizes();
+    BOOL IsOptionsMode() const { return _optionsMode; }
+    HRESULT ToggleOptionsMode(_In_ ITfContext *pContext);
+    HRESULT _HandleOptionsSelection(UINT row);
+    HRESULT _StartOptions(TfEditCookie ec, _In_ ITfContext *pContext);
+    HRESULT _ApplyOptionsSelection(TfEditCookie ec, _In_ ITfContext *pContext, UINT row);
+    BOOL _HandleOptionsKey(_In_ ITfContext *pContext, UINT code);
+    void _BuildOptionsRows(_Out_writes_(10) COptionsView::Row* rows);
 
     // comless helpers
     static HRESULT CreateInstance(REFCLSID rclsid, REFIID riid, _Outptr_result_maybenull_ LPVOID* ppv, _Out_opt_ HINSTANCE* phInst, BOOL isComLessMode);
@@ -245,6 +253,8 @@ private:
 
     CANDIDATE_MODE _candidateMode;
     CCandidateListUIPresenter *_pCandidateListUIPresenter;
+    BOOL _optionsMode;
+    BOOL _optionsStandalonePresenter;
 
     ITfDocumentMgr* _pDocMgrLastFocused;
 

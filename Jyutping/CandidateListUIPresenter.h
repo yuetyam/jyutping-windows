@@ -63,7 +63,14 @@ public:
     STDMETHODIMP FinalizeExactCompositionString();
 
     virtual HRESULT _StartCandidateList(TfClientId tfClientId, _In_ ITfDocumentMgr *pDocumentMgr, _In_ ITfContext *pContextDocument, TfEditCookie ec, _In_ ITfRange *pRangeComposition);
+    HRESULT _StartOptions(_In_ ITfContext *pContextDocument, TfEditCookie ec);
     void _EndCandidateList();
+    void _EnterOptions(_In_reads_(10) const COptionsView::Row* rows, UINT selection);
+    void _ExitOptions();
+    BOOL _IsOptionsMode() const;
+    UINT _GetOptionsSelection() const;
+    void _MoveOptionsSelection(int offset);
+    void _SetOptionsSelection(UINT selection);
 
     void _SetText(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList);
     void _ClearList();

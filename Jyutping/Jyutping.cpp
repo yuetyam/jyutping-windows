@@ -5,6 +5,44 @@
 #include "Logger.h"
 #include "CompositionProcessorEngine.h"
 #include "Compartment.h"
+#include "EditSession.h"
+#include "Localization.h"
+#include "Settings.h"
+#include "resource.h"
+
+namespace
+{
+class COptionsStartEditSession final : public CEditSessionBase
+{
+public:
+    COptionsStartEditSession(_In_ CJyutping *pTextService, _In_ ITfContext *pContext) :
+        CEditSessionBase(pTextService, pContext)
+    {
+    }
+
+    STDMETHODIMP DoEditSession(TfEditCookie ec) override
+    {
+        return _pTextService->_StartOptions(ec, _pContext);
+    }
+};
+
+class COptionsSelectionEditSession final : public CEditSessionBase
+{
+public:
+    COptionsSelectionEditSession(_In_ CJyutping *pTextService, _In_ ITfContext *pContext, UINT row) :
+        CEditSessionBase(pTextService, pContext), _row(row)
+    {
+    }
+
+    STDMETHODIMP DoEditSession(TfEditCookie ec) override
+    {
+        return _pTextService->_ApplyOptionsSelection(ec, _pContext, _row);
+    }
+
+private:
+    UINT _row;
+};
+}
 
 //+---------------------------------------------------------------------------
 //
@@ -70,6 +108,8 @@ CJyutping::CJyutping()
 
     _candidateMode = CANDIDATE_NONE;
     _pCandidateListUIPresenter = nullptr;
+    _optionsMode = FALSE;
+    _optionsStandalonePresenter = FALSE;
 
     _pDocMgrLastFocused = nullptr;
 
@@ -96,6 +136,202 @@ CJyutping::~CJyutping()
         _pCandidateListUIPresenter = nullptr;
     }
     DllRelease();
+}
+
+void CJyutping::_BuildOptionsRows(_Out_writes_(10) COptionsView::Row* rows)
+{
+    if (rows == nullptr)
+    {
+        return;
+    }
+    static const UINT resourceIds[10] = {
+        IDS_MENU_CHARACTER_VARIANT_TRADITIONAL,
+        IDS_MENU_CHARACTER_VARIANT_HONG_KONG,
+        IDS_MENU_CHARACTER_VARIANT_TAIWAN,
+        IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED,
+        IDS_MENU_CHARACTER_FORM_HALF_WIDTH,
+        IDS_MENU_CHARACTER_FORM_FULL_WIDTH,
+        IDS_MENU_PUNCTUATION_FORM_CANTONESE,
+        IDS_MENU_PUNCTUATION_FORM_ENGLISH,
+        IDS_OPTIONS_INPUT_MODE_CANTONESE,
+        IDS_OPTIONS_INPUT_MODE_ABC
+    };
+    static const WCHAR* fallbackLabels[10] = { L"Traditional", L"Hong Kong", L"Taiwan", L"Simplified", L"Half-width", L"Full-width", L"Cantonese", L"English", L"Cantonese", L"ABC" };
+    CharacterVariant variant = _pCompositionProcessorEngine ? _pCompositionProcessorEngine->CurrentCharacterVariant() : CharacterVariant::Traditional;
+    CharacterForm characterForm = _pCompositionProcessorEngine ? _pCompositionProcessorEngine->CurrentCharacterForm() : CharacterForm::HalfWidth;
+    PunctuationForm punctuationForm = _pCompositionProcessorEngine ? _pCompositionProcessorEngine->CurrentPunctuationForm() : PunctuationForm::Cantonese;
+    InputMethodMode inputMode = _pCompositionProcessorEngine ? _pCompositionProcessorEngine->CurrentInputMethodMode() : InputMethodMode::Cantonese;
+    const BOOL selected[10] = { variant == CharacterVariant::Traditional, variant == CharacterVariant::HongKong, variant == CharacterVariant::Taiwan, variant == CharacterVariant::Simplified, characterForm == CharacterForm::HalfWidth, characterForm == CharacterForm::FullWidth, punctuationForm == PunctuationForm::Cantonese, punctuationForm == PunctuationForm::English, inputMode == InputMethodMode::Cantonese, inputMode == InputMethodMode::ABC };
+    const UINT ids[10] = { COptionsView::CharacterTraditional, COptionsView::CharacterHongKong, COptionsView::CharacterTaiwan, COptionsView::CharacterSimplified, COptionsView::CharacterHalfWidth, COptionsView::CharacterFullWidth, COptionsView::PunctuationCantonese, COptionsView::PunctuationEnglish, COptionsView::InputCantonese, COptionsView::InputABC };
+    for (UINT index = 0; index < 10; ++index)
+    {
+        rows[index] = { ids[index], Localization::LoadStringOrFallback(resourceIds[index], fallbackLabels[index]), selected[index], index == 4 || index == 6 || index == 8 };
+    }
+}
+
+HRESULT CJyutping::ToggleOptionsMode(_In_ ITfContext *pContext)
+{
+    if (_optionsMode)
+    {
+        if (_pCandidateListUIPresenter)
+        {
+            _pCandidateListUIPresenter->_ExitOptions();
+            if (_optionsStandalonePresenter)
+            {
+                _pCandidateListUIPresenter->_EndCandidateList();
+                delete _pCandidateListUIPresenter;
+                _pCandidateListUIPresenter = nullptr;
+                _optionsStandalonePresenter = FALSE;
+            }
+        }
+        _optionsMode = FALSE;
+        return S_OK;
+    }
+    if (_pCandidateListUIPresenter != nullptr)
+    {
+        COptionsView::Row rows[10] = {};
+        _BuildOptionsRows(rows);
+        _pCandidateListUIPresenter->_EnterOptions(rows, 0);
+        _optionsMode = TRUE;
+        return S_OK;
+    }
+
+    if (pContext == nullptr || _pCompositionProcessorEngine == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+    COptionsStartEditSession *pEditSession = new (std::nothrow) COptionsStartEditSession(this, pContext);
+    if (pEditSession == nullptr)
+    {
+        return E_OUTOFMEMORY;
+    }
+    HRESULT editSessionResult = E_FAIL;
+    HRESULT hr = pContext->RequestEditSession(_tfClientId, pEditSession, TF_ES_SYNC | TF_ES_READ, &editSessionResult);
+    if (editSessionResult == TF_E_SYNCHRONOUS)
+    {
+        hr = pContext->RequestEditSession(_tfClientId, pEditSession, TF_ES_ASYNCDONTCARE | TF_ES_READ, &editSessionResult);
+    }
+    pEditSession->Release();
+    return FAILED(hr) ? hr : editSessionResult;
+}
+
+HRESULT CJyutping::_StartOptions(TfEditCookie ec, _In_ ITfContext *pContext)
+{
+    if (_optionsMode || pContext == nullptr || _pCompositionProcessorEngine == nullptr)
+    {
+        return _optionsMode ? S_OK : E_INVALIDARG;
+    }
+    if (_pCandidateListUIPresenter == nullptr)
+    {
+        _pCandidateListUIPresenter = new (std::nothrow) CCandidateListUIPresenter(this, Global::AtomCandidateWindow, CATEGORY_CANDIDATE, _pCompositionProcessorEngine->GetCandidateListIndexRange(), FALSE);
+        if (_pCandidateListUIPresenter == nullptr)
+        {
+            return E_OUTOFMEMORY;
+        }
+        HRESULT hr = _pCandidateListUIPresenter->_StartOptions(pContext, ec);
+        if (FAILED(hr))
+        {
+            delete _pCandidateListUIPresenter;
+            _pCandidateListUIPresenter = nullptr;
+            return hr;
+        }
+        _optionsStandalonePresenter = TRUE;
+    }
+    COptionsView::Row rows[10] = {};
+    _BuildOptionsRows(rows);
+    _pCandidateListUIPresenter->_EnterOptions(rows, 0);
+    _optionsMode = TRUE;
+    return S_OK;
+}
+
+HRESULT CJyutping::_HandleOptionsSelection(UINT row)
+{
+    if (!_optionsMode || _pCandidateListUIPresenter == nullptr || row >= 10)
+    {
+        return S_FALSE;
+    }
+    ITfContext* pContext = _pCandidateListUIPresenter->_GetContextDocument();
+    if (pContext == nullptr)
+    {
+        return E_UNEXPECTED;
+    }
+    COptionsSelectionEditSession *pEditSession = new (std::nothrow) COptionsSelectionEditSession(this, pContext, row);
+    if (pEditSession == nullptr)
+    {
+        return E_OUTOFMEMORY;
+    }
+    HRESULT editSessionResult = E_FAIL;
+    HRESULT hr = pContext->RequestEditSession(_tfClientId, pEditSession, TF_ES_ASYNCDONTCARE | TF_ES_READWRITE, &editSessionResult);
+    pEditSession->Release();
+    return FAILED(hr) ? hr : editSessionResult;
+}
+
+HRESULT CJyutping::_ApplyOptionsSelection(TfEditCookie ec, _In_ ITfContext *pContext, UINT row)
+{
+    if (!_optionsMode || _pCompositionProcessorEngine == nullptr || pContext == nullptr || row >= 10)
+    {
+        return S_FALSE;
+    }
+    if (row == COptionsView::InputABC &&
+        _pCompositionProcessorEngine->CurrentInputMethodMode() != InputMethodMode::ABC && _IsComposing())
+    {
+        ToggleOptionsMode(pContext);
+        HRESULT hr = _HandleCompositionFinalizeRaw(ec, pContext);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
+    }
+    switch (row)
+    {
+    case COptionsView::CharacterTraditional: _pCompositionProcessorEngine->SetCharacterVariant(CharacterVariant::Traditional); break;
+    case COptionsView::CharacterHongKong: _pCompositionProcessorEngine->SetCharacterVariant(CharacterVariant::HongKong); break;
+    case COptionsView::CharacterTaiwan: _pCompositionProcessorEngine->SetCharacterVariant(CharacterVariant::Taiwan); break;
+    case COptionsView::CharacterSimplified: _pCompositionProcessorEngine->SetCharacterVariant(CharacterVariant::Simplified); break;
+    case COptionsView::CharacterHalfWidth: _pCompositionProcessorEngine->SetCharacterForm(CharacterForm::HalfWidth); break;
+    case COptionsView::CharacterFullWidth: _pCompositionProcessorEngine->SetCharacterForm(CharacterForm::FullWidth); break;
+    case COptionsView::PunctuationCantonese: _pCompositionProcessorEngine->SetPunctuationForm(PunctuationForm::Cantonese); break;
+    case COptionsView::PunctuationEnglish: _pCompositionProcessorEngine->SetPunctuationForm(PunctuationForm::English); break;
+    case COptionsView::InputCantonese: _pCompositionProcessorEngine->SetInputMethodMode(InputMethodMode::Cantonese); break;
+    case COptionsView::InputABC: _pCompositionProcessorEngine->SetInputMethodMode(InputMethodMode::ABC); break;
+    default: return E_INVALIDARG;
+    }
+    if (_optionsMode)
+    {
+        ToggleOptionsMode(pContext);
+    }
+    return S_OK;
+}
+
+BOOL CJyutping::_HandleOptionsKey(_In_ ITfContext *pContext, UINT code)
+{
+    if (!_optionsMode || _pCandidateListUIPresenter == nullptr)
+    {
+        return FALSE;
+    }
+    if (code >= '1' && code <= '9')
+    {
+        _pCandidateListUIPresenter->_SetOptionsSelection(code - '1');
+        _HandleOptionsSelection(code - '1');
+        return TRUE;
+    }
+    if (code == '0')
+    {
+        _pCandidateListUIPresenter->_SetOptionsSelection(9);
+        _HandleOptionsSelection(9);
+        return TRUE;
+    }
+    switch (code)
+    {
+    case VK_UP: _pCandidateListUIPresenter->_MoveOptionsSelection(-1); return TRUE;
+    case VK_DOWN: _pCandidateListUIPresenter->_MoveOptionsSelection(1); return TRUE;
+    case VK_TAB: _pCandidateListUIPresenter->_MoveOptionsSelection(Global::CheckModifiers(Global::ModifiersValue, TF_MOD_SHIFT) ? -1 : 1); return TRUE;
+    case VK_RETURN:
+    case VK_SPACE: return SUCCEEDED(_HandleOptionsSelection(_pCandidateListUIPresenter->_GetOptionsSelection()));
+    case VK_ESCAPE:
+    case VK_BACK: ToggleOptionsMode(pContext); return TRUE;
+    default: return TRUE;
+    }
 }
 
 //+---------------------------------------------------------------------------

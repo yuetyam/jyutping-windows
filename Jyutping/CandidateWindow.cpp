@@ -220,6 +220,7 @@ CCandidateWindow::CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void* 
     _candidateFontSize = candidateFontSize;
     _numberFontSize = numberFontSize;
     _commentFontSize = commentFontSize;
+    _optionsMode = FALSE;
 }
 
 //+---------------------------------------------------------------------------
@@ -344,6 +345,16 @@ void CCandidateWindow::_ResizeWindow()
 {
     UINT dpi = GetDpiForWindow(_wndHandle);
     float scale = (float)dpi / USER_DEFAULT_SCREEN_DPI;
+
+    if (_optionsMode)
+    {
+        SetWindowPos(_wndHandle, nullptr, 0, 0, _optionsView.Width(dpi), _optionsView.Height(dpi), SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER);
+        if (_pVScrollBarWnd)
+        {
+            _pVScrollBarWnd->_Show(FALSE);
+        }
+        return;
+    }
 
     UINT currentPage = 0;
     _GetCurrentPage(&currentPage);
@@ -594,6 +605,51 @@ VOID CCandidateWindow::_SetFillColor(_In_ HBRUSH hBrush)
     _backgroundBrush = hBrush;
 }
 
+void CCandidateWindow::_SetOptions(_In_reads_(count) const COptionsView::Row* rows, UINT count, UINT selection)
+{
+    _optionsView.SetRows(rows, count);
+    _optionsView.SetSelection(selection);
+    _optionsMode = TRUE;
+    if (_pShadowWnd)
+    {
+        _pShadowWnd->_Show(FALSE);
+    }
+    _ResizeWindow();
+    _InvalidateRect();
+}
+
+void CCandidateWindow::_ClearOptions()
+{
+    _optionsMode = FALSE;
+    if (_pShadowWnd)
+    {
+        _pShadowWnd->_Show(TRUE);
+    }
+    _ResizeWindow();
+    _InvalidateRect();
+}
+
+void CCandidateWindow::_SetOptionsSelection(UINT selection)
+{
+    _optionsView.SetSelection(selection);
+    _InvalidateRect();
+}
+
+void CCandidateWindow::_MoveOptionsSelection(int offset)
+{
+    UINT selection = _optionsView.Selection();
+    if (offset < 0 && selection > 0)
+    {
+        --selection;
+    }
+    else if (offset > 0 && selection < 9)
+    {
+        ++selection;
+    }
+    _optionsView.SetSelection(selection);
+    _InvalidateRect();
+}
+
 //+---------------------------------------------------------------------------
 //
 // _WindowProcCallback
@@ -828,6 +884,11 @@ void CCandidateWindow::_HandleMouseMsg(_In_ UINT mouseMsg, _In_ POINT point)
 
 void CCandidateWindow::_OnPaint(_In_ HDC dcHandle, _In_ PAINTSTRUCT* pPaintStruct)
 {
+    if (_optionsMode)
+    {
+        _DrawOptions(dcHandle, &pPaintStruct->rcPaint);
+        return;
+    }
     SetBkMode(dcHandle, TRANSPARENT);
 
     if (!_pDirect2DRenderTarget)
@@ -850,6 +911,34 @@ void CCandidateWindow::_OnPaint(_In_ HDC dcHandle, _In_ PAINTSTRUCT* pPaintStruc
     _DrawList(dcHandle, currentPageIndex, &pPaintStruct->rcPaint);
 }
 
+void CCandidateWindow::_DrawOptions(_In_ HDC dcHandle, _In_ const RECT* prc)
+{
+    RECT clientRect = {};
+    _GetClientRect(&clientRect);
+    int savedDc = SaveDC(dcHandle);
+    if (prc != nullptr)
+    {
+        IntersectClipRect(dcHandle, prc->left, prc->top, prc->right, prc->bottom);
+    }
+    if (_pDirect2DRenderTarget && _pDWriteTextFormat && _pDWriteNumberFormat)
+    {
+        _pDirect2DRenderTarget->BindDC(dcHandle, prc);
+        _pDirect2DRenderTarget->BeginDraw();
+        _pDirect2DRenderTarget->SetTransform(D2D1::IdentityMatrix());
+        _pDirect2DRenderTarget->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
+        _optionsView.DrawD2D(_pDirect2DRenderTarget.Get(), _pDWriteTextFormat.Get(), _pDWriteNumberFormat.Get(), clientRect, GetDpiForWindow(_wndHandle));
+        _pDirect2DRenderTarget->EndDraw();
+    }
+    else
+    {
+        _optionsView.Draw(dcHandle, clientRect, _textColor, _backgroundColor, GetDpiForWindow(_wndHandle), _candidateFontSize, _numberFontSize);
+    }
+    if (savedDc != 0)
+    {
+        RestoreDC(dcHandle, savedDc);
+    }
+}
+
 //+---------------------------------------------------------------------------
 //
 // _OnLButtonDown
@@ -858,6 +947,16 @@ void CCandidateWindow::_OnPaint(_In_ HDC dcHandle, _In_ PAINTSTRUCT* pPaintStruc
 
 void CCandidateWindow::_OnLButtonDown(POINT pt)
 {
+    if (_optionsMode)
+    {
+        UINT row = _optionsView.RowFromPoint(pt, GetDpiForWindow(_wndHandle));
+        if (row != static_cast<UINT>(-1))
+        {
+            _optionsView.SetSelection(row);
+            _InvalidateRect();
+        }
+        return;
+    }
     RECT rcWindow = { 0, 0, 0, 0 };;
     _GetClientRect(&rcWindow);
 
@@ -918,6 +1017,19 @@ void CCandidateWindow::_OnLButtonDown(POINT pt)
 
 void CCandidateWindow::_OnLButtonUp(POINT pt)
 {
+    if (_optionsMode)
+    {
+        UINT row = _optionsView.RowFromPoint(pt, GetDpiForWindow(_wndHandle));
+        if (row != static_cast<UINT>(-1))
+        {
+            _optionsView.SetSelection(row);
+            if (_pfnCallback)
+            {
+                _pfnCallback(_pCallbackObject, CAND_OPTION_SELECT);
+            }
+        }
+        return;
+    }
     if (nullptr == _pVScrollBarWnd)
     {
         return;
@@ -945,6 +1057,12 @@ void CCandidateWindow::_OnLButtonUp(POINT pt)
 
 void CCandidateWindow::_OnMouseMove(POINT pt)
 {
+    if (_optionsMode)
+    {
+        _optionsView.SetHover(_optionsView.RowFromPoint(pt, GetDpiForWindow(_wndHandle)));
+        _InvalidateRect();
+        return;
+    }
     RECT rcWindow = { 0, 0, 0, 0 };
 
     _GetClientRect(&rcWindow);

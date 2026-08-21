@@ -5,10 +5,12 @@
 #include "ShadowWindow.h"
 #include "ScrollBarWindow.h"
 #include "JyutpingBaseStructure.h"
+#include "OptionsView.h"
 
 enum CANDWND_ACTION
 {
-    CAND_ITEM_SELECT
+    CAND_ITEM_SELECT,
+    CAND_OPTION_SELECT
 };
 
 typedef HRESULT (*CANDWNDCALLBACK)(void *pv, enum CANDWND_ACTION action);
@@ -48,6 +50,12 @@ public:
         return _currentSelection;
     }
     void _SetScrollInfo(_In_ int nMax, _In_ int nPage);
+    void _SetOptions(_In_reads_(count) const COptionsView::Row* rows, UINT count, UINT selection);
+    void _ClearOptions();
+    BOOL _IsOptionsMode() const { return _optionsMode; }
+    UINT _GetOptionsSelection() const { return _optionsView.Selection(); }
+    void _SetOptionsSelection(UINT selection);
+    void _MoveOptionsSelection(int offset);
 
     DWORD _GetCandidateString(_In_ int iIndex, _Outptr_result_maybenull_z_ const WCHAR **ppwchCandidateString);
     DWORD _GetSelectedCandidateString(_Outptr_result_maybenull_ const WCHAR **ppwchCandidateString);
@@ -85,6 +93,7 @@ private:
     void _DeleteShadowWnd();
     void _DeleteVScrollBarWnd();
     void _InitializeTextFormats(_In_ HWND wndHandle);
+    void _DrawOptions(_In_ HDC dcHandle, _In_ const RECT* prc);
 
 private:
     // Selection and display state
@@ -128,4 +137,6 @@ private:
     DWORD _candidateFontSize;
     DWORD _numberFontSize;
     DWORD _commentFontSize;
+    COptionsView _optionsView;
+    BOOL _optionsMode;
 };

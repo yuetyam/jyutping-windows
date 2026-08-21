@@ -77,6 +77,8 @@ VOID CJyutping::_DeleteCandidateList(BOOL isForce, _In_opt_ ITfContext *pContext
 
         _candidateMode = CANDIDATE_NONE;
     }
+    _optionsMode = FALSE;
+    _optionsStandalonePresenter = FALSE;
 }
 
 //+---------------------------------------------------------------------------
