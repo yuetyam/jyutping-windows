@@ -9,10 +9,15 @@
 
 namespace
 {
-constexpr int OptionsPadding = 12;
 constexpr int OptionsNumberWidth = 24;
-constexpr int OptionsSeparatorHeight = 7;
+constexpr int OptionsSeparatorHeight = 6;
 constexpr int OptionsRowHeight = 30;
+
+// Reuse the candidate-view HStack row layout constants (Define.h):
+// LeftPadding | Number | Spacing | Label | Spacing | Checkmark | RightPadding
+constexpr int OptionsLeftPadding = static_cast<int>(CANDIDATE_ROW_PADDING_LEFT);
+constexpr int OptionsRightPadding = static_cast<int>(CANDIDATE_ROW_PADDING_LEFT);
+constexpr int OptionsTextSpacing = static_cast<int>(CANDIDATE_NUMBER_SPACING);
 
 static D2D1_COLOR_F ColorRefToD2DColor(COLORREF color)
 {
@@ -111,7 +116,10 @@ void COptionsView::Draw(_In_ HDC dc, _In_ const RECT& clientRect, COLORREF textC
     SetBkMode(dc, TRANSPARENT);
     int rowHeight = RowHeight(dpi);
     int separatorHeight = MulDiv(OptionsSeparatorHeight, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
-    int padding = MulDiv(OptionsPadding, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
+    int leftPadding = MulDiv(OptionsLeftPadding, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
+    int rightPadding = MulDiv(OptionsRightPadding, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
+    int numberSpacing = MulDiv(OptionsTextSpacing, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
+    int textSpacing = MulDiv(OptionsTextSpacing, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
     int numberWidth = MulDiv(OptionsNumberWidth, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
     int y = 0;
     int logicalFontHeight = -MulDiv(static_cast<int>(fontSize), static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI);
@@ -159,20 +167,25 @@ void COptionsView::Draw(_In_ HDC dc, _In_ const RECT& clientRect, COLORREF textC
         COLORREF rowTextColor = (index == _selection || index == _hover) ? Global::GetHighlightedTextColor() : textColor;
         SetTextColor(dc, rowTextColor);
         WCHAR number[2] = { index == 9 ? L'0' : static_cast<WCHAR>(L'1' + index), L'\0' };
-        RECT numberRect = { row.left + padding, row.top, row.left + padding + numberWidth, row.bottom };
+        RECT numberRect = { row.left + leftPadding, row.top, row.left + leftPadding + numberWidth, row.bottom };
         SelectObject(dc, numberFont);
         if (index != _selection && index != _hover)
         {
             SetTextColor(dc, Global::GetNumberLabelColor());
         }
+        SIZE numberSize = { 0, 0 };
+        GetTextExtentPoint32W(dc, number, 1, &numberSize);
         DrawTextW(dc, number, 1, &numberRect, DT_SINGLELINE | DT_VCENTER | DT_LEFT);
         SelectObject(dc, font);
         SetTextColor(dc, rowTextColor);
-        RECT labelRect = { numberRect.right, row.top, row.right - padding, row.bottom };
+        SIZE checkSize = { 0, 0 };
+        GetTextExtentPoint32W(dc, L"\x2713", 1, &checkSize);
+        RECT labelRect = { numberRect.left + numberSize.cx + numberSpacing, row.top,
+            row.right - rightPadding - textSpacing - checkSize.cx, row.bottom };
         DrawTextW(dc, _rows[index].label.c_str(), -1, &labelRect, DT_SINGLELINE | DT_VCENTER | DT_LEFT | DT_END_ELLIPSIS);
         if (_rows[index].selected)
         {
-            RECT checkRect = { row.right - padding - numberWidth, row.top, row.right - padding, row.bottom };
+            RECT checkRect = { row.right - rightPadding - checkSize.cx, row.top, row.right - rightPadding, row.bottom };
             DrawTextW(dc, L"\x2713", 1, &checkRect, DT_SINGLELINE | DT_VCENTER | DT_RIGHT);
         }
         y += rowHeight;
@@ -208,7 +221,10 @@ void COptionsView::DrawD2D(_In_ ID2D1DCRenderTarget* renderTarget, _In_ IDWriteT
 
     const FLOAT rowHeight = static_cast<FLOAT>(RowHeight(dpi));
     const FLOAT separatorHeight = static_cast<FLOAT>(MulDiv(OptionsSeparatorHeight, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI));
-    const FLOAT padding = static_cast<FLOAT>(MulDiv(OptionsPadding, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI));
+    const FLOAT leftPadding = static_cast<FLOAT>(MulDiv(OptionsLeftPadding, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI));
+    const FLOAT rightPadding = static_cast<FLOAT>(MulDiv(OptionsRightPadding, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI));
+    const FLOAT numberSpacing = static_cast<FLOAT>(MulDiv(OptionsTextSpacing, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI));
+    const FLOAT textSpacing = static_cast<FLOAT>(MulDiv(OptionsTextSpacing, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI));
     const FLOAT numberWidth = static_cast<FLOAT>(MulDiv(OptionsNumberWidth, static_cast<int>(dpi), USER_DEFAULT_SCREEN_DPI));
 
     ComPtr<ID2D1SolidColorBrush> normalBrush;
@@ -238,27 +254,37 @@ void COptionsView::DrawD2D(_In_ ID2D1DCRenderTarget* renderTarget, _In_ IDWriteT
 
         WCHAR number[2] = { index == 9 ? L'0' : static_cast<WCHAR>(L'1' + index), L'\0' };
         ComPtr<IDWriteTextLayout> numberLayout;
+        ComPtr<IDWriteTextLayout> checkLayout;
         ComPtr<IDWriteTextLayout> labelLayout;
         Global::pDWriteFactory->CreateTextLayout(number, 1, numberFormat, numberWidth, rowHeight, &numberLayout);
+        Global::pDWriteFactory->CreateTextLayout(L"\x2713", 1, textFormat, numberWidth, rowHeight, &checkLayout);
+        FLOAT numberTextWidth = 0.0f;
+        FLOAT checkTextWidth = 0.0f;
+        DWRITE_TEXT_METRICS textMetrics = {};
+        if (numberLayout && SUCCEEDED(numberLayout->GetMetrics(&textMetrics)))
+        {
+            numberTextWidth = textMetrics.width;
+        }
+        if (checkLayout && SUCCEEDED(checkLayout->GetMetrics(&textMetrics)))
+        {
+            checkTextWidth = textMetrics.width;
+        }
+        const FLOAT labelLeft = static_cast<FLOAT>(paintRect.left) + leftPadding + numberTextWidth + numberSpacing;
+        const FLOAT labelWidth = static_cast<FLOAT>(paintRect.right) - rightPadding - textSpacing - checkTextWidth - labelLeft;
         Global::pDWriteFactory->CreateTextLayout(_rows[index].label.c_str(), static_cast<UINT32>(_rows[index].label.length()), textFormat,
-            static_cast<FLOAT>(paintRect.right) - padding * 2.0f - numberWidth, rowHeight, &labelLayout);
+            labelWidth, rowHeight, &labelLayout);
         ID2D1Brush* textBrush = highlighted ? selectedBrush.Get() : normalBrush.Get();
         if (numberLayout)
         {
-            renderTarget->DrawTextLayout(D2D1::Point2F(static_cast<FLOAT>(paintRect.left) + padding, y), numberLayout.Get(), textBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
+            renderTarget->DrawTextLayout(D2D1::Point2F(static_cast<FLOAT>(paintRect.left) + leftPadding, y), numberLayout.Get(), textBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
         }
         if (labelLayout)
         {
-            renderTarget->DrawTextLayout(D2D1::Point2F(static_cast<FLOAT>(paintRect.left) + padding + numberWidth, y), labelLayout.Get(), textBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
+            renderTarget->DrawTextLayout(D2D1::Point2F(labelLeft, y), labelLayout.Get(), textBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
         }
-        if (_rows[index].selected)
+        if (_rows[index].selected && checkLayout)
         {
-            ComPtr<IDWriteTextLayout> checkLayout;
-            Global::pDWriteFactory->CreateTextLayout(L"\x2713", 1, textFormat, numberWidth, rowHeight, &checkLayout);
-            if (checkLayout)
-            {
-                renderTarget->DrawTextLayout(D2D1::Point2F(static_cast<FLOAT>(paintRect.right) - padding - numberWidth, y), checkLayout.Get(), textBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
-            }
+            renderTarget->DrawTextLayout(D2D1::Point2F(static_cast<FLOAT>(paintRect.right) - rightPadding - checkTextWidth, y), checkLayout.Get(), textBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
         }
         y += rowHeight;
     }
