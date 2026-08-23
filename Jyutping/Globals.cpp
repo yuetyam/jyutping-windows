@@ -106,6 +106,54 @@ extern const GUID JyutpingGuidSimplifiedCharacterVariantPreserveKey = {
     { 0x88, 0xe1, 0xc2, 0xc5, 0x93, 0x7e, 0x00, 0xd3 }
 };
 
+// {AAF51363-3468-4686-804C-316856046EEE}
+extern const GUID JyutpingGuidHalfWidthCharacterFormPreserveKey = {
+    0xaaf51363,
+    0x3468,
+    0x4686,
+    { 0x80, 0x4c, 0x31, 0x68, 0x56, 0x04, 0x6e, 0xee }
+};
+
+// {3A660A21-6946-4747-92C9-79A721337B4D}
+extern const GUID JyutpingGuidFullWidthCharacterFormPreserveKey = {
+    0x3a660a21,
+    0x6946,
+    0x4747,
+    { 0x92, 0xc9, 0x79, 0xa7, 0x21, 0x33, 0x7b, 0x4d }
+};
+
+// {96E92228-88F9-4CEF-B584-7AD03D46DD3F}
+extern const GUID JyutpingGuidCantonesePunctuationFormPreserveKey = {
+    0x96e92228,
+    0x88f9,
+    0x4cef,
+    { 0xb5, 0x84, 0x7a, 0xd0, 0x3d, 0x46, 0xdd, 0x3f }
+};
+
+// {EF8C1B1D-2136-4A9A-9EBD-C7CC44BF0F5D}
+extern const GUID JyutpingGuidEnglishPunctuationFormPreserveKey = {
+    0xef8c1b1d,
+    0x2136,
+    0x4a9a,
+    { 0x9e, 0xbd, 0xc7, 0xcc, 0x44, 0xbf, 0x0f, 0x5d }
+};
+
+// {E0242C08-897B-4C04-B08A-CCF175FD0B1D}
+extern const GUID JyutpingGuidCantoneseInputMethodModePreserveKey = {
+    0xe0242c08,
+    0x897b,
+    0x4c04,
+    { 0xb0, 0x8a, 0xcc, 0xf1, 0x75, 0xfd, 0x0b, 0x1d }
+};
+
+// {F9E34CCD-309E-4B43-8A86-288D825E5616}
+extern const GUID JyutpingGuidABCInputMethodModePreserveKey = {
+    0xf9e34ccd,
+    0x309e,
+    0x4b43,
+    { 0x8a, 0x86, 0x28, 0x8d, 0x82, 0x5e, 0x56, 0x16 }
+};
+
 //---------------------------------------------------------------------
 // Compartments
 //---------------------------------------------------------------------
@@ -192,6 +240,13 @@ extern const WCHAR TraditionalCharacterVariantDescription[] = L"Traditional Char
 extern const WCHAR HongKongCharacterVariantDescription[] = L"Traditional Characters, HK (Ctrl+Shift+2)";
 extern const WCHAR TaiwanCharacterVariantDescription[] = L"Traditional Characters, TW (Ctrl+Shift+3)";
 extern const WCHAR SimplifiedCharacterVariantDescription[] = L"Simplified Characters (Ctrl+Shift+4)";
+
+extern const WCHAR HalfWidthCharacterFormDescription[] = L"Half-width Characters (Ctrl+Shift+5)";
+extern const WCHAR FullWidthCharacterFormDescription[] = L"Full-width Characters (Ctrl+Shift+6)";
+extern const WCHAR CantonesePunctuationFormDescription[] = L"Cantonese Punctuation (Ctrl+Shift+7)";
+extern const WCHAR EnglishPunctuationFormDescription[] = L"English Punctuation (Ctrl+Shift+8)";
+extern const WCHAR CantoneseInputMethodModeDescription[] = L"Cantonese Mode (Ctrl+Shift+9)";
+extern const WCHAR ABCInputMethodModeDescription[] = L"ABC Mode (Ctrl+Shift+0)";
 
 //---------------------------------------------------------------------
 // defined item in setting file table [LanguageBar] section

@@ -123,6 +123,12 @@ extern const CLSID JyutpingGuidTraditionalCharacterVariantPreserveKey;
 extern const CLSID JyutpingGuidHongKongCharacterVariantPreserveKey;
 extern const CLSID JyutpingGuidTaiwanCharacterVariantPreserveKey;
 extern const CLSID JyutpingGuidSimplifiedCharacterVariantPreserveKey;
+extern const CLSID JyutpingGuidHalfWidthCharacterFormPreserveKey;
+extern const CLSID JyutpingGuidFullWidthCharacterFormPreserveKey;
+extern const CLSID JyutpingGuidCantonesePunctuationFormPreserveKey;
+extern const CLSID JyutpingGuidEnglishPunctuationFormPreserveKey;
+extern const CLSID JyutpingGuidCantoneseInputMethodModePreserveKey;
+extern const CLSID JyutpingGuidABCInputMethodModePreserveKey;
 
 LRESULT CALLBACK ThreadKeyboardProc(int nCode, WPARAM wParam, LPARAM lParam);
 BOOL CheckModifiers(UINT uModCurrent, UINT uMod);
@@ -160,6 +166,13 @@ extern const WCHAR TraditionalCharacterVariantDescription[];
 extern const WCHAR HongKongCharacterVariantDescription[];
 extern const WCHAR TaiwanCharacterVariantDescription[];
 extern const WCHAR SimplifiedCharacterVariantDescription[];
+
+extern const WCHAR HalfWidthCharacterFormDescription[];
+extern const WCHAR FullWidthCharacterFormDescription[];
+extern const WCHAR CantonesePunctuationFormDescription[];
+extern const WCHAR EnglishPunctuationFormDescription[];
+extern const WCHAR CantoneseInputMethodModeDescription[];
+extern const WCHAR ABCInputMethodModeDescription[];
 
 extern const WCHAR LangbarInputMethodModeDescription[];
 

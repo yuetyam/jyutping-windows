@@ -19,8 +19,10 @@ namespace {
 class CInputMethodModeEditSession final : public CEditSessionBase
 {
 public:
-    CInputMethodModeEditSession(_In_ CJyutping *pTextService, _In_ ITfContext *pContext) :
-        CEditSessionBase(pTextService, pContext)
+    CInputMethodModeEditSession(_In_ CJyutping *pTextService, _In_ ITfContext *pContext,
+        std::optional<InputMethodMode> targetMode = std::nullopt) :
+        CEditSessionBase(pTextService, pContext),
+        _targetMode(targetMode)
     {
     }
 
@@ -38,10 +40,18 @@ public:
             return E_FAIL;
         }
 
+        if (_targetMode.has_value())
+        {
+            return pCompositionProcessorEngine->SetInputMethodMode(*_targetMode);
+        }
+
         return pCompositionProcessorEngine->ToggleInputMethodMode(
             _pTextService->_GetThreadMgr(),
             _pTextService->_GetClientId());
     }
+
+private:
+    std::optional<InputMethodMode> _targetMode;
 };
 
 BOOL IsPageNavigationFunction(KEYSTROKE_FUNCTION function)
@@ -498,10 +508,16 @@ STDAPI CJyutping::OnPreservedKey(ITfContext *pContext, REFGUID rguid, BOOL *pIsE
     CCompositionProcessorEngine *pCompositionProcessorEngine;
     pCompositionProcessorEngine = _pCompositionProcessorEngine;
 
-    if (pContext != nullptr && _IsComposing() &&
-        pCompositionProcessorEngine->ShouldHandleInputMethodModePreservedKey(rguid))
+    // Switching the input mode while composing must finalize the composition
+    // inside an edit session, for the Shift toggle key and the preserved keys
+    // that set a different mode alike.
+    std::optional<InputMethodMode> preservedKeyInputMethodMode = pCompositionProcessorEngine->InputMethodModeForPreservedKey(rguid);
+    BOOL needsCompositionFinalize = pCompositionProcessorEngine->ShouldHandleInputMethodModePreservedKey(rguid) ||
+        (preservedKeyInputMethodMode.has_value() &&
+            *preservedKeyInputMethodMode != pCompositionProcessorEngine->CurrentInputMethodMode());
+    if (pContext != nullptr && _IsComposing() && needsCompositionFinalize)
     {
-        CInputMethodModeEditSession *pEditSession = new (std::nothrow) CInputMethodModeEditSession(this, pContext);
+        CInputMethodModeEditSession *pEditSession = new (std::nothrow) CInputMethodModeEditSession(this, pContext, preservedKeyInputMethodMode);
         if (pEditSession == nullptr)
         {
             *pIsEaten = FALSE;

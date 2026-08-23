@@ -63,6 +63,7 @@ public:
     HRESULT SetInputMethodMode(InputMethodMode mode);
     InputMethodMode CurrentInputMethodMode() const { return _settings.inputMethodMode; }
     BOOL IsCharacterVariantPreservedKey(REFGUID rguid) const;
+    std::optional<InputMethodMode> InputMethodModeForPreservedKey(REFGUID rguid) const;
 
     BOOL IsCharacterFormConvertible(WCHAR wch);
     BOOL IsReverseLookupBuffer() const;
@@ -195,6 +196,12 @@ private:
     XPreservedKey _PreservedKey_CharacterVariantHongKong;
     XPreservedKey _PreservedKey_CharacterVariantTaiwan;
     XPreservedKey _PreservedKey_CharacterVariantSimplified;
+    XPreservedKey _PreservedKey_CharacterFormHalfWidth;
+    XPreservedKey _PreservedKey_CharacterFormFullWidth;
+    XPreservedKey _PreservedKey_PunctuationFormCantonese;
+    XPreservedKey _PreservedKey_PunctuationFormEnglish;
+    XPreservedKey _PreservedKey_InputMethodModeCantonese;
+    XPreservedKey _PreservedKey_InputMethodModeABC;
 
     // Language bar data
     CLangBarItemButton* _pLanguageBar_InputMethodMode;

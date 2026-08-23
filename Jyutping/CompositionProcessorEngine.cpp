@@ -593,6 +593,12 @@ void CCompositionProcessorEngine::SetupPreserved(_In_ ITfThreadMgr *pThreadMgr, 
     std::wstring hongKongCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_VARIANT_HONG_KONG, Global::HongKongCharacterVariantDescription);
     std::wstring taiwanCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_VARIANT_TAIWAN, Global::TaiwanCharacterVariantDescription);
     std::wstring simplifiedCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_VARIANT_SIMPLIFIED, Global::SimplifiedCharacterVariantDescription);
+    std::wstring halfWidthCharacterFormDescription = Localization::LoadStringOrFallback(IDS_HALF_WIDTH_CHARACTER_FORM_DESCRIPTION, Global::HalfWidthCharacterFormDescription);
+    std::wstring fullWidthCharacterFormDescription = Localization::LoadStringOrFallback(IDS_FULL_WIDTH_CHARACTER_FORM_DESCRIPTION, Global::FullWidthCharacterFormDescription);
+    std::wstring cantonesePunctuationFormDescription = Localization::LoadStringOrFallback(IDS_CANTONESE_PUNCTUATION_FORM_DESCRIPTION, Global::CantonesePunctuationFormDescription);
+    std::wstring englishPunctuationFormDescription = Localization::LoadStringOrFallback(IDS_ENGLISH_PUNCTUATION_FORM_DESCRIPTION, Global::EnglishPunctuationFormDescription);
+    std::wstring cantoneseInputMethodModeDescription = Localization::LoadStringOrFallback(IDS_CANTONESE_INPUT_METHOD_MODE_DESCRIPTION, Global::CantoneseInputMethodModeDescription);
+    std::wstring abcInputMethodModeDescription = Localization::LoadStringOrFallback(IDS_ABC_INPUT_METHOD_MODE_DESCRIPTION, Global::ABCInputMethodModeDescription);
 
     TF_PRESERVEDKEY preservedKeyInputMethodMode;
     preservedKeyInputMethodMode.uVKey = VK_SHIFT;
@@ -629,6 +635,36 @@ void CCompositionProcessorEngine::SetupPreserved(_In_ ITfThreadMgr *pThreadMgr, 
     preservedKeySimplifiedCharacterVariant.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
     SetPreservedKey(Global::JyutpingGuidSimplifiedCharacterVariantPreserveKey, preservedKeySimplifiedCharacterVariant, simplifiedCharacterVariantDescription.c_str(), &_PreservedKey_CharacterVariantSimplified);
 
+    TF_PRESERVEDKEY preservedKeyCharacterFormHalfWidth;
+    preservedKeyCharacterFormHalfWidth.uVKey = L'5';
+    preservedKeyCharacterFormHalfWidth.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
+    SetPreservedKey(Global::JyutpingGuidHalfWidthCharacterFormPreserveKey, preservedKeyCharacterFormHalfWidth, halfWidthCharacterFormDescription.c_str(), &_PreservedKey_CharacterFormHalfWidth);
+
+    TF_PRESERVEDKEY preservedKeyCharacterFormFullWidth;
+    preservedKeyCharacterFormFullWidth.uVKey = L'6';
+    preservedKeyCharacterFormFullWidth.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
+    SetPreservedKey(Global::JyutpingGuidFullWidthCharacterFormPreserveKey, preservedKeyCharacterFormFullWidth, fullWidthCharacterFormDescription.c_str(), &_PreservedKey_CharacterFormFullWidth);
+
+    TF_PRESERVEDKEY preservedKeyPunctuationFormCantonese;
+    preservedKeyPunctuationFormCantonese.uVKey = L'7';
+    preservedKeyPunctuationFormCantonese.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
+    SetPreservedKey(Global::JyutpingGuidCantonesePunctuationFormPreserveKey, preservedKeyPunctuationFormCantonese, cantonesePunctuationFormDescription.c_str(), &_PreservedKey_PunctuationFormCantonese);
+
+    TF_PRESERVEDKEY preservedKeyPunctuationFormEnglish;
+    preservedKeyPunctuationFormEnglish.uVKey = L'8';
+    preservedKeyPunctuationFormEnglish.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
+    SetPreservedKey(Global::JyutpingGuidEnglishPunctuationFormPreserveKey, preservedKeyPunctuationFormEnglish, englishPunctuationFormDescription.c_str(), &_PreservedKey_PunctuationFormEnglish);
+
+    TF_PRESERVEDKEY preservedKeyInputMethodModeCantonese;
+    preservedKeyInputMethodModeCantonese.uVKey = L'9';
+    preservedKeyInputMethodModeCantonese.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
+    SetPreservedKey(Global::JyutpingGuidCantoneseInputMethodModePreserveKey, preservedKeyInputMethodModeCantonese, cantoneseInputMethodModeDescription.c_str(), &_PreservedKey_InputMethodModeCantonese);
+
+    TF_PRESERVEDKEY preservedKeyInputMethodModeABC;
+    preservedKeyInputMethodModeABC.uVKey = L'0';
+    preservedKeyInputMethodModeABC.uModifiers = TF_MOD_CONTROL | TF_MOD_SHIFT;
+    SetPreservedKey(Global::JyutpingGuidABCInputMethodModePreserveKey, preservedKeyInputMethodModeABC, abcInputMethodModeDescription.c_str(), &_PreservedKey_InputMethodModeABC);
+
     InitPreservedKey(&_PreservedKey_InputMethodMode, pThreadMgr, tfClientId);
     InitPreservedKey(&_PreservedKey_CharacterForm, pThreadMgr, tfClientId);
     InitPreservedKey(&_PreservedKey_PunctuationForm, pThreadMgr, tfClientId);
@@ -636,6 +672,12 @@ void CCompositionProcessorEngine::SetupPreserved(_In_ ITfThreadMgr *pThreadMgr, 
     InitPreservedKey(&_PreservedKey_CharacterVariantHongKong, pThreadMgr, tfClientId);
     InitPreservedKey(&_PreservedKey_CharacterVariantTaiwan, pThreadMgr, tfClientId);
     InitPreservedKey(&_PreservedKey_CharacterVariantSimplified, pThreadMgr, tfClientId);
+    InitPreservedKey(&_PreservedKey_CharacterFormHalfWidth, pThreadMgr, tfClientId);
+    InitPreservedKey(&_PreservedKey_CharacterFormFullWidth, pThreadMgr, tfClientId);
+    InitPreservedKey(&_PreservedKey_PunctuationFormCantonese, pThreadMgr, tfClientId);
+    InitPreservedKey(&_PreservedKey_PunctuationFormEnglish, pThreadMgr, tfClientId);
+    InitPreservedKey(&_PreservedKey_InputMethodModeCantonese, pThreadMgr, tfClientId);
+    InitPreservedKey(&_PreservedKey_InputMethodModeABC, pThreadMgr, tfClientId);
 
     return;
 }
@@ -704,7 +746,13 @@ BOOL CCompositionProcessorEngine::InitPreservedKey(_In_ XPreservedKey *pXPreserv
         {
             return FALSE;
         }
-        pKeystrokeMgr->PreserveKey(tfClientId, pXPreservedKey->Guid, &preservedKey, pXPreservedKey->Description, static_cast<ULONG>(lenOfDesc));
+        HRESULT hr = pKeystrokeMgr->PreserveKey(tfClientId, pXPreservedKey->Guid, &preservedKey, pXPreservedKey->Description, static_cast<ULONG>(lenOfDesc));
+        if (FAILED(hr))
+        {
+            // A chord already claimed by another TIP or by the system input
+            // switcher (e.g. Ctrl+Shift+0 on default Windows) fails here.
+            Global::Log(L"InitPreservedKey failed: PreserveKey hr=0x%08X", static_cast<unsigned int>(hr));
+        }
     }
 
     pKeystrokeMgr->Release();
@@ -835,6 +883,34 @@ void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsE
         SetCharacterVariant(CharacterVariant::Simplified);
         *pIsEaten = TRUE;
     }
+    else if (IsEqualGUID(rguid, _PreservedKey_CharacterFormHalfWidth.Guid))
+    {
+        SetCharacterForm(CharacterForm::HalfWidth);
+        *pIsEaten = TRUE;
+    }
+    else if (IsEqualGUID(rguid, _PreservedKey_CharacterFormFullWidth.Guid))
+    {
+        SetCharacterForm(CharacterForm::FullWidth);
+        *pIsEaten = TRUE;
+    }
+    else if (IsEqualGUID(rguid, _PreservedKey_PunctuationFormCantonese.Guid))
+    {
+        SetPunctuationForm(PunctuationForm::Cantonese);
+        *pIsEaten = TRUE;
+    }
+    else if (IsEqualGUID(rguid, _PreservedKey_PunctuationFormEnglish.Guid))
+    {
+        SetPunctuationForm(PunctuationForm::English);
+        *pIsEaten = TRUE;
+    }
+    else if (IsEqualGUID(rguid, _PreservedKey_InputMethodModeCantonese.Guid))
+    {
+        *pIsEaten = SUCCEEDED(SetInputMethodMode(InputMethodMode::Cantonese));
+    }
+    else if (IsEqualGUID(rguid, _PreservedKey_InputMethodModeABC.Guid))
+    {
+        *pIsEaten = SUCCEEDED(SetInputMethodMode(InputMethodMode::ABC));
+    }
     else
     {
         *pIsEaten = FALSE;
@@ -894,6 +970,19 @@ BOOL CCompositionProcessorEngine::IsCharacterVariantPreservedKey(REFGUID rguid) 
         IsEqualGUID(rguid, _PreservedKey_CharacterVariantHongKong.Guid) ||
         IsEqualGUID(rguid, _PreservedKey_CharacterVariantTaiwan.Guid) ||
         IsEqualGUID(rguid, _PreservedKey_CharacterVariantSimplified.Guid);
+}
+
+std::optional<InputMethodMode> CCompositionProcessorEngine::InputMethodModeForPreservedKey(REFGUID rguid) const
+{
+    if (IsEqualGUID(rguid, _PreservedKey_InputMethodModeCantonese.Guid))
+    {
+        return InputMethodMode::Cantonese;
+    }
+    if (IsEqualGUID(rguid, _PreservedKey_InputMethodModeABC.Guid))
+    {
+        return InputMethodMode::ABC;
+    }
+    return std::nullopt;
 }
 
 //+---------------------------------------------------------------------------
