@@ -586,19 +586,19 @@ BOOL CCompositionProcessorEngine::IsCharacterFormConvertible(WCHAR wch)
 
 void CCompositionProcessorEngine::SetupPreserved(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId)
 {
-    std::wstring inputMethodModeDescription = Localization::LoadStringOrFallback(IDS_INPUT_MODE_DESCRIPTION, Global::InputMethodModeDescription);
-    std::wstring characterFormDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_FORM_DESCRIPTION, Global::CharacterFormDescription);
-    std::wstring punctuationFormDescription = Localization::LoadStringOrFallback(IDS_PUNCTUATION_FORM_DESCRIPTION, Global::PunctuationFormDescription);
-    std::wstring traditionalCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_VARIANT_TRADITIONAL, Global::TraditionalCharacterVariantDescription);
-    std::wstring hongKongCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_VARIANT_HONG_KONG, Global::HongKongCharacterVariantDescription);
-    std::wstring taiwanCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_VARIANT_TAIWAN, Global::TaiwanCharacterVariantDescription);
-    std::wstring simplifiedCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_CHARACTER_VARIANT_SIMPLIFIED, Global::SimplifiedCharacterVariantDescription);
-    std::wstring halfWidthCharacterFormDescription = Localization::LoadStringOrFallback(IDS_HALF_WIDTH_CHARACTER_FORM_DESCRIPTION, Global::HalfWidthCharacterFormDescription);
-    std::wstring fullWidthCharacterFormDescription = Localization::LoadStringOrFallback(IDS_FULL_WIDTH_CHARACTER_FORM_DESCRIPTION, Global::FullWidthCharacterFormDescription);
-    std::wstring cantonesePunctuationFormDescription = Localization::LoadStringOrFallback(IDS_CANTONESE_PUNCTUATION_FORM_DESCRIPTION, Global::CantonesePunctuationFormDescription);
-    std::wstring englishPunctuationFormDescription = Localization::LoadStringOrFallback(IDS_ENGLISH_PUNCTUATION_FORM_DESCRIPTION, Global::EnglishPunctuationFormDescription);
-    std::wstring cantoneseInputMethodModeDescription = Localization::LoadStringOrFallback(IDS_CANTONESE_INPUT_METHOD_MODE_DESCRIPTION, Global::CantoneseInputMethodModeDescription);
-    std::wstring abcInputMethodModeDescription = Localization::LoadStringOrFallback(IDS_ABC_INPUT_METHOD_MODE_DESCRIPTION, Global::ABCInputMethodModeDescription);
+    std::wstring inputMethodModeDescription = Localization::LoadStringOrFallback(IDS_DESC_INPUT_MODE_TOGGLE, Global::InputMethodModeDescription);
+    std::wstring characterFormDescription = Localization::LoadStringOrFallback(IDS_DESC_CHARACTER_FORM_TOGGLE, Global::CharacterFormDescription);
+    std::wstring punctuationFormDescription = Localization::LoadStringOrFallback(IDS_DESC_PUNCTUATION_FORM_TOGGLE, Global::PunctuationFormDescription);
+    std::wstring traditionalCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_DESC_CHARACTER_VARIANT_TRADITIONAL, Global::TraditionalCharacterVariantDescription);
+    std::wstring hongKongCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_DESC_CHARACTER_VARIANT_HONG_KONG, Global::HongKongCharacterVariantDescription);
+    std::wstring taiwanCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_DESC_CHARACTER_VARIANT_TAIWAN, Global::TaiwanCharacterVariantDescription);
+    std::wstring simplifiedCharacterVariantDescription = Localization::LoadStringOrFallback(IDS_DESC_CHARACTER_VARIANT_SIMPLIFIED, Global::SimplifiedCharacterVariantDescription);
+    std::wstring halfWidthCharacterFormDescription = Localization::LoadStringOrFallback(IDS_DESC_CHARACTER_FORM_HALF_WIDTH, Global::HalfWidthCharacterFormDescription);
+    std::wstring fullWidthCharacterFormDescription = Localization::LoadStringOrFallback(IDS_DESC_CHARACTER_FORM_FULL_WIDTH, Global::FullWidthCharacterFormDescription);
+    std::wstring cantonesePunctuationFormDescription = Localization::LoadStringOrFallback(IDS_DESC_PUNCTUATION_FORM_CANTONESE, Global::CantonesePunctuationFormDescription);
+    std::wstring englishPunctuationFormDescription = Localization::LoadStringOrFallback(IDS_DESC_PUNCTUATION_FORM_ENGLISH, Global::EnglishPunctuationFormDescription);
+    std::wstring cantoneseInputMethodModeDescription = Localization::LoadStringOrFallback(IDS_DESC_INPUT_MODE_CANTONESE, Global::CantoneseInputMethodModeDescription);
+    std::wstring abcInputMethodModeDescription = Localization::LoadStringOrFallback(IDS_DESC_INPUT_MODE_ABC, Global::ABCInputMethodModeDescription);
 
     TF_PRESERVEDKEY preservedKeyInputMethodMode;
     preservedKeyInputMethodMode.uVKey = VK_SHIFT;

@@ -628,6 +628,7 @@ ptsd	PTSD
 qwerty	qwerty
 refactor	refactor
 saul	Saul
+seadog	seadog
 skyler	Skyler
 tint	tint
 tv	TV
@@ -15281,4 +15282,6 @@ dysfunction	dysfunction
 padding	padding
 cameraman	cameraman
 trillionaire	trillionaire
+yosemite	yosemite
+mavericks	mavericks
 ecosystems	ecosystems

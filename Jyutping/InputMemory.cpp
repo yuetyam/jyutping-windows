@@ -1090,7 +1090,8 @@ bool PrepareMemorySchema(sqlite3* database)
         L"CREATE INDEX IF NOT EXISTS ix2608_frequency ON memory2608 (frequency);",
         L"CREATE INDEX IF NOT EXISTS ix2608_anchors ON memory2608 (anchors, char_count, frequency DESC);",
         L"CREATE INDEX IF NOT EXISTS ix2608_spell ON memory2608 (spell, letter_count, complexity, frequency DESC);",
-        L"CREATE INDEX IF NOT EXISTS ix2608_word ON memory2608 (word, frequency DESC);"
+        L"CREATE INDEX IF NOT EXISTS ix2608_word ON memory2608 (word, frequency DESC);",
+        L"CREATE INDEX IF NOT EXISTS ix2608_lexicon ON memory2608 (word, romanization);"
     };
 
     if (!ExecuteDatabaseStatement(database, L"BEGIN IMMEDIATE;", L"begin memory migration"))
