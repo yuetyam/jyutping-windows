@@ -348,6 +348,7 @@ void CCandidateWindow::_ResizeWindow()
 
     if (_optionsMode)
     {
+        _optionsView.UpdateLayout(_pDWriteTextFormat.Get(), _pDWriteNumberFormat.Get(), _candidateFontSize, _numberFontSize, dpi);
         SetWindowPos(_wndHandle, nullptr, 0, 0, _optionsView.Width(dpi), _optionsView.Height(dpi), SWP_NOACTIVATE | SWP_NOMOVE | SWP_NOZORDER);
         if (_pVScrollBarWnd)
         {

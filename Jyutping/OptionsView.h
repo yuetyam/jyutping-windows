@@ -40,6 +40,7 @@ public:
     int RowHeight(UINT dpi) const;
     int Width(UINT dpi) const;
     int Height(UINT dpi) const;
+    void UpdateLayout(_In_opt_ IDWriteTextFormat* textFormat, _In_opt_ IDWriteTextFormat* numberFormat, DWORD fontSize, DWORD numberFontSize, UINT dpi);
     void Draw(_In_ HDC dc, _In_ const RECT& clientRect, COLORREF textColor, COLORREF backgroundColor, UINT dpi, DWORD fontSize, DWORD numberFontSize) const;
     void DrawD2D(_In_ ID2D1DCRenderTarget* renderTarget, _In_ IDWriteTextFormat* textFormat, _In_ IDWriteTextFormat* numberFormat, _In_ const RECT& paintRect, UINT dpi) const;
 
@@ -48,4 +49,9 @@ private:
     UINT _count;
     UINT _selection;
     UINT _hover;
+
+    // Layout measured from the current fonts and DPI; refreshed by UpdateLayout before the view is shown.
+    UINT _layoutDpi;
+    int _rowHeight;
+    int _viewWidth;
 };
