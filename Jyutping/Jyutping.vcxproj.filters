@@ -51,6 +51,12 @@
     <None Include="Resources\Strings.zh-HK.rc2">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="Resources\Strings.zh-MO.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="Resources\Strings.zh-SG.rc2">
+      <Filter>Resource Files</Filter>
+    </None>
     <None Include="Resources\Strings.zh-TW.rc2">
       <Filter>Resource Files</Filter>
     </None>

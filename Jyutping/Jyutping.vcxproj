@@ -45,6 +45,8 @@
     <None Include="Resources\Strings.en-US.rc2" />
     <None Include="Resources\Strings.zh-CN.rc2" />
     <None Include="Resources\Strings.zh-HK.rc2" />
+    <None Include="Resources\Strings.zh-MO.rc2" />
+    <None Include="Resources\Strings.zh-SG.rc2" />
     <None Include="Resources\Strings.zh-TW.rc2" />
     <None Include="Jyutping.def" />
   </ItemGroup>

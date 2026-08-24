@@ -16,6 +16,12 @@
 #ifndef SUBLANG_CHINESE_HONGKONG
 #define SUBLANG_CHINESE_HONGKONG               0x03
 #endif
+#ifndef SUBLANG_CHINESE_SINGAPORE
+#define SUBLANG_CHINESE_SINGAPORE              0x04
+#endif
+#ifndef SUBLANG_CHINESE_MACAU
+#define SUBLANG_CHINESE_MACAU                  0x05
+#endif
 #define IDIS_IME                               12
 #define IDIS_IME_ALT                           13
 #define IDS_DEFAULT_FONT                       14
