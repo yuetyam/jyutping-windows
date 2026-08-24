@@ -11,6 +11,7 @@
 namespace
 {
 constexpr FLOAT limitedMaxSpace = 2000.0f;
+constexpr DWORD windows11MinimumBuildNumber = 22000;
 constexpr int OptionsSeparatorHeight = 6;
 constexpr wchar_t OptionsCheckmarkText[] = L"\x2713";
 
@@ -23,6 +24,39 @@ constexpr int OptionsTextSpacing = static_cast<int>(CANDIDATE_NUMBER_SPACING);
 static D2D1_COLOR_F ColorRefToD2DColor(COLORREF color)
 {
     return D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f, 1.0f);
+}
+
+static BOOL IsWindows11OrGreater()
+{
+    static const BOOL isWindows11OrGreater = []() -> BOOL
+    {
+        typedef LONG(WINAPI* RtlGetVersionFunc)(_Out_ PRTL_OSVERSIONINFOW);
+
+        HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
+        if (ntdll == nullptr)
+        {
+            return FALSE;
+        }
+
+        RtlGetVersionFunc rtlGetVersion = reinterpret_cast<RtlGetVersionFunc>(GetProcAddress(ntdll, "RtlGetVersion"));
+        if (rtlGetVersion == nullptr)
+        {
+            return FALSE;
+        }
+
+        RTL_OSVERSIONINFOW versionInfo = {};
+        versionInfo.dwOSVersionInfoSize = sizeof(versionInfo);
+        if (rtlGetVersion(&versionInfo) != 0)
+        {
+            return FALSE;
+        }
+
+        return versionInfo.dwMajorVersion > 10 ||
+            (versionInfo.dwMajorVersion == 10 && versionInfo.dwBuildNumber >= windows11MinimumBuildNumber);
+    }();
+
+    // return FALSE; // For testing window border on Windows 11
+    return isWindows11OrGreater;
 }
 
 static HFONT CreateOptionsFont(DWORD fontSize, UINT dpi)
@@ -304,15 +338,33 @@ void COptionsView::Draw(_In_ HDC dc, _In_ const RECT& clientRect, COLORREF textC
         DeleteObject(numberFont);
     }
 
-    HPEN borderPen = CreatePen(PS_SOLID, 1, Global::GetCandidateWindowBorderColor());
-    if (borderPen)
+    if (!IsWindows11OrGreater())
     {
-        HPEN oldPen = static_cast<HPEN>(SelectObject(dc, borderPen));
-        HBRUSH oldBrush = static_cast<HBRUSH>(SelectObject(dc, GetStockObject(NULL_BRUSH)));
-        Rectangle(dc, clientRect.left, clientRect.top, clientRect.right, clientRect.bottom);
-        SelectObject(dc, oldBrush);
-        SelectObject(dc, oldPen);
-        DeleteObject(borderPen);
+        HBRUSH borderBrush = CreateSolidBrush(Global::GetCandidateWindowBorderColor());
+        if (borderBrush)
+        {
+            RECT borderRect = clientRect;
+            borderRect.bottom = clientRect.top + CANDWND_BORDER_WIDTH;
+            FillRect(dc, &borderRect, borderBrush);
+
+            borderRect = clientRect;
+            borderRect.top = clientRect.bottom - CANDWND_BORDER_WIDTH;
+            FillRect(dc, &borderRect, borderBrush);
+
+            borderRect = clientRect;
+            borderRect.top += CANDWND_BORDER_WIDTH;
+            borderRect.right = clientRect.left + CANDWND_BORDER_WIDTH;
+            borderRect.bottom -= CANDWND_BORDER_WIDTH;
+            FillRect(dc, &borderRect, borderBrush);
+
+            borderRect = clientRect;
+            borderRect.top += CANDWND_BORDER_WIDTH;
+            borderRect.left = clientRect.right - CANDWND_BORDER_WIDTH;
+            borderRect.bottom -= CANDWND_BORDER_WIDTH;
+            FillRect(dc, &borderRect, borderBrush);
+
+            DeleteObject(borderBrush);
+        }
     }
 }
 
@@ -395,5 +447,23 @@ void COptionsView::DrawD2D(_In_ ID2D1DCRenderTarget* renderTarget, _In_ IDWriteT
             renderTarget->DrawTextLayout(D2D1::Point2F(static_cast<FLOAT>(paintRect.right) - rightPadding - checkTextWidth, y), checkLayout.Get(), textBrush, D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
         }
         y += rowHeight;
+    }
+
+    if (!IsWindows11OrGreater())
+    {
+        ComPtr<ID2D1SolidColorBrush> borderBrush;
+        if (SUCCEEDED(renderTarget->CreateSolidColorBrush(ColorRefToD2DColor(Global::GetCandidateWindowBorderColor()), &borderBrush))
+            && borderBrush)
+        {
+            const FLOAT left = static_cast<FLOAT>(paintRect.left);
+            const FLOAT top = static_cast<FLOAT>(paintRect.top);
+            const FLOAT right = static_cast<FLOAT>(paintRect.right);
+            const FLOAT bottom = static_cast<FLOAT>(paintRect.bottom);
+            constexpr FLOAT borderWidth = static_cast<FLOAT>(CANDWND_BORDER_WIDTH);
+            renderTarget->FillRectangle(D2D1::RectF(left, top, right, top + borderWidth), borderBrush.Get());
+            renderTarget->FillRectangle(D2D1::RectF(left, bottom - borderWidth, right, bottom), borderBrush.Get());
+            renderTarget->FillRectangle(D2D1::RectF(left, top + borderWidth, left + borderWidth, bottom - borderWidth), borderBrush.Get());
+            renderTarget->FillRectangle(D2D1::RectF(right - borderWidth, top + borderWidth, right, bottom - borderWidth), borderBrush.Get());
+        }
     }
 }
