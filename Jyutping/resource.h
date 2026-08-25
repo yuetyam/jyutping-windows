@@ -2,58 +2,59 @@
 // Microsoft Visual C++ generated include file.
 // Used by Jyutping.rc
 //
-#define SUBLANG_ENGLISH_US                     0x01
-#define LANG_ENGLISH                           0x09
+#define SUBLANG_ENGLISH_US                        0x01
+#define LANG_ENGLISH                              0x09
 #ifndef LANG_CHINESE
-#define LANG_CHINESE                           0x04
+#define LANG_CHINESE                              0x04
 #endif
 #ifndef SUBLANG_CHINESE_TRADITIONAL
-#define SUBLANG_CHINESE_TRADITIONAL            0x01
+#define SUBLANG_CHINESE_TRADITIONAL               0x01
 #endif
 #ifndef SUBLANG_CHINESE_SIMPLIFIED
-#define SUBLANG_CHINESE_SIMPLIFIED             0x02
+#define SUBLANG_CHINESE_SIMPLIFIED                0x02
 #endif
 #ifndef SUBLANG_CHINESE_HONGKONG
-#define SUBLANG_CHINESE_HONGKONG               0x03
+#define SUBLANG_CHINESE_HONGKONG                  0x03
 #endif
 #ifndef SUBLANG_CHINESE_SINGAPORE
-#define SUBLANG_CHINESE_SINGAPORE              0x04
+#define SUBLANG_CHINESE_SINGAPORE                 0x04
 #endif
 #ifndef SUBLANG_CHINESE_MACAU
-#define SUBLANG_CHINESE_MACAU                  0x05
+#define SUBLANG_CHINESE_MACAU                     0x05
 #endif
-#define IDIS_IME                               12
-#define IDIS_IME_ALT                           13
-#define IDS_TEXTSERVICE_DESC                   20
-#define IDI_INPUT_MODE_CANTONESE               21
-#define IDI_INPUT_MODE_CANTONESE_ALT           22
-#define IDI_INPUT_MODE_ABC                     23
-#define IDI_INPUT_MODE_ABC_ALT                 24
-#define IDS_DESC_INPUT_MODE_TOGGLE             30
-#define IDS_DESC_CHARACTER_FORM_TOGGLE         31
-#define IDS_DESC_PUNCTUATION_FORM_TOGGLE       32
-#define IDS_DESC_CHARACTER_VARIANT_TRADITIONAL 33
-#define IDS_DESC_CHARACTER_VARIANT_HONG_KONG   34
-#define IDS_DESC_CHARACTER_VARIANT_TAIWAN      35
-#define IDS_DESC_CHARACTER_VARIANT_SIMPLIFIED  36
-#define IDS_LANGBAR_INPUT_METHOD_MODE          37
-#define IDS_MENU_CANDIDATE_FONT_SIZE           40
-#define IDS_MENU_CANDIDATE_NUMBER_FONT_SIZE    41
-#define IDS_MENU_CANDIDATE_COMMENT_FONT_SIZE   42
-#define IDS_MENU_CANDIDATE_PAGE_SIZE           43
-#define IDS_MENU_PUNCTUATION_FORM              44
-#define IDS_MENU_PUNCTUATION_FORM_CANTONESE    45
-#define IDS_MENU_PUNCTUATION_FORM_ENGLISH      46
-#define IDS_MENU_CHARACTER_FORM                47
-#define IDS_MENU_CHARACTER_FORM_HALF_WIDTH     48
-#define IDS_MENU_CHARACTER_FORM_FULL_WIDTH     49
-#define IDS_MENU_CHARACTER_VARIANT             50
-#define IDS_MENU_CHARACTER_VARIANT_TRADITIONAL 51
-#define IDS_MENU_CHARACTER_VARIANT_HONG_KONG   52
-#define IDS_MENU_CHARACTER_VARIANT_TAIWAN      53
-#define IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED  54
-#define IDS_MENU_MORE_SETTINGS                 55
-#define IDS_LANGBAR_INPUT_MODE_TOOLTIP         56
+
+#define IDIS_IME                                  12
+#define IDIS_IME_ALT                              13
+#define IDS_TEXTSERVICE_DESC                      20
+#define IDI_INPUT_MODE_CANTONESE                  21
+#define IDI_INPUT_MODE_CANTONESE_ALT              22
+#define IDI_INPUT_MODE_ABC                        23
+#define IDI_INPUT_MODE_ABC_ALT                    24
+#define IDS_DESC_INPUT_MODE_TOGGLE                30
+#define IDS_DESC_CHARACTER_FORM_TOGGLE            31
+#define IDS_DESC_PUNCTUATION_FORM_TOGGLE          32
+#define IDS_DESC_CHARACTER_VARIANT_TRADITIONAL    33
+#define IDS_DESC_CHARACTER_VARIANT_HONG_KONG      34
+#define IDS_DESC_CHARACTER_VARIANT_TAIWAN         35
+#define IDS_DESC_CHARACTER_VARIANT_SIMPLIFIED     36
+#define IDS_LANGBAR_INPUT_METHOD_MODE             37
+#define IDS_MENU_CANDIDATE_FONT_SIZE              40
+#define IDS_MENU_CANDIDATE_NUMBER_FONT_SIZE       41
+#define IDS_MENU_CANDIDATE_COMMENT_FONT_SIZE      42
+#define IDS_MENU_CANDIDATE_PAGE_SIZE              43
+#define IDS_MENU_PUNCTUATION_FORM                 44
+#define IDS_MENU_PUNCTUATION_FORM_CANTONESE       45
+#define IDS_MENU_PUNCTUATION_FORM_ENGLISH         46
+#define IDS_MENU_CHARACTER_FORM                   47
+#define IDS_MENU_CHARACTER_FORM_HALF_WIDTH        48
+#define IDS_MENU_CHARACTER_FORM_FULL_WIDTH        49
+#define IDS_MENU_CHARACTER_VARIANT                50
+#define IDS_MENU_CHARACTER_VARIANT_TRADITIONAL    51
+#define IDS_MENU_CHARACTER_VARIANT_HONG_KONG      52
+#define IDS_MENU_CHARACTER_VARIANT_TAIWAN         53
+#define IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED     54
+#define IDS_MENU_MORE_SETTINGS                    55
+#define IDS_LANGBAR_INPUT_MODE_TOOLTIP            56
 
 #define IDS_OPTIONS_CHARACTER_VARIANT_TRADITIONAL 57
 #define IDS_OPTIONS_CHARACTER_VARIANT_HONG_KONG   58
@@ -73,7 +74,7 @@
 #define IDS_DESC_INPUT_MODE_CANTONESE             71
 #define IDS_DESC_INPUT_MODE_ABC                   72
 
-#define IDR_VERSION                            1
+#define IDR_VERSION                               1
 
 // Next default values for new objects
 //
