@@ -1,5 +1,5 @@
 #ifndef AppVersion
-#define AppVersion "0.6.0"
+#define AppVersion "0.7.0"
 #endif
 
 #ifndef OutputDir
@@ -7,7 +7,7 @@
 #endif
 
 #ifndef VersionInfoVersion
-#define VersionInfoVersion "0.6.0.0"
+#define VersionInfoVersion "0.7.0.0"
 #endif
 
 #define AppId "{{B120D0CC-C4A1-4F0A-BA46-B3F1376BDE4F}"
