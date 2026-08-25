@@ -8190,7 +8190,7 @@
 網友	wang you
 將就	jiang jiu
 嚇鬼	xia gui
-焗住	ju zhu
+局住	ju zhu
 無需	wu xu
 冇死	mao si
 闊太	kuo tai
@@ -26137,6 +26137,10 @@
 描	miao
 到痹	dao bi
 孻	nai
+腌臢	yan za
+句讀	ju du
+契丹	qi dan
+鮎魚	nian yu
 川普	chuan pu
 唐川普	tang chuan pu
 杜林普	du lin pu
@@ -27008,6 +27012,23 @@
 共享單車	gong xiang dan che
 美美	mei mei
 美美美	mei mei mei
+臀腿	tun tui
+臀控	tun kong
+腿控	tui kong
+足控	zu kong
+手控	shou kong
+胸控	xiong kong
+顏控	yan kong
+控臀	kong tun
+控腿	kong tui
+控足	kong zu
+控手	kong shou
+控胸	kong xiong
+控顏	kong yan
+戀足	lian zu
+戀足癖	lian zu pi
+羣主	qun zhu
+谷主	gu zhu
 簽走	qian zou
 潮汕佬	chao shan lao
 潮州府	chao zhou fu
@@ -34572,6 +34593,9 @@
 狗爪邊	gou zhao bian
 犬字邊	quan zi bian
 犬字旁	quan zi pang
+牛字邊	niu zi bian
+牛字旁	niu zi pang
+左旁牛	zuo pang niu
 阜字邊	fu zi bian
 阜字旁	fu zi pang
 耳仔邊	er zai bian
@@ -42284,7 +42308,6 @@
 松柏	song bai
 擺渡	bai du
 愛問	ai wen
-契丹	qi dan
 夾具	jia ju
 墓葬	mu zang
 吸管	xi guan
@@ -49248,7 +49271,6 @@
 銤霸	mi ba
 麥霸	mai ba
 鹵素	lu su
-鮎魚	nian yu
 魯山	lu shan
 馬背	ma bei
 項圈	xiang quan
@@ -69645,6 +69667,7 @@
 五代史	wu dai shi
 三色堇	san se jin
 鴨掌	ya zhang
+鯰魚	nian yu
 食具	shi ju
 霞飛	xia fei
 雜役	za yi
@@ -72229,7 +72252,6 @@
 捲帶	juan dai
 挑夫	tiao fu
 才識	cai shi
-手控	shou kong
 情份	qing fen
 後孃	hou niang
 強辯	qiang bian
@@ -76220,7 +76242,6 @@
 回還	hui hai
 召陵	zhao ling
 叩謝	kou xie
-句讀	ju du
 博識	bo shi
 劫道	jie dao
 加添	jia tian
@@ -92675,7 +92696,6 @@
 藐藐	miao miao
 芋圓	yu yuan
 舀湯	yao tang
-腌臢	yan za
 耘田	yun tian
 羯族	jie zu
 綜效	zong xiao
@@ -100402,6 +100422,7 @@
 宿娼	su chang
 孱頭	can tou
 回祿	hui lu
+句逗	ju dou
 劇跌	ju die
 刺戳	ci chuo
 凹線	ao xian
@@ -116436,7 +116457,6 @@
 居所	ju suo
 屁眼	pi yan
 局促	ju cu
-局住	ju zhu
 就座	jiu zuo
 尤物	you wu
 尚可	shang ke
@@ -122271,6 +122291,7 @@
 太清楚	tai qing chu
 大鰈魚	da die yu
 大馬路	da ma lu
+大阪市	da ban shi
 大明湖	da ming hu
 大屁股	da pi gu
 大家都	da jia dou
@@ -139974,6 +139995,7 @@
 穀圍	gu wei
 唂精上腦	gu jing shang nao
 穀種	gu zhong
+唂住	gu zhu
 唂住道氣	gu zhu dao qi
 焗餅	ju bing
 焗茶	ju cha
@@ -142532,7 +142554,6 @@
 飲藥	yin yao
 飲悶酒	yin men jiu
 飲衫	yin shan
-飲新婦酒	yin xin fu jiu
 飲水飽	yin shui bao
 飲水底	yin shui di
 飲水尾	yin shui wei
@@ -151583,8 +151604,6 @@
 心噏	xin xi
 芯片卡	xin pian ka
 心平如鏡	xin ping ru jing
-新婦茶	xin fu cha
-新婦仔	xin fu zai
 心心不忿	xin xin bu fen
 心神不屬	xin shen bu shu
 心神專註	xin shen zhuan zhu
@@ -151687,6 +151706,8 @@
 新牌仔	xin pai zai
 新葡	xin pu
 新蒲崗	xin pu gang
+新婦茶	xin fu cha
+新婦仔	xin fu zai
 新婦酒	xin fu jiu
 身心科	shen xin ke
 伸手黨	shen shou dang
@@ -158573,7 +158594,6 @@
 枱	tai
 毡	zhan
 凈	jing
-句逗	ju dou
 𠃌	gun
 籺	he
 媿	kui
@@ -163766,16 +163786,6 @@
 乴	xue
 枠	hua
 絶	jue
-大坂	da ban
-端粒酶	duan li mei
-顆粒物	ke li wu
-吔屎	ye shi
-吔屎啦	ye shi la
-吔屎啦你	ye shi la ni
-腼腆	mian tian
-鯰魚	nian yu
-暖粒粒	nuan li li
-酒粒	jiu li
 王氏	wang shi
 張氏	zhang shi
 劉氏	liu shi
@@ -164756,6 +164766,10 @@
 爭風吃醋	zheng feng chi cu
 自討苦吃	zi tao ku chi
 自找苦吃	zi zhao ku chi
+端粒酶	duan li mei
+顆粒物	ke li wu
+暖粒粒	nuan li li
+酒粒	jiu li
 漢太祖	han tai zu
 高皇帝	gao huang di
 劉盈	liu ying
@@ -165228,7 +165242,6 @@
 全州市	quan zhou shi
 泉州市	quan zhou shi
 全椒縣	quan jiao xian
-大阪市	da ban shi
 大埔縣	da pu xian
 大廠縣	da chang xian
 大跌市	da die shi
@@ -167602,6 +167615,7 @@
 一些些	yi xie xie
 一想到	yi xiang dao
 一肚子	yi du zi
+一直在	yi zhi zai
 一整個	yi zheng ge
 日屄	ri bi
 日你	ri ni
@@ -167724,6 +167738,7 @@
 沒有	mei you
 沒有人	mei you ren
 沒問題	mei wen ti
+沒睡	mei shui
 沒少	mei shao
 沒想到	mei xiang dao
 沒準	mei zhun
@@ -167992,6 +168007,7 @@
 還給我	hai gei wo
 還給他	hai gei ta
 還給她	hai gei ta
+還沒睡	hai mei shui
 還在	hai zai
 挖鼻子	wa bi zi
 爲了	wei le
@@ -170034,20 +170050,10 @@
 沙冧	sha lin
 鮮菇冧	xian gu lin
 冧佢	lin qu
-臀腿	tun tui
-臀控	tun kong
-腿控	tui kong
-足控	zu kong
-胸控	xiong kong
-顏控	yan kong
-控臀	kong tun
-控腿	kong tui
-控足	kong zu
-控手	kong shou
-控胸	kong xiong
-控顏	kong yan
-戀足	lian zu
-戀足癖	lian zu pi
+腼腆	mian tian
+吔屎	ye shi
+吔屎啦	ye shi la
+吔屎啦你	ye shi la ni
 老亞洲	lao ya zhou
 老亞洲母系	lao ya zhou mu xi
 新亞洲	xin ya zhou
@@ -171436,6 +171442,10 @@
 𡀔	lou
 掮	jian
 孻	lai
+腌臢	a za
+腌臢	ang za
+腌臢	ang zang
+句讀	ju dou
 度量	duo liang
 驃	piao
 驃騎	piao ji
@@ -173438,7 +173448,6 @@
 釘耙	ding pa
 肉脯	rou fu
 曾參	zeng shen
-句讀	ju dou
 黥	jing
 訐	gan
 訐	jian
@@ -174276,9 +174285,6 @@
 喦	yan
 龍眼乾	long yan gan
 輝長岩	hui chang yan
-腌臢	a za
-腌臢	ang za
-腌臢	ang zang
 扒灰	pa hui
 鱲	la
 鑴	juan
