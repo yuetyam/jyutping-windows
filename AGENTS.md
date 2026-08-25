@@ -11,6 +11,8 @@ This project is a Windows Input Method Editor for Cantonese Jyutping romanizatio
 
 Build from the repository root:
 
+For verification builds, run only the `Debug|ARM64` variant to save build time. Use the full matrix below when a broader platform or configuration build is explicitly required.
+
 ```powershell
 cargo run --release --manifest-path preparing\Cargo.toml
 msbuild Jyutping.sln /p:Configuration=Debug /p:Platform=x64
