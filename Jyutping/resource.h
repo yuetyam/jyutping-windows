@@ -24,7 +24,6 @@
 #endif
 #define IDIS_IME                               12
 #define IDIS_IME_ALT                           13
-#define IDS_DEFAULT_FONT                       14
 #define IDS_TEXTSERVICE_DESC                   20
 #define IDI_INPUT_MODE_CANTONESE               21
 #define IDI_INPUT_MODE_CANTONESE_ALT           22
@@ -38,8 +37,6 @@
 #define IDS_DESC_CHARACTER_VARIANT_TAIWAN      35
 #define IDS_DESC_CHARACTER_VARIANT_SIMPLIFIED  36
 #define IDS_LANGBAR_INPUT_METHOD_MODE          37
-#define IDS_FILE_DESCRIPTION                   38
-#define IDS_PRODUCT_NAME                       39
 #define IDS_MENU_CANDIDATE_FONT_SIZE           40
 #define IDS_MENU_CANDIDATE_NUMBER_FONT_SIZE    41
 #define IDS_MENU_CANDIDATE_COMMENT_FONT_SIZE   42

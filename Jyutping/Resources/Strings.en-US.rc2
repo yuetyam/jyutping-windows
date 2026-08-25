@@ -7,7 +7,6 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 STRINGTABLE
 BEGIN
     IDIS_IME                                  "Jyutping Input Method"
-    IDS_DEFAULT_FONT                          "Segoe UI"
     IDS_TEXTSERVICE_DESC                      "Jyutping"
     IDS_DESC_INPUT_MODE_TOGGLE                "Input Mode (Cantonese/ABC, Shift)"
     IDS_DESC_CHARACTER_FORM_TOGGLE            "Character Form (Half-width/Full-width, Shift+Space)"
@@ -23,8 +22,6 @@ BEGIN
     IDS_DESC_INPUT_MODE_CANTONESE             "Cantonese Mode (Ctrl+Shift+9)"
     IDS_DESC_INPUT_MODE_ABC                   "ABC Mode (Ctrl+Shift+0)"
     IDS_LANGBAR_INPUT_METHOD_MODE             "Input Mode"
-    IDS_FILE_DESCRIPTION                      "Jyutping Input Method"
-    IDS_PRODUCT_NAME                          "Jyutping"
     IDS_MENU_CANDIDATE_FONT_SIZE              "Candidate Font Size"
     IDS_MENU_CANDIDATE_NUMBER_FONT_SIZE       "Number Font Size"
     IDS_MENU_CANDIDATE_COMMENT_FONT_SIZE      "Comment Font Size"
