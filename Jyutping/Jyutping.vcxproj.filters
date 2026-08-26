@@ -203,6 +203,15 @@
     <ClInclude Include="OptionsView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="SettingsMenuModel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SettingsMenuWindow.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="WindowAppearance.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ActiveLanguageProfileNotifySink.cpp">
@@ -218,6 +227,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="OptionsView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SettingsMenuModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SettingsMenuWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowAppearance.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="CharacterStandard.cpp">

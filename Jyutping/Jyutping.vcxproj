@@ -65,6 +65,8 @@
     <ClInclude Include="JyutpingStructureArray.h" />
     <ClInclude Include="Localization.h" />
     <ClInclude Include="OptionsView.h" />
+    <ClInclude Include="SettingsMenuModel.h" />
+    <ClInclude Include="SettingsMenuWindow.h" />
     <ClInclude Include="PinyinSegmenter.h" />
     <ClInclude Include="SearchCandidateProvider.h" />
     <ClInclude Include="Segmenter.h" />
@@ -98,6 +100,7 @@
     <ClInclude Include="TipCandidateString.h" />
     <ClInclude Include="Logger.h" />
     <ClInclude Include="VirtualInputKey.h" />
+    <ClInclude Include="WindowAppearance.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ActiveLanguageProfileNotifySink.cpp" />
@@ -106,6 +109,8 @@
     <ClCompile Include="CandidateListUIPresenter.cpp" />
     <ClCompile Include="CandidateWindow.cpp" />
     <ClCompile Include="OptionsView.cpp" />
+    <ClCompile Include="SettingsMenuModel.cpp" />
+    <ClCompile Include="SettingsMenuWindow.cpp" />
     <ClCompile Include="CharacterStandard.cpp" />
     <ClCompile Include="Compartment.cpp" />
     <ClCompile Include="Composition.cpp" />
@@ -163,6 +168,7 @@
     <ClCompile Include="TipCandidateList.cpp" />
     <ClCompile Include="TipCandidateString.cpp" />
     <ClCompile Include="VirtualInputKey.cpp" />
+    <ClCompile Include="WindowAppearance.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="Jyutping.rc" />

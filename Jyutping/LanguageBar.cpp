@@ -4,178 +4,10 @@
 #include "LanguageBar.h"
 #include "Globals.h"
 #include "Compartment.h"
-#include "Localization.h"
-#include "resource.h"
+#include "SettingsMenuModel.h"
+#include "SettingsMenuWindow.h"
 
 namespace {
-
-constexpr UINT MenuIdCandidateFontSize = 1;
-constexpr UINT MenuIdCandidateFontSizeFirst = MenuIdCandidateFontSize + 1;
-constexpr UINT MenuIdCandidateFontSizeLast = MenuIdCandidateFontSizeFirst + MaximumCandidateFontSize - MinimumCandidateFontSize;
-constexpr UINT MenuIdCandidateNumberFontSize = MenuIdCandidateFontSizeLast + 1;
-constexpr UINT MenuIdCandidateNumberFontSizeFirst = MenuIdCandidateNumberFontSize + 1;
-constexpr UINT MenuIdCandidateNumberFontSizeLast = MenuIdCandidateNumberFontSizeFirst + MaximumCandidateFontSize - MinimumCandidateFontSize;
-constexpr UINT MenuIdCandidateCommentFontSize = MenuIdCandidateNumberFontSizeLast + 1;
-constexpr UINT MenuIdCandidateCommentFontSizeFirst = MenuIdCandidateCommentFontSize + 1;
-constexpr UINT MenuIdCandidateCommentFontSizeLast = MenuIdCandidateCommentFontSizeFirst + MaximumCandidateFontSize - MinimumCandidateFontSize;
-constexpr UINT MenuIdCandidatePageSize = MenuIdCandidateCommentFontSizeLast + 1;
-constexpr UINT MenuIdCandidatePageSizeFirst = MenuIdCandidatePageSize + 1;
-constexpr UINT MenuIdCandidatePageSizeLast = MenuIdCandidatePageSizeFirst + 9;
-constexpr UINT MenuIdPunctuationForm = MenuIdCandidatePageSizeLast + 1;
-constexpr UINT MenuIdPunctuationFormCantonese = MenuIdPunctuationForm + 1;
-constexpr UINT MenuIdPunctuationFormEnglish = MenuIdPunctuationFormCantonese + 1;
-constexpr UINT MenuIdCharacterForm = MenuIdPunctuationFormEnglish + 1;
-constexpr UINT MenuIdCharacterFormHalfWidth = MenuIdCharacterForm + 1;
-constexpr UINT MenuIdCharacterFormFullWidth = MenuIdCharacterFormHalfWidth + 1;
-constexpr UINT MenuIdCharacterVariant = MenuIdCharacterFormFullWidth + 1;
-constexpr UINT MenuIdCharacterVariantTraditional = MenuIdCharacterVariant + 1;
-constexpr UINT MenuIdCharacterVariantHongKong = MenuIdCharacterVariantTraditional + 1;
-constexpr UINT MenuIdCharacterVariantTaiwan = MenuIdCharacterVariantHongKong + 1;
-constexpr UINT MenuIdCharacterVariantSimplified = MenuIdCharacterVariantTaiwan + 1;
-constexpr UINT MenuIdSeparator = MenuIdCharacterVariantSimplified + 1;
-constexpr UINT MenuIdMoreSettings = MenuIdSeparator + 1;
-
-std::wstring LoadMenuString(UINT resourceId, PCWSTR fallback)
-{
-    return Localization::LoadStringOrFallback(resourceId, fallback);
-}
-
-HRESULT AddMenuItem(_In_ ITfMenu *pMenu, UINT id, DWORD flags, const std::wstring& text, _Inout_opt_ ITfMenu **ppSubMenu = nullptr)
-{
-    return pMenu->AddMenuItem(
-        id,
-        flags,
-        nullptr,
-        nullptr,
-        text.c_str(),
-        static_cast<ULONG>(text.length()),
-        ppSubMenu);
-}
-
-DWORD RadioFlagForVariant(CharacterVariant currentVariant, CharacterVariant itemVariant)
-{
-    return currentVariant == itemVariant ? TF_LBMENUF_RADIOCHECKED : 0;
-}
-
-DWORD RadioFlagForPunctuationForm(PunctuationForm currentForm, PunctuationForm itemForm)
-{
-    return currentForm == itemForm ? TF_LBMENUF_RADIOCHECKED : 0;
-}
-
-DWORD RadioFlagForCharacterForm(CharacterForm currentForm, CharacterForm itemForm)
-{
-    return currentForm == itemForm ? TF_LBMENUF_RADIOCHECKED : 0;
-}
-
-UINT MenuIdForCharacterVariant(CharacterVariant variant)
-{
-    switch (variant)
-    {
-    case CharacterVariant::HongKong:
-        return MenuIdCharacterVariantHongKong;
-    case CharacterVariant::Taiwan:
-        return MenuIdCharacterVariantTaiwan;
-    case CharacterVariant::Simplified:
-        return MenuIdCharacterVariantSimplified;
-    case CharacterVariant::Traditional:
-    default:
-        return MenuIdCharacterVariantTraditional;
-    }
-}
-
-UINT MenuIdForPunctuationForm(PunctuationForm form)
-{
-    return form == PunctuationForm::English ? MenuIdPunctuationFormEnglish : MenuIdPunctuationFormCantonese;
-}
-
-UINT MenuIdForCharacterForm(CharacterForm form)
-{
-    return form == CharacterForm::FullWidth ? MenuIdCharacterFormFullWidth : MenuIdCharacterFormHalfWidth;
-}
-
-UINT MenuIdForFontSize(UINT firstId, DWORD fontSize)
-{
-    return firstId + fontSize - MinimumCandidateFontSize;
-}
-
-DWORD FontSizeForMenuId(UINT firstId, UINT id)
-{
-    return MinimumCandidateFontSize + id - firstId;
-}
-
-UINT MenuIdForCandidatePageSize(DWORD pageSize)
-{
-    return MenuIdCandidatePageSizeFirst + pageSize - 1;
-}
-
-DWORD CandidatePageSizeForMenuId(UINT id)
-{
-    return id - MenuIdCandidatePageSizeFirst + 1;
-}
-
-HRESULT AddFontSizeMenu(
-    _In_ ITfMenu *pMenu,
-    UINT menuId,
-    UINT firstItemId,
-    const std::wstring& menuText,
-    DWORD currentFontSize)
-{
-    ITfMenu* pFontSizeMenu = nullptr;
-    HRESULT hr = AddMenuItem(pMenu, menuId, TF_LBMENUF_SUBMENU, menuText, &pFontSizeMenu);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    if (pFontSizeMenu)
-    {
-        for (DWORD fontSize = MinimumCandidateFontSize; fontSize <= MaximumCandidateFontSize; fontSize++)
-        {
-            WCHAR fontSizeText[3] = {};
-            StringCchPrintf(fontSizeText, ARRAYSIZE(fontSizeText), L"%lu", fontSize);
-            AddMenuItem(
-                pFontSizeMenu,
-                MenuIdForFontSize(firstItemId, fontSize),
-                currentFontSize == fontSize ? TF_LBMENUF_RADIOCHECKED : 0,
-                fontSizeText);
-        }
-        pFontSizeMenu->Release();
-    }
-    return S_OK;
-}
-
-BOOL AppendFontSizePopupMenu(
-    _In_ HMENU menuHandle,
-    _In_ HMENU fontSizeMenuHandle,
-    UINT firstItemId,
-    const std::wstring& menuText,
-    DWORD currentFontSize)
-{
-    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(fontSizeMenuHandle), menuText.c_str()))
-    {
-        return FALSE;
-    }
-
-    for (DWORD fontSize = MinimumCandidateFontSize; fontSize <= MaximumCandidateFontSize; fontSize++)
-    {
-        WCHAR fontSizeText[3] = {};
-        StringCchPrintf(fontSizeText, ARRAYSIZE(fontSizeText), L"%lu", fontSize);
-        AppendMenuW(fontSizeMenuHandle, MF_STRING, MenuIdForFontSize(firstItemId, fontSize), fontSizeText);
-    }
-    CheckMenuRadioItem(
-        fontSizeMenuHandle,
-        firstItemId,
-        firstItemId + MaximumCandidateFontSize - MinimumCandidateFontSize,
-        MenuIdForFontSize(firstItemId, currentFontSize),
-        MF_BYCOMMAND);
-    return TRUE;
-}
-
-BOOL AppendPopupMenuItem(_In_ HMENU menuHandle, UINT id, UINT flags, UINT resourceId, PCWSTR fallback)
-{
-    std::wstring text = LoadMenuString(resourceId, fallback);
-    return AppendMenuW(menuHandle, flags, id, text.c_str());
-}
 
 POINT PopupPointFromClick(POINT pt, _In_opt_ const RECT *prcArea)
 {
@@ -524,163 +356,7 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
     {
         return S_OK;
     }
-
-    HMENU menuHandle = CreatePopupMenu();
-    HMENU candidateFontSizeMenuHandle = CreatePopupMenu();
-    HMENU candidateNumberFontSizeMenuHandle = CreatePopupMenu();
-    HMENU candidateCommentFontSizeMenuHandle = CreatePopupMenu();
-    HMENU candidatePageSizeMenuHandle = CreatePopupMenu();
-    HMENU punctuationFormMenuHandle = CreatePopupMenu();
-    HMENU characterFormMenuHandle = CreatePopupMenu();
-    HMENU characterVariantMenuHandle = CreatePopupMenu();
-    if (menuHandle == nullptr || candidateFontSizeMenuHandle == nullptr || candidateNumberFontSizeMenuHandle == nullptr ||
-        candidateCommentFontSizeMenuHandle == nullptr || candidatePageSizeMenuHandle == nullptr || punctuationFormMenuHandle == nullptr ||
-        characterFormMenuHandle == nullptr || characterVariantMenuHandle == nullptr)
-    {
-        if (characterFormMenuHandle != nullptr)
-        {
-            DestroyMenu(characterFormMenuHandle);
-        }
-        if (punctuationFormMenuHandle != nullptr)
-        {
-            DestroyMenu(punctuationFormMenuHandle);
-        }
-        if (candidateCommentFontSizeMenuHandle != nullptr)
-        {
-            DestroyMenu(candidateCommentFontSizeMenuHandle);
-        }
-        if (candidateNumberFontSizeMenuHandle != nullptr)
-        {
-            DestroyMenu(candidateNumberFontSizeMenuHandle);
-        }
-        if (candidateFontSizeMenuHandle != nullptr)
-        {
-            DestroyMenu(candidateFontSizeMenuHandle);
-        }
-        if (candidatePageSizeMenuHandle != nullptr)
-        {
-            DestroyMenu(candidatePageSizeMenuHandle);
-        }
-        if (characterVariantMenuHandle != nullptr)
-        {
-            DestroyMenu(characterVariantMenuHandle);
-        }
-        if (menuHandle != nullptr)
-        {
-            DestroyMenu(menuHandle);
-        }
-        return E_OUTOFMEMORY;
-    }
-
-    if (!AppendFontSizePopupMenu(
-        menuHandle,
-        candidateFontSizeMenuHandle,
-        MenuIdCandidateFontSizeFirst,
-        LoadMenuString(IDS_MENU_CANDIDATE_FONT_SIZE, L"Candidate Font Size"),
-        _pSettingsMenuHandler->CurrentCandidateFontSize()) ||
-        !AppendFontSizePopupMenu(
-            menuHandle,
-            candidateNumberFontSizeMenuHandle,
-            MenuIdCandidateNumberFontSizeFirst,
-            LoadMenuString(IDS_MENU_CANDIDATE_NUMBER_FONT_SIZE, L"Candidate Number Font Size"),
-            _pSettingsMenuHandler->CurrentCandidateNumberFontSize()) ||
-        !AppendFontSizePopupMenu(
-            menuHandle,
-            candidateCommentFontSizeMenuHandle,
-            MenuIdCandidateCommentFontSizeFirst,
-            LoadMenuString(IDS_MENU_CANDIDATE_COMMENT_FONT_SIZE, L"Candidate Comment Font Size"),
-            _pSettingsMenuHandler->CurrentCandidateCommentFontSize()))
-    {
-        DestroyMenu(menuHandle);
-        return E_FAIL;
-    }
-
-    std::wstring candidatePageSizeText = LoadMenuString(IDS_MENU_CANDIDATE_PAGE_SIZE, L"Candidate Count per Page");
-    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(candidatePageSizeMenuHandle), candidatePageSizeText.c_str()))
-    {
-        DestroyMenu(candidatePageSizeMenuHandle);
-        DestroyMenu(characterVariantMenuHandle);
-        DestroyMenu(menuHandle);
-        return E_FAIL;
-    }
-
-    for (DWORD pageSize = 1; pageSize <= 10; pageSize++)
-    {
-        WCHAR pageSizeText[3] = {};
-        StringCchPrintf(pageSizeText, ARRAYSIZE(pageSizeText), L"%lu", pageSize);
-        AppendMenuW(candidatePageSizeMenuHandle, MF_STRING, MenuIdForCandidatePageSize(pageSize), pageSizeText);
-    }
-
-    CheckMenuRadioItem(
-        candidatePageSizeMenuHandle,
-        MenuIdCandidatePageSizeFirst,
-        MenuIdCandidatePageSizeLast,
-        MenuIdForCandidatePageSize(_pSettingsMenuHandler->CurrentCandidatePageSize()),
-        MF_BYCOMMAND);
-
-    std::wstring punctuationFormText = LoadMenuString(IDS_MENU_PUNCTUATION_FORM, L"Punctuation Form");
-    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(punctuationFormMenuHandle), punctuationFormText.c_str()))
-    {
-        DestroyMenu(punctuationFormMenuHandle);
-        DestroyMenu(characterFormMenuHandle);
-        DestroyMenu(characterVariantMenuHandle);
-        DestroyMenu(menuHandle);
-        return E_FAIL;
-    }
-
-    AppendPopupMenuItem(punctuationFormMenuHandle, MenuIdPunctuationFormCantonese, MF_STRING, IDS_MENU_PUNCTUATION_FORM_CANTONESE, L"Cantonese");
-    AppendPopupMenuItem(punctuationFormMenuHandle, MenuIdPunctuationFormEnglish, MF_STRING, IDS_MENU_PUNCTUATION_FORM_ENGLISH, L"English");
-
-    CheckMenuRadioItem(
-        punctuationFormMenuHandle,
-        MenuIdPunctuationFormCantonese,
-        MenuIdPunctuationFormEnglish,
-        MenuIdForPunctuationForm(_pSettingsMenuHandler->CurrentPunctuationForm()),
-        MF_BYCOMMAND);
-
-    std::wstring characterFormText = LoadMenuString(IDS_MENU_CHARACTER_FORM, L"Character Form");
-    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(characterFormMenuHandle), characterFormText.c_str()))
-    {
-        DestroyMenu(characterFormMenuHandle);
-        DestroyMenu(characterVariantMenuHandle);
-        DestroyMenu(menuHandle);
-        return E_FAIL;
-    }
-
-    AppendPopupMenuItem(characterFormMenuHandle, MenuIdCharacterFormHalfWidth, MF_STRING, IDS_MENU_CHARACTER_FORM_HALF_WIDTH, L"Half-width");
-    AppendPopupMenuItem(characterFormMenuHandle, MenuIdCharacterFormFullWidth, MF_STRING, IDS_MENU_CHARACTER_FORM_FULL_WIDTH, L"Full-width");
-
-    CheckMenuRadioItem(
-        characterFormMenuHandle,
-        MenuIdCharacterFormHalfWidth,
-        MenuIdCharacterFormFullWidth,
-        MenuIdForCharacterForm(_pSettingsMenuHandler->CurrentCharacterForm()),
-        MF_BYCOMMAND);
-
-    std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variants");
-    if (!AppendMenuW(menuHandle, MF_POPUP, reinterpret_cast<UINT_PTR>(characterVariantMenuHandle), characterVariantText.c_str()))
-    {
-        DestroyMenu(characterVariantMenuHandle);
-        DestroyMenu(menuHandle);
-        return E_FAIL;
-    }
-
-    AppendPopupMenuItem(characterVariantMenuHandle, MenuIdCharacterVariantTraditional, MF_STRING, IDS_MENU_CHARACTER_VARIANT_TRADITIONAL, L"Traditional");
-    AppendPopupMenuItem(characterVariantMenuHandle, MenuIdCharacterVariantHongKong, MF_STRING, IDS_MENU_CHARACTER_VARIANT_HONG_KONG, L"Hong Kong");
-    AppendPopupMenuItem(characterVariantMenuHandle, MenuIdCharacterVariantTaiwan, MF_STRING, IDS_MENU_CHARACTER_VARIANT_TAIWAN, L"Taiwan");
-    AppendPopupMenuItem(characterVariantMenuHandle, MenuIdCharacterVariantSimplified, MF_STRING, IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED, L"Simplified");
-
-    CharacterVariant currentVariant = _pSettingsMenuHandler->CurrentCharacterVariant();
-    CheckMenuRadioItem(
-        characterVariantMenuHandle,
-        MenuIdCharacterVariantTraditional,
-        MenuIdCharacterVariantSimplified,
-        MenuIdForCharacterVariant(currentVariant),
-        MF_BYCOMMAND);
-
-    AppendMenuW(menuHandle, MF_SEPARATOR, MenuIdSeparator, nullptr);
-    AppendPopupMenuItem(menuHandle, MenuIdMoreSettings, MF_STRING | MF_GRAYED, IDS_MENU_MORE_SETTINGS, L"More Settings…");
-
+    SettingsMenu::Snapshot snapshot = SettingsMenu::BuildSnapshot(*_pSettingsMenuHandler);
     POINT popupPoint = PopupPointFromClick(pt, prcArea);
     HWND ownerWndHandle = GetActiveWindow();
     if (ownerWndHandle == nullptr)
@@ -692,23 +368,13 @@ HRESULT CLangBarItemButton::ShowSettingsMenu(POINT pt, _In_opt_ const RECT *prcA
         ownerWndHandle = GetDesktopWindow();
     }
 
-    SetForegroundWindow(ownerWndHandle);
-    UINT command = TrackPopupMenu(
-        menuHandle,
-        TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY,
-        popupPoint.x,
-        popupPoint.y,
-        0,
-        ownerWndHandle,
-        nullptr);
+    UINT command = 0;
+    HRESULT hr = TrackSettingsMenu(snapshot, popupPoint, ownerWndHandle, &command);
     if (command != 0)
     {
         OnMenuSelect(command);
     }
-    PostMessage(ownerWndHandle, WM_NULL, 0, 0);
-
-    DestroyMenu(menuHandle);
-    return S_OK;
+    return hr;
 }
 
 //+---------------------------------------------------------------------------
@@ -788,171 +454,8 @@ STDAPI CLangBarItemButton::InitMenu(_In_ ITfMenu *pMenu)
     {
         return S_OK;
     }
-
-    HRESULT hr = AddFontSizeMenu(
-        pMenu,
-        MenuIdCandidateFontSize,
-        MenuIdCandidateFontSizeFirst,
-        LoadMenuString(IDS_MENU_CANDIDATE_FONT_SIZE, L"Candidate Font Size"),
-        _pSettingsMenuHandler->CurrentCandidateFontSize());
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-    hr = AddFontSizeMenu(
-        pMenu,
-        MenuIdCandidateNumberFontSize,
-        MenuIdCandidateNumberFontSizeFirst,
-        LoadMenuString(IDS_MENU_CANDIDATE_NUMBER_FONT_SIZE, L"Candidate Number Font Size"),
-        _pSettingsMenuHandler->CurrentCandidateNumberFontSize());
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-    hr = AddFontSizeMenu(
-        pMenu,
-        MenuIdCandidateCommentFontSize,
-        MenuIdCandidateCommentFontSizeFirst,
-        LoadMenuString(IDS_MENU_CANDIDATE_COMMENT_FONT_SIZE, L"Candidate Comment Font Size"),
-        _pSettingsMenuHandler->CurrentCandidateCommentFontSize());
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    std::wstring candidatePageSizeText = LoadMenuString(IDS_MENU_CANDIDATE_PAGE_SIZE, L"Candidate Count per Page");
-    ITfMenu* pCandidatePageSizeMenu = nullptr;
-    hr = AddMenuItem(
-        pMenu,
-        MenuIdCandidatePageSize,
-        TF_LBMENUF_SUBMENU,
-        candidatePageSizeText,
-        &pCandidatePageSizeMenu);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    if (pCandidatePageSizeMenu)
-    {
-        DWORD currentPageSize = _pSettingsMenuHandler->CurrentCandidatePageSize();
-        for (DWORD pageSize = 1; pageSize <= 10; pageSize++)
-        {
-            WCHAR pageSizeTextBuffer[3] = {};
-            StringCchPrintf(pageSizeTextBuffer, ARRAYSIZE(pageSizeTextBuffer), L"%lu", pageSize);
-            AddMenuItem(
-                pCandidatePageSizeMenu,
-                MenuIdForCandidatePageSize(pageSize),
-                currentPageSize == pageSize ? TF_LBMENUF_RADIOCHECKED : 0,
-                pageSizeTextBuffer);
-        }
-        pCandidatePageSizeMenu->Release();
-    }
-
-    PunctuationForm currentPunctuationForm = _pSettingsMenuHandler->CurrentPunctuationForm();
-    ITfMenu* pPunctuationFormMenu = nullptr;
-    hr = AddMenuItem(
-        pMenu,
-        MenuIdPunctuationForm,
-        TF_LBMENUF_SUBMENU,
-        LoadMenuString(IDS_MENU_PUNCTUATION_FORM, L"Punctuation Form"),
-        &pPunctuationFormMenu);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    if (pPunctuationFormMenu)
-    {
-        AddMenuItem(
-            pPunctuationFormMenu,
-            MenuIdPunctuationFormCantonese,
-            RadioFlagForPunctuationForm(currentPunctuationForm, PunctuationForm::Cantonese),
-            LoadMenuString(IDS_MENU_PUNCTUATION_FORM_CANTONESE, L"Cantonese"));
-        AddMenuItem(
-            pPunctuationFormMenu,
-            MenuIdPunctuationFormEnglish,
-            RadioFlagForPunctuationForm(currentPunctuationForm, PunctuationForm::English),
-            LoadMenuString(IDS_MENU_PUNCTUATION_FORM_ENGLISH, L"English"));
-        pPunctuationFormMenu->Release();
-    }
-
-    CharacterForm currentCharacterForm = _pSettingsMenuHandler->CurrentCharacterForm();
-    ITfMenu* pCharacterFormMenu = nullptr;
-    hr = AddMenuItem(
-        pMenu,
-        MenuIdCharacterForm,
-        TF_LBMENUF_SUBMENU,
-        LoadMenuString(IDS_MENU_CHARACTER_FORM, L"Character Form"),
-        &pCharacterFormMenu);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    if (pCharacterFormMenu)
-    {
-        AddMenuItem(
-            pCharacterFormMenu,
-            MenuIdCharacterFormHalfWidth,
-            RadioFlagForCharacterForm(currentCharacterForm, CharacterForm::HalfWidth),
-            LoadMenuString(IDS_MENU_CHARACTER_FORM_HALF_WIDTH, L"Half-width"));
-        AddMenuItem(
-            pCharacterFormMenu,
-            MenuIdCharacterFormFullWidth,
-            RadioFlagForCharacterForm(currentCharacterForm, CharacterForm::FullWidth),
-            LoadMenuString(IDS_MENU_CHARACTER_FORM_FULL_WIDTH, L"Full-width"));
-        pCharacterFormMenu->Release();
-    }
-
-    CharacterVariant currentVariant = _pSettingsMenuHandler->CurrentCharacterVariant();
-    std::wstring characterVariantText = LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variants");
-
-    ITfMenu* pCharacterVariantMenu = nullptr;
-    hr = AddMenuItem(
-        pMenu,
-        MenuIdCharacterVariant,
-        TF_LBMENUF_SUBMENU,
-        characterVariantText,
-        &pCharacterVariantMenu);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    if (pCharacterVariantMenu)
-    {
-        AddMenuItem(
-            pCharacterVariantMenu,
-            MenuIdCharacterVariantTraditional,
-            RadioFlagForVariant(currentVariant, CharacterVariant::Traditional),
-            LoadMenuString(IDS_MENU_CHARACTER_VARIANT_TRADITIONAL, L"Traditional"));
-        AddMenuItem(
-            pCharacterVariantMenu,
-            MenuIdCharacterVariantHongKong,
-            RadioFlagForVariant(currentVariant, CharacterVariant::HongKong),
-            LoadMenuString(IDS_MENU_CHARACTER_VARIANT_HONG_KONG, L"Hong Kong"));
-        AddMenuItem(
-            pCharacterVariantMenu,
-            MenuIdCharacterVariantTaiwan,
-            RadioFlagForVariant(currentVariant, CharacterVariant::Taiwan),
-            LoadMenuString(IDS_MENU_CHARACTER_VARIANT_TAIWAN, L"Taiwan"));
-        AddMenuItem(
-            pCharacterVariantMenu,
-            MenuIdCharacterVariantSimplified,
-            RadioFlagForVariant(currentVariant, CharacterVariant::Simplified),
-            LoadMenuString(IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED, L"Simplified"));
-        pCharacterVariantMenu->Release();
-    }
-
-    pMenu->AddMenuItem(MenuIdSeparator, TF_LBMENUF_SEPARATOR, nullptr, nullptr, nullptr, 0, nullptr);
-    AddMenuItem(
-        pMenu,
-        MenuIdMoreSettings,
-        TF_LBMENUF_GRAYED,
-        LoadMenuString(IDS_MENU_MORE_SETTINGS, L"More Settings…"));
-
-    return S_OK;
+    SettingsMenu::Snapshot snapshot = SettingsMenu::BuildSnapshot(*_pSettingsMenuHandler);
+    return SettingsMenu::PopulateTfMenu(pMenu, snapshot);
 }
 
 //+---------------------------------------------------------------------------
@@ -968,54 +471,54 @@ STDAPI CLangBarItemButton::OnMenuSelect(UINT wID)
         return S_OK;
     }
 
-    if (wID >= MenuIdCandidateFontSizeFirst && wID <= MenuIdCandidateFontSizeLast)
+    if (wID >= SettingsMenu::CandidateFontSizeFirst && wID <= SettingsMenu::CandidateFontSizeLast)
     {
-        _pSettingsMenuHandler->SetCandidateFontSize(FontSizeForMenuId(MenuIdCandidateFontSizeFirst, wID));
+        _pSettingsMenuHandler->SetCandidateFontSize(SettingsMenu::FontSizeFromId(SettingsMenu::CandidateFontSizeFirst, wID));
         return S_OK;
     }
-    if (wID >= MenuIdCandidateNumberFontSizeFirst && wID <= MenuIdCandidateNumberFontSizeLast)
+    if (wID >= SettingsMenu::CandidateNumberFontSizeFirst && wID <= SettingsMenu::CandidateNumberFontSizeLast)
     {
-        _pSettingsMenuHandler->SetCandidateNumberFontSize(FontSizeForMenuId(MenuIdCandidateNumberFontSizeFirst, wID));
+        _pSettingsMenuHandler->SetCandidateNumberFontSize(SettingsMenu::FontSizeFromId(SettingsMenu::CandidateNumberFontSizeFirst, wID));
         return S_OK;
     }
-    if (wID >= MenuIdCandidateCommentFontSizeFirst && wID <= MenuIdCandidateCommentFontSizeLast)
+    if (wID >= SettingsMenu::CandidateCommentFontSizeFirst && wID <= SettingsMenu::CandidateCommentFontSizeLast)
     {
-        _pSettingsMenuHandler->SetCandidateCommentFontSize(FontSizeForMenuId(MenuIdCandidateCommentFontSizeFirst, wID));
+        _pSettingsMenuHandler->SetCandidateCommentFontSize(SettingsMenu::FontSizeFromId(SettingsMenu::CandidateCommentFontSizeFirst, wID));
         return S_OK;
     }
-    if (wID >= MenuIdCandidatePageSizeFirst && wID <= MenuIdCandidatePageSizeLast)
+    if (wID >= SettingsMenu::CandidatePageSizeFirst && wID <= SettingsMenu::CandidatePageSizeLast)
     {
-        _pSettingsMenuHandler->SetCandidatePageSize(CandidatePageSizeForMenuId(wID));
+        _pSettingsMenuHandler->SetCandidatePageSize(SettingsMenu::CandidatePageSizeFromId(wID));
         return S_OK;
     }
 
     switch (wID)
     {
-    case MenuIdPunctuationFormCantonese:
+    case SettingsMenu::PunctuationFormCantonese:
         _pSettingsMenuHandler->SetPunctuationForm(PunctuationForm::Cantonese);
         break;
-    case MenuIdPunctuationFormEnglish:
+    case SettingsMenu::PunctuationFormEnglish:
         _pSettingsMenuHandler->SetPunctuationForm(PunctuationForm::English);
         break;
-    case MenuIdCharacterFormHalfWidth:
+    case SettingsMenu::CharacterFormHalfWidth:
         _pSettingsMenuHandler->SetCharacterForm(CharacterForm::HalfWidth);
         break;
-    case MenuIdCharacterFormFullWidth:
+    case SettingsMenu::CharacterFormFullWidth:
         _pSettingsMenuHandler->SetCharacterForm(CharacterForm::FullWidth);
         break;
-    case MenuIdCharacterVariantTraditional:
+    case SettingsMenu::CharacterVariantTraditional:
         _pSettingsMenuHandler->SetCharacterVariant(CharacterVariant::Traditional);
         break;
-    case MenuIdCharacterVariantHongKong:
+    case SettingsMenu::CharacterVariantHongKong:
         _pSettingsMenuHandler->SetCharacterVariant(CharacterVariant::HongKong);
         break;
-    case MenuIdCharacterVariantTaiwan:
+    case SettingsMenu::CharacterVariantTaiwan:
         _pSettingsMenuHandler->SetCharacterVariant(CharacterVariant::Taiwan);
         break;
-    case MenuIdCharacterVariantSimplified:
+    case SettingsMenu::CharacterVariantSimplified:
         _pSettingsMenuHandler->SetCharacterVariant(CharacterVariant::Simplified);
         break;
-    case MenuIdMoreSettings:
+    case SettingsMenu::MoreSettings:
     default:
         break;
     }

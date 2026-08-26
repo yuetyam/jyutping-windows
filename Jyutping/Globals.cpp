@@ -17,6 +17,7 @@ IDWriteFactory2* pDWriteFactory = nullptr;
 IDWriteFontFallback* pDWriteCandidateFontFallback = nullptr;
 IDWriteFontFallback* pDWriteNumberLabelFontFallback = nullptr;
 IDWriteFontFallback* pDWriteCommentFontFallback = nullptr;
+IDWriteFontFallback* pDWriteMenuFontFallback = nullptr;
 
 const LPCWSTR candidateFontNames[] = { CANDIDATE_FONT_NAMES };
 const size_t candidateFontNamesCount = ARRAYSIZE(candidateFontNames);
@@ -265,6 +266,9 @@ ATOM AtomShadowWindow;
 extern const WCHAR ScrollBarClassName[] = L"Jyutping.ScrollBarWindow";
 ATOM AtomScrollBarWindow;
 
+extern const WCHAR SettingsMenuClassName[] = L"Jyutping.SettingsMenuWindow";
+ATOM AtomSettingsMenuWindow;
+
 BOOL RegisterWindowClass()
 {
     if (!CBaseWindow::_InitWindowClass(CandidateClassName, &AtomCandidateWindow))
@@ -276,6 +280,10 @@ BOOL RegisterWindowClass()
         return FALSE;
     }
     if (!CBaseWindow::_InitWindowClass(ScrollBarClassName, &AtomScrollBarWindow))
+    {
+        return FALSE;
+    }
+    if (!CBaseWindow::_InitWindowClass(SettingsMenuClassName, &AtomSettingsMenuWindow))
     {
         return FALSE;
     }
@@ -341,12 +349,18 @@ BOOL InitDirectWrite()
     CreateFontFallback(candidateFontNames, candidateFontNamesCount, &pDWriteCandidateFontFallback);
     CreateFontFallback(numberLabelFontNames, numberLabelFontNamesCount, &pDWriteNumberLabelFontFallback);
     CreateFontFallback(commentFontNames, commentFontNamesCount, &pDWriteCommentFontFallback);
+    CreateFontFallback(candidateFontNames, candidateFontNamesCount, &pDWriteMenuFontFallback);
 
     return TRUE;
 }
 
 void UninitDirectWrite()
 {
+    if (pDWriteMenuFontFallback)
+    {
+        pDWriteMenuFontFallback->Release();
+        pDWriteMenuFontFallback = nullptr;
+    }
     if (pDWriteCommentFontFallback)
     {
         pDWriteCommentFontFallback->Release();

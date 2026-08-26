@@ -95,6 +95,7 @@ extern HINSTANCE dllInstanceHandle;
 extern ATOM AtomCandidateWindow;
 extern ATOM AtomShadowWindow;
 extern ATOM AtomScrollBarWindow;
+extern ATOM AtomSettingsMenuWindow;
 
 BOOL RegisterWindowClass();
 
@@ -107,6 +108,7 @@ extern IDWriteFactory2* pDWriteFactory;
 extern IDWriteFontFallback* pDWriteCandidateFontFallback;
 extern IDWriteFontFallback* pDWriteNumberLabelFontFallback;
 extern IDWriteFontFallback* pDWriteCommentFontFallback;
+extern IDWriteFontFallback* pDWriteMenuFontFallback;
 extern const LPCWSTR candidateFontNames[];
 extern const size_t candidateFontNamesCount;
 extern const LPCWSTR numberLabelFontNames[];

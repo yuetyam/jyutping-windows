@@ -3,187 +3,12 @@
 #include "BaseWindow.h"
 #include "CandidateWindow.h"
 #include "Settings.h"
-#include <dwmapi.h>
-
-#pragma comment(lib, "dwmapi.lib")
+#include "WindowAppearance.h"
 
 constexpr auto limitedMaxSpace = 2000.0f;
 constexpr D2D1_DRAW_TEXT_OPTIONS textDrawOptions = D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT;
-constexpr DWORD windows11MinimumBuildNumber = 22000;
 constexpr BYTE candidateWindowAcrylicAlpha = 0xB8;
 constexpr FLOAT candidateWindowClearAlpha = 0.0f;
-
-static DWORD ColorRefToAccentGradientColor(_In_ COLORREF color, _In_ BYTE alpha)
-{
-    return (static_cast<DWORD>(alpha) << 24) |
-        (static_cast<DWORD>(GetBValue(color)) << 16) |
-        (static_cast<DWORD>(GetGValue(color)) << 8) |
-        static_cast<DWORD>(GetRValue(color));
-}
-
-static D2D1_COLOR_F ColorRefToD2DColor(_In_ COLORREF color, _In_ FLOAT alpha = 1.0f)
-{
-    return D2D1::ColorF(
-        GetRValue(color) / 255.0f,
-        GetGValue(color) / 255.0f,
-        GetBValue(color) / 255.0f,
-        alpha
-    );
-}
-
-static BOOL IsWindows11OrGreater()
-{
-    static const BOOL isWindows11OrGreater = []() -> BOOL
-    {
-        typedef LONG(WINAPI* RtlGetVersionFunc)(_Out_ PRTL_OSVERSIONINFOW);
-
-        HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
-        if (ntdll == nullptr)
-        {
-            return FALSE;
-        }
-
-        RtlGetVersionFunc rtlGetVersion = reinterpret_cast<RtlGetVersionFunc>(GetProcAddress(ntdll, "RtlGetVersion"));
-        if (rtlGetVersion == nullptr)
-        {
-            return FALSE;
-        }
-
-        RTL_OSVERSIONINFOW versionInfo = {};
-        versionInfo.dwOSVersionInfoSize = sizeof(versionInfo);
-        if (rtlGetVersion(&versionInfo) != 0)
-        {
-            return FALSE;
-        }
-
-        return versionInfo.dwMajorVersion > 10 ||
-            (versionInfo.dwMajorVersion == 10 && versionInfo.dwBuildNumber >= windows11MinimumBuildNumber);
-    }();
-
-    // return FALSE; // For testing window border on Windows 11
-    return isWindows11OrGreater;
-}
-
-static HRESULT CreateRoleTextFormat(
-    _In_ FLOAT fontSize,
-    _In_reads_(fontNamesCount) const LPCWSTR* fontNames,
-    _In_ size_t fontNamesCount,
-    _In_opt_ IDWriteFontFallback* fontFallback,
-    _COM_Outptr_ IDWriteTextFormat1** textFormat)
-{
-    if (Global::pDWriteFactory == nullptr || textFormat == nullptr)
-    {
-        return E_INVALIDARG;
-    }
-
-    *textFormat = nullptr;
-
-    if (fontNames == nullptr || fontNamesCount == 0)
-    {
-        return E_INVALIDARG;
-    }
-
-    ComPtr<IDWriteTextFormat> baseTextFormat;
-    HRESULT hr = Global::pDWriteFactory->CreateTextFormat(
-        fontNames[0],
-        nullptr,
-        DWRITE_FONT_WEIGHT_NORMAL,
-        DWRITE_FONT_STYLE_NORMAL,
-        DWRITE_FONT_STRETCH_NORMAL,
-        fontSize,
-        L"",
-        &baseTextFormat
-    );
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    ComPtr<IDWriteTextFormat1> textFormat1;
-    hr = baseTextFormat.As(&textFormat1);
-    if (FAILED(hr))
-    {
-        return hr;
-    }
-
-    if (fontFallback)
-    {
-        textFormat1->SetFontFallback(fontFallback);
-    }
-    textFormat1->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_CENTER);
-
-    *textFormat = textFormat1.Detach();
-
-    return S_OK;
-}
-
-// SetWindowCompositionAttribute definitions
-enum ACCENT_STATE {
-    ACCENT_DISABLED = 0,
-    ACCENT_ENABLE_GRADIENT = 1,
-    ACCENT_ENABLE_TRANSPARENTGRADIENT = 2,
-    ACCENT_ENABLE_BLURBEHIND = 3,
-    ACCENT_ENABLE_ACRYLICBLURBEHIND = 4,
-    ACCENT_INVALID_STATE = 5
-};
-
-struct ACCENT_POLICY {
-    ACCENT_STATE AccentState;
-    DWORD AccentFlags;
-    DWORD GradientColor;
-    DWORD AnimationId;
-};
-
-struct WINDOWCOMPOSITIONATTRIBDATA {
-    DWORD Attrib;
-    PVOID pvData;
-    DWORD cbData;
-};
-
-typedef BOOL(WINAPI* pfnSetWindowCompositionAttribute)(HWND, WINDOWCOMPOSITIONATTRIBDATA*);
-
-static void ApplyCandidateWindowAccent(_In_ HWND wndHandle)
-{
-    HMODULE hUser = GetModuleHandle(L"user32.dll");
-    if (hUser == nullptr)
-    {
-        return;
-    }
-
-    pfnSetWindowCompositionAttribute setWindowCompositionAttribute = (pfnSetWindowCompositionAttribute)GetProcAddress(hUser, "SetWindowCompositionAttribute");
-    if (setWindowCompositionAttribute == nullptr)
-    {
-        return;
-    }
-
-    ACCENT_POLICY accent = {};
-    accent.AccentState = ACCENT_ENABLE_ACRYLICBLURBEHIND;
-    accent.GradientColor = ColorRefToAccentGradientColor(Global::GetCandidateWindowBackgroundColor(), candidateWindowAcrylicAlpha);
-
-    WINDOWCOMPOSITIONATTRIBDATA data = {};
-    data.Attrib = 19; // WCA_ACCENT_POLICY
-    data.pvData = &accent;
-    data.cbData = sizeof(accent);
-    setWindowCompositionAttribute(wndHandle, &data);
-}
-
-static void ApplyCandidateWindowCornerPreference(_In_ HWND wndHandle)
-{
-    // Enable rounded corners where DWM supports the Windows 11 corner preference.
-#ifndef DWMWA_WINDOW_CORNER_PREFERENCE
-#define DWMWA_WINDOW_CORNER_PREFERENCE 33
-#endif
-    enum DWM_WINDOW_CORNER_PREFERENCE
-    {
-        DWMWCP_DEFAULT = 0,
-        DWMWCP_DONOTROUND = 1,
-        DWMWCP_ROUND = 2,
-        DWMWCP_ROUNDSMALL = 3
-    };
-
-    DWM_WINDOW_CORNER_PREFERENCE preference = DWMWCP_ROUND;
-    DwmSetWindowAttribute(wndHandle, DWMWA_WINDOW_CORNER_PREFERENCE, &preference, sizeof(preference));
-}
 
 
 //+---------------------------------------------------------------------------
@@ -209,6 +34,7 @@ CCandidateWindow::CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void* 
 
     _candidateTextMetric = {};
     _numberLabelTextMetric = {};
+    _isAcrylic = FALSE;
     _rowHeight = static_cast<int>(ceil(DefaultCandidateFontSize + CANDIDATE_ROW_VERTICAL_SPACING));
     _windowWidth = 0;
 
@@ -250,11 +76,11 @@ BOOL CCandidateWindow::_Create(ATOM atom, _In_opt_ HWND parentWndHandle)
         return FALSE;
     }
 
-    ApplyCandidateWindowAccent(_wndHandle);
+    _isAcrylic = WindowAppearance::ApplyAcrylic(_wndHandle, Global::GetCandidateWindowBackgroundColor(), candidateWindowAcrylicAlpha);
 
-    if (IsWindows11OrGreater())
+    if (WindowAppearance::IsWindows11OrGreater())
     {
-        ApplyCandidateWindowCornerPreference(_wndHandle);
+        WindowAppearance::ApplyRoundedCorners(_wndHandle);
     }
 
     if (!_CreateBackGroundShadowWindow())
@@ -500,19 +326,19 @@ void CCandidateWindow::_InitializeTextFormats(_In_ HWND wndHandle)
     }
 
     float scale = static_cast<float>(GetDpiForWindow(wndHandle)) / USER_DEFAULT_SCREEN_DPI;
-    CreateRoleTextFormat(
+    WindowAppearance::CreateTextFormat(
         static_cast<float>(_candidateFontSize) * scale,
         Global::candidateFontNames,
         Global::candidateFontNamesCount,
         Global::pDWriteCandidateFontFallback,
         _pDWriteTextFormat.ReleaseAndGetAddressOf());
-    CreateRoleTextFormat(
+    WindowAppearance::CreateTextFormat(
         static_cast<float>(_numberFontSize) * scale,
         Global::numberLabelFontNames,
         Global::numberLabelFontNamesCount,
         Global::pDWriteNumberLabelFontFallback,
         _pDWriteNumberFormat.ReleaseAndGetAddressOf());
-    CreateRoleTextFormat(
+    WindowAppearance::CreateTextFormat(
         static_cast<float>(_commentFontSize) * scale,
         Global::commentFontNames,
         Global::commentFontNamesCount,
@@ -841,7 +667,7 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
     case WM_SETTINGCHANGE:
     {
         Global::UpdateSystemTheme();
-        ApplyCandidateWindowAccent(wndHandle);
+        _isAcrylic = WindowAppearance::ApplyAcrylic(wndHandle, Global::GetCandidateWindowBackgroundColor(), candidateWindowAcrylicAlpha);
         _ResizeWindow();
         _InvalidateRect();
         return 0;
@@ -1157,7 +983,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         _pDirect2DRenderTarget->BindDC(dcHandle, prc);
         _pDirect2DRenderTarget->BeginDraw();
         _pDirect2DRenderTarget->SetTransform(D2D1::IdentityMatrix());
-        _pDirect2DRenderTarget->Clear(ColorRefToD2DColor(Global::GetCandidateWindowBackgroundColor(), candidateWindowClearAlpha));
+        _pDirect2DRenderTarget->Clear(WindowAppearance::ColorFromColorRef(Global::GetCandidateWindowBackgroundColor(), _isAcrylic ? candidateWindowClearAlpha : 1.0f));
     }
 
     const size_t lenOfPageCount = 16;
@@ -1192,7 +1018,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                     static_cast<FLOAT>(rc.bottom)
                 );
                 ComPtr<ID2D1SolidColorBrush> pBkBrush;
-                _pDirect2DRenderTarget->CreateSolidColorBrush(ColorRefToD2DColor(crBk), &pBkBrush);
+                _pDirect2DRenderTarget->CreateSolidColorBrush(WindowAppearance::ColorFromColorRef(crBk), &pBkBrush);
                 if (pBkBrush)
                 {
                     _pDirect2DRenderTarget->FillRectangle(&rcRow, pBkBrush.Get());
@@ -1203,7 +1029,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         ComPtr<ID2D1SolidColorBrush> pTextBrush;
         if (_pDirect2DRenderTarget)
         {
-            _pDirect2DRenderTarget->CreateSolidColorBrush(ColorRefToD2DColor(crText), &pTextBrush);
+            _pDirect2DRenderTarget->CreateSolidColorBrush(WindowAppearance::ColorFromColorRef(crText), &pTextBrush);
         }
 
         // HStack layout: accumulate x position as we draw each element
@@ -1291,7 +1117,7 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         }
     }
 
-    if (!IsWindows11OrGreater())
+    if (!WindowAppearance::IsWindows11OrGreater())
     {
         _DrawBorder(dcHandle, prc, CANDWND_BORDER_WIDTH);
     }
@@ -1318,7 +1144,7 @@ void CCandidateWindow::_DrawBorder(_In_ HDC dcHandle, _In_ RECT* prc, _In_ int c
     if (_pDirect2DRenderTarget)
     {
         ComPtr<ID2D1SolidColorBrush> pBorderBrush;
-        _pDirect2DRenderTarget->CreateSolidColorBrush(ColorRefToD2DColor(borderColor), &pBorderBrush);
+        _pDirect2DRenderTarget->CreateSolidColorBrush(WindowAppearance::ColorFromColorRef(borderColor), &pBorderBrush);
         if (!pBorderBrush)
         {
             return;

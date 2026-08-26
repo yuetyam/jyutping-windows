@@ -115,6 +115,7 @@ private:
     ComPtr<IDWriteTextFormat1> _pDWriteNumberFormat;    // Text format for number labels
     ComPtr<IDWriteTextFormat1> _pDWriteCommentFormat;   // Text format for candidate comments
     ComPtr<ID2D1DCRenderTarget> _pDirect2DRenderTarget; // Direct2D render target
+    BOOL _isAcrylic;
 
     // Window dimensions
     int _rowHeight;   // Height of each candidate row in pixels
