@@ -47,10 +47,10 @@ HRESULT CJyutping::_HandleCandidateFinalize(TfEditCookie ec, _In_ ITfContext *pC
     {
         if (_candidateMode == CANDIDATE_INCREMENTAL && candidateInputCount > 0 && _pCompositionProcessorEngine != nullptr)
         {
-            std::vector<VirtualInputKey> tailInputKeys = _pCompositionProcessorEngine->GetCandidateTailInputKeys(candidateInputCount);
-            if (!tailInputKeys.empty())
+            std::vector<Ime::BasicInputEvent> tailInputEvents = _pCompositionProcessorEngine->GetCandidateTailInputEvents(candidateInputCount);
+            if (!tailInputEvents.empty())
             {
-                return _HandleIncrementalCandidateFinalize(ec, pContext, &candidateString, tailInputKeys, candidateIndex, hasCandidateIndex);
+                return _HandleIncrementalCandidateFinalize(ec, pContext, &candidateString, tailInputEvents, candidateIndex, hasCandidateIndex);
             }
         }
 
@@ -79,7 +79,7 @@ HRESULT CJyutping::_HandleIncrementalCandidateFinalize(
     TfEditCookie ec,
     _In_ ITfContext *pContext,
     _In_ CStringRange *pCandidateString,
-    const std::vector<VirtualInputKey>& tailInputKeys,
+    const std::vector<Ime::BasicInputEvent>& tailInputEvents,
     UINT candidateIndex,
     BOOL hasCandidateIndex)
 {
@@ -108,7 +108,7 @@ HRESULT CJyutping::_HandleIncrementalCandidateFinalize(
     {
         return hr;
     }
-    _pCompositionProcessorEngine->SetInputKeys(tailInputKeys);
+    _pCompositionProcessorEngine->SetInputEvents(tailInputEvents);
 
     HRESULT startResult = _StartComposition(ec, pContext);
     if (FAILED(startResult) || !_IsComposing())

@@ -122,7 +122,7 @@ HRESULT CJyutping::_HandleCancel(TfEditCookie ec, _In_ ITfContext *pContext)
 //
 //----------------------------------------------------------------------------
 
-HRESULT CJyutping::_HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pContext, const VirtualInputKey& inputKey)
+HRESULT CJyutping::_HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pContext, const VirtualInputKey& inputKey, BOOL isShifting)
 {
     HRESULT hr = S_OK;
     ITfRange* pRangeComposition = nullptr;
@@ -203,7 +203,7 @@ HRESULT CJyutping::_HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pCo
     }
 
     // Add input key to composition processor engine
-    pCompositionProcessorEngine->AddInputKey(inputKey);
+    pCompositionProcessorEngine->AddInputKey(inputKey, isShifting);
 
     hr = _HandleCompositionInputWorker(pCompositionProcessorEngine, ec, pContext);
 

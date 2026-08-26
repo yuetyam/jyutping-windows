@@ -67,6 +67,35 @@ BOOL ContainsNonLetterInputKey(const std::vector<VirtualInputKey>& keys)
     }) != keys.end();
 }
 
+BOOL ContainsCapitalizedInputEvent(const std::vector<Ime::BasicInputEvent>& events)
+{
+    return std::find_if(events.begin(), events.end(), [](const Ime::BasicInputEvent& event)
+    {
+        return event.IsCapitalized();
+    }) != events.end();
+}
+
+BOOL IsPeculiarInput(
+    Ime::ReverseLookupMethod method,
+    const std::vector<VirtualInputKey>& keys,
+    const std::vector<Ime::BasicInputEvent>& events)
+{
+    switch (method)
+    {
+    case Ime::ReverseLookupMethod::None:
+        return ContainsCapitalizedInputEvent(events) || ContainsNonSyllableInputKey(keys);
+    case Ime::ReverseLookupMethod::Pinyin:
+        return ContainsCapitalizedInputEvent(events) || ContainsNonLetterInputKey(keys);
+    case Ime::ReverseLookupMethod::Structure:
+        return keys.size() > 1 && std::find_if(keys.begin() + 1, keys.end(), [](const VirtualInputKey& key)
+        {
+            return !key.IsSyllableLetter();
+        }) != keys.end();
+    default:
+        return FALSE;
+    }
+}
+
 
 
 
@@ -342,7 +371,7 @@ void CCompositionProcessorEngine::ApplyPersistedSettings(_In_ ITfThreadMgr *pThr
 //     State of Text Processor Engine.
 //----------------------------------------------------------------------------
 
-BOOL CCompositionProcessorEngine::AddInputKey(const VirtualInputKey& inputKey)
+BOOL CCompositionProcessorEngine::AddInputKey(const VirtualInputKey& inputKey, BOOL isShifting)
 {
     if (inputKey.code == 0)
     {
@@ -350,6 +379,7 @@ BOOL CCompositionProcessorEngine::AddInputKey(const VirtualInputKey& inputKey)
     }
 
     _inputKeys.push_back(inputKey);
+    _inputEvents.push_back(Ime::BasicInputEvent(inputKey, isShifting != FALSE));
     return TRUE;
 }
 
@@ -368,6 +398,7 @@ void CCompositionProcessorEngine::RemoveInputKey(size_t index)
     if (index < _inputKeys.size())
     {
         _inputKeys.erase(_inputKeys.begin() + index);
+        _inputEvents.erase(_inputEvents.begin() + index);
     }
 }
 
@@ -384,6 +415,7 @@ void CCompositionProcessorEngine::RemoveInputKey(size_t index)
 void CCompositionProcessorEngine::ClearInputKeys()
 {
     _inputKeys.clear();
+    _inputEvents.clear();
     ClearSelectedCandidateMemory();
 }
 
@@ -392,25 +424,31 @@ std::wstring CCompositionProcessorEngine::GetRawInputText() const
     return CurrentInputText();
 }
 
-std::vector<VirtualInputKey> CCompositionProcessorEngine::GetCandidateTailInputKeys(size_t inputCount) const
+std::vector<Ime::BasicInputEvent> CCompositionProcessorEngine::GetCandidateTailInputEvents(size_t inputCount) const
 {
-    size_t offset = (std::min)(inputCount, _inputKeys.size());
+    size_t offset = (std::min)(inputCount, _inputEvents.size());
     BOOL isReverseLookupBuffer = ReverseLookupMethodFromKeys(_inputKeys) != Ime::ReverseLookupMethod::None;
-    std::vector<VirtualInputKey> tail(_inputKeys.begin() + offset, _inputKeys.end());
-    while (!tail.empty() && tail.front().IsApostrophe())
+    std::vector<Ime::BasicInputEvent> tail(_inputEvents.begin() + offset, _inputEvents.end());
+    while (!tail.empty() && tail.front().key.IsApostrophe())
     {
         tail.erase(tail.begin());
     }
     if (isReverseLookupBuffer && offset > 0 && !tail.empty())
     {
-        tail.insert(tail.begin(), _inputKeys.front());
+        tail.insert(tail.begin(), _inputEvents.front());
     }
     return tail;
 }
 
-void CCompositionProcessorEngine::SetInputKeys(const std::vector<VirtualInputKey>& inputKeys)
+void CCompositionProcessorEngine::SetInputEvents(const std::vector<Ime::BasicInputEvent>& inputEvents)
 {
-    _inputKeys = inputKeys;
+    _inputEvents = inputEvents;
+    _inputKeys.clear();
+    _inputKeys.reserve(inputEvents.size());
+    for (const Ime::BasicInputEvent& inputEvent : inputEvents)
+    {
+        _inputKeys.push_back(inputEvent.key);
+    }
     _cachedInputText.clear();
     _cachedReverseLookupMethod = Ime::ReverseLookupMethod::None;
     _cachedSuggestions.clear();
@@ -435,7 +473,8 @@ void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStri
         const std::vector<Ime::Candidate>& suggestions = GetInputSuggestions();
         if (!suggestions.empty())
         {
-            BOOL isReverseLookupBuffer = IsReverseLookupBuffer();
+            Ime::ReverseLookupMethod reverseLookupMethod = CurrentReverseLookupMethod();
+            BOOL isReverseLookupBuffer = reverseLookupMethod != Ime::ReverseLookupMethod::None;
             size_t inputLength = currentInputText.length();
             size_t matchedInputCount = suggestions.front().lexicon.inputCount;
             if (isReverseLookupBuffer && inputLength > 0)
@@ -444,15 +483,18 @@ void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStri
             }
 
             const std::vector<VirtualInputKey>& inputKeys = CurrentInputKeys();
-            if (!isReverseLookupBuffer && ContainsNonSyllableInputKey(inputKeys))
+            BOOL isPeculiar = IsPeculiarInput(reverseLookupMethod, inputKeys, _inputEvents);
+            if (suggestions.front().IsNotCantonese())
             {
-                std::vector<Ime::BasicInputEvent> inputEvents;
-                inputEvents.reserve(inputKeys.size());
-                for (const VirtualInputKey& inputKey : inputKeys)
-                {
-                    inputEvents.push_back(Ime::BasicInputEvent(inputKey, Ime::KeyboardCase::Lowercased));
-                }
-                _readingStringStorage = Ime::PreviewMarkNormalized(inputEvents);
+                _readingStringStorage = currentInputText;
+            }
+            else if (!isReverseLookupBuffer && isPeculiar)
+            {
+                _readingStringStorage = Ime::PreviewMarkNormalized(_inputEvents);
+            }
+            else if (isReverseLookupBuffer && isPeculiar)
+            {
+                _readingStringStorage = ReverseLookupReadingText(suggestions, TRUE);
             }
             else if (matchedInputCount < inputLength)
             {
@@ -461,7 +503,7 @@ void CCompositionProcessorEngine::GetReadingStrings(_Inout_ CJyutpingArray<CStri
             else
             {
                 _readingStringStorage = isReverseLookupBuffer ?
-                    ReverseLookupReadingText(suggestions) : suggestions.front().lexicon.mark;
+                    ReverseLookupReadingText(suggestions, FALSE) : suggestions.front().lexicon.mark;
                 if (_readingStringStorage.empty())
                 {
                     _readingStringStorage = currentInputText;
@@ -1127,7 +1169,7 @@ BOOL CCompositionProcessorEngine::SetupInputEngine()
 
 std::wstring CCompositionProcessorEngine::CurrentInputText() const
 {
-    return Ime::TextFromKeys(_inputKeys);
+    return Ime::TextFromEvents(_inputEvents);
 }
 
 const std::vector<VirtualInputKey>& CCompositionProcessorEngine::CurrentInputKeys() const
@@ -1155,7 +1197,9 @@ std::vector<VirtualInputKey> CCompositionProcessorEngine::ReverseLookupQueryKeys
     return std::vector<VirtualInputKey>(inputKeys.begin() + 1, inputKeys.end());
 }
 
-std::wstring CCompositionProcessorEngine::ReverseLookupReadingText(const std::vector<Ime::Candidate>& suggestions) const
+std::wstring CCompositionProcessorEngine::ReverseLookupReadingText(
+    const std::vector<Ime::Candidate>& suggestions,
+    BOOL isPeculiar) const
 {
     Ime::ReverseLookupMethod method = CurrentReverseLookupMethod();
     if (suggestions.empty() || suggestions.front().lexicon.mark.empty())
@@ -1169,14 +1213,17 @@ std::wstring CCompositionProcessorEngine::ReverseLookupReadingText(const std::ve
 
     if (method == Ime::ReverseLookupMethod::Pinyin)
     {
-        std::vector<VirtualInputKey> queryKeys = ReverseLookupQueryKeys();
-        std::wstring tailMark = ContainsNonLetterInputKey(queryKeys) ?
-            Ime::MarkFormatted(Ime::TextFromKeys(queryKeys)) : suggestions.front().lexicon.mark;
-        return std::wstring(VirtualInputKey::letterR.text) + L" " + tailMark;
+        std::wstring inputText = CurrentInputText();
+        std::wstring tailMark = isPeculiar ?
+            Ime::MarkFormatted(inputText.substr(1)) : suggestions.front().lexicon.mark;
+        return inputText.substr(0, 1) + L" " + tailMark;
     }
     if (method == Ime::ReverseLookupMethod::Structure)
     {
-        return std::wstring(VirtualInputKey::letterQ.text) + L" " + suggestions.front().lexicon.mark;
+        std::wstring inputText = CurrentInputText();
+        std::wstring tailMark = isPeculiar ?
+            Ime::MarkFormatted(Ime::ToneConverted(inputText.substr(1))) : suggestions.front().lexicon.mark;
+        return inputText.substr(0, 1) + L" " + tailMark;
     }
     return suggestions.front().lexicon.mark;
 }

@@ -40,14 +40,14 @@ public:
 
     BOOL IsVirtualKeyNeed(UINT uCode, _In_reads_(1) WCHAR *pwch, BOOL fComposing, CANDIDATE_MODE candidateMode, _Out_opt_ _KEYSTROKE_STATE *pKeyState);
 
-    BOOL AddInputKey(const VirtualInputKey& inputKey);
+    BOOL AddInputKey(const VirtualInputKey& inputKey, BOOL isShifting);
     void RemoveInputKey(size_t index);
     void ClearInputKeys();
 
     size_t GetInputKeyCount() const { return _inputKeys.size(); }
     std::wstring GetRawInputText() const;
-    std::vector<VirtualInputKey> GetCandidateTailInputKeys(size_t inputCount) const;
-    void SetInputKeys(const std::vector<VirtualInputKey>& inputKeys);
+    std::vector<Ime::BasicInputEvent> GetCandidateTailInputEvents(size_t inputCount) const;
+    void SetInputEvents(const std::vector<Ime::BasicInputEvent>& inputEvents);
 
     void GetReadingStrings(_Inout_ CJyutpingArray<CStringRange> *pReadingStrings);
     void GetCandidateList(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
@@ -140,7 +140,7 @@ private:
     const std::vector<VirtualInputKey>& CurrentInputKeys() const;
     Ime::ReverseLookupMethod CurrentReverseLookupMethod() const;
     std::vector<VirtualInputKey> ReverseLookupQueryKeys() const;
-    std::wstring ReverseLookupReadingText(const std::vector<Ime::Candidate>& suggestions) const;
+    std::wstring ReverseLookupReadingText(const std::vector<Ime::Candidate>& suggestions, BOOL isPeculiar) const;
     BOOL IsNonAlphabeticInputKey(UINT uCode) const;
     const std::vector<Ime::Candidate>& GetInputSuggestions();
     std::optional<Ime::Lexicon> CandidateAt(UINT candidateIndex) const;
@@ -164,6 +164,7 @@ private:
     _KEYSTROKE _keystrokeTable[VirtualInputKey::alphabetSetCount];
 
     std::vector<VirtualInputKey> _inputKeys;
+    std::vector<Ime::BasicInputEvent> _inputEvents;
 
     LANGID _langid;
     GUID _guidProfile;

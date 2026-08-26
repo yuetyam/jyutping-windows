@@ -2,6 +2,7 @@
 
 #include "KeyHandlerEditSession.h"
 #include "JyutpingBaseStructure.h"
+#include "ImeTypes.h"
 #include "VirtualInputKey.h"
 #include "OptionsView.h"
 
@@ -104,7 +105,7 @@ public:
     HRESULT _HandleCancel(TfEditCookie ec, _In_ ITfContext *pContext);
 
     // key event handlers for composition object.
-    HRESULT _HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pContext, const VirtualInputKey& inputKey);
+    HRESULT _HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pContext, const VirtualInputKey& inputKey, BOOL isShifting);
     HRESULT _HandleCompositionFinalize(TfEditCookie ec, _In_ ITfContext *pContext, BOOL fCandidateList);
     HRESULT _HandleCompositionFinalizeRaw(TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *pContext);
@@ -154,7 +155,7 @@ private:
         TfEditCookie ec,
         _In_ ITfContext *pContext,
         _In_ CStringRange *pCandidateString,
-        const std::vector<VirtualInputKey>& tailInputKeys,
+        const std::vector<Ime::BasicInputEvent>& tailInputEvents,
         UINT candidateIndex,
         BOOL hasCandidateIndex);
     HRESULT _FinalizeBeforePunctuation(TfEditCookie ec, _In_ ITfContext *pContext);
