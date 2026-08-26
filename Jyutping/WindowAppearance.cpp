@@ -71,6 +71,8 @@ BOOL IsWindows11OrGreater()
         version.dwOSVersionInfoSize = sizeof(version);
         return getVersion(&version) == 0 && (version.dwMajorVersion > 10 || (version.dwMajorVersion == 10 && version.dwBuildNumber >= Windows11MinimumBuildNumber));
     }();
+
+    // return FALSE; // For testing window border on Windows 11
     return value;
 }
 

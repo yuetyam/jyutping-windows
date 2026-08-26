@@ -2,6 +2,7 @@
 #include "OptionsView.h"
 #include "Globals.h"
 #include "Settings.h"
+#include "WindowAppearance.h"
 
 #include <d2d1.h>
 #include <dwrite.h>
@@ -11,7 +12,6 @@
 namespace
 {
 constexpr FLOAT limitedMaxSpace = 2000.0f;
-constexpr DWORD windows11MinimumBuildNumber = 22000;
 constexpr int OptionsSeparatorHeight = 6;
 constexpr wchar_t OptionsCheckmarkText[] = L"\x2713";
 
@@ -20,44 +20,6 @@ constexpr wchar_t OptionsCheckmarkText[] = L"\x2713";
 constexpr int OptionsLeftPadding = static_cast<int>(CANDIDATE_ROW_PADDING_LEFT);
 constexpr int OptionsRightPadding = static_cast<int>(CANDIDATE_ROW_PADDING_LEFT);
 constexpr int OptionsTextSpacing = static_cast<int>(CANDIDATE_NUMBER_SPACING);
-
-static D2D1_COLOR_F ColorRefToD2DColor(COLORREF color)
-{
-    return D2D1::ColorF(GetRValue(color) / 255.0f, GetGValue(color) / 255.0f, GetBValue(color) / 255.0f, 1.0f);
-}
-
-static BOOL IsWindows11OrGreater()
-{
-    static const BOOL isWindows11OrGreater = []() -> BOOL
-    {
-        typedef LONG(WINAPI* RtlGetVersionFunc)(_Out_ PRTL_OSVERSIONINFOW);
-
-        HMODULE ntdll = GetModuleHandleW(L"ntdll.dll");
-        if (ntdll == nullptr)
-        {
-            return FALSE;
-        }
-
-        RtlGetVersionFunc rtlGetVersion = reinterpret_cast<RtlGetVersionFunc>(GetProcAddress(ntdll, "RtlGetVersion"));
-        if (rtlGetVersion == nullptr)
-        {
-            return FALSE;
-        }
-
-        RTL_OSVERSIONINFOW versionInfo = {};
-        versionInfo.dwOSVersionInfoSize = sizeof(versionInfo);
-        if (rtlGetVersion(&versionInfo) != 0)
-        {
-            return FALSE;
-        }
-
-        return versionInfo.dwMajorVersion > 10 ||
-            (versionInfo.dwMajorVersion == 10 && versionInfo.dwBuildNumber >= windows11MinimumBuildNumber);
-    }();
-
-    // return FALSE; // For testing window border on Windows 11
-    return isWindows11OrGreater;
-}
 
 static HFONT CreateOptionsFont(DWORD fontSize, UINT dpi)
 {
@@ -338,7 +300,7 @@ void COptionsView::Draw(_In_ HDC dc, _In_ const RECT& clientRect, COLORREF textC
         DeleteObject(numberFont);
     }
 
-    if (!IsWindows11OrGreater())
+    if (!WindowAppearance::IsWindows11OrGreater())
     {
         HBRUSH borderBrush = CreateSolidBrush(Global::GetCandidateWindowBorderColor());
         if (borderBrush)
@@ -385,9 +347,9 @@ void COptionsView::DrawD2D(_In_ ID2D1DCRenderTarget* renderTarget, _In_ IDWriteT
     ComPtr<ID2D1SolidColorBrush> normalBrush;
     ComPtr<ID2D1SolidColorBrush> selectedBrush;
     ComPtr<ID2D1SolidColorBrush> selectedBackgroundBrush;
-    renderTarget->CreateSolidColorBrush(ColorRefToD2DColor(Global::GetNormalTextColor()), &normalBrush);
-    renderTarget->CreateSolidColorBrush(ColorRefToD2DColor(Global::GetHighlightedTextColor()), &selectedBrush);
-    renderTarget->CreateSolidColorBrush(ColorRefToD2DColor(Global::GetHighlightedBackColor()), &selectedBackgroundBrush);
+    renderTarget->CreateSolidColorBrush(WindowAppearance::ColorFromColorRef(Global::GetNormalTextColor()), &normalBrush);
+    renderTarget->CreateSolidColorBrush(WindowAppearance::ColorFromColorRef(Global::GetHighlightedTextColor()), &selectedBrush);
+    renderTarget->CreateSolidColorBrush(WindowAppearance::ColorFromColorRef(Global::GetHighlightedBackColor()), &selectedBackgroundBrush);
     if (!normalBrush || !selectedBrush || !selectedBackgroundBrush)
     {
         return;
@@ -449,10 +411,10 @@ void COptionsView::DrawD2D(_In_ ID2D1DCRenderTarget* renderTarget, _In_ IDWriteT
         y += rowHeight;
     }
 
-    if (!IsWindows11OrGreater())
+    if (!WindowAppearance::IsWindows11OrGreater())
     {
         ComPtr<ID2D1SolidColorBrush> borderBrush;
-        if (SUCCEEDED(renderTarget->CreateSolidColorBrush(ColorRefToD2DColor(Global::GetCandidateWindowBorderColor()), &borderBrush))
+        if (SUCCEEDED(renderTarget->CreateSolidColorBrush(WindowAppearance::ColorFromColorRef(Global::GetCandidateWindowBorderColor()), &borderBrush))
             && borderBrush)
         {
             const FLOAT left = static_cast<FLOAT>(paintRect.left);
