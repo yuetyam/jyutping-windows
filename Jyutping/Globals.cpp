@@ -17,7 +17,6 @@ IDWriteFactory2* pDWriteFactory = nullptr;
 IDWriteFontFallback* pDWriteCandidateFontFallback = nullptr;
 IDWriteFontFallback* pDWriteNumberLabelFontFallback = nullptr;
 IDWriteFontFallback* pDWriteCommentFontFallback = nullptr;
-IDWriteFontFallback* pDWriteMenuFontFallback = nullptr;
 
 const LPCWSTR candidateFontNames[] = { CANDIDATE_FONT_NAMES };
 const size_t candidateFontNamesCount = ARRAYSIZE(candidateFontNames);
@@ -349,18 +348,12 @@ BOOL InitDirectWrite()
     CreateFontFallback(candidateFontNames, candidateFontNamesCount, &pDWriteCandidateFontFallback);
     CreateFontFallback(numberLabelFontNames, numberLabelFontNamesCount, &pDWriteNumberLabelFontFallback);
     CreateFontFallback(commentFontNames, commentFontNamesCount, &pDWriteCommentFontFallback);
-    CreateFontFallback(candidateFontNames, candidateFontNamesCount, &pDWriteMenuFontFallback);
 
     return TRUE;
 }
 
 void UninitDirectWrite()
 {
-    if (pDWriteMenuFontFallback)
-    {
-        pDWriteMenuFontFallback->Release();
-        pDWriteMenuFontFallback = nullptr;
-    }
     if (pDWriteCommentFontFallback)
     {
         pDWriteCommentFontFallback->Release();

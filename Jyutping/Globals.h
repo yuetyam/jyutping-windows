@@ -108,7 +108,6 @@ extern IDWriteFactory2* pDWriteFactory;
 extern IDWriteFontFallback* pDWriteCandidateFontFallback;
 extern IDWriteFontFallback* pDWriteNumberLabelFontFallback;
 extern IDWriteFontFallback* pDWriteCommentFontFallback;
-extern IDWriteFontFallback* pDWriteMenuFontFallback;
 extern const LPCWSTR candidateFontNames[];
 extern const size_t candidateFontNamesCount;
 extern const LPCWSTR numberLabelFontNames[];

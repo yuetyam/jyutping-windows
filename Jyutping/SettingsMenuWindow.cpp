@@ -245,13 +245,16 @@ void CSettingsMenuLevel::InitializeResources(_In_ HWND wndHandle)
         SystemParametersInfoW(SPI_GETNONCLIENTMETRICS, sizeof(metrics), &metrics, 0);
     }
     _menuLogFont = metrics.lfMenuFont;
+    if (Global::candidateFontNamesCount > 0 && Global::candidateFontNames[0] != nullptr)
+    {
+        StringCchCopyW(_menuLogFont.lfFaceName, ARRAYSIZE(_menuLogFont.lfFaceName), Global::candidateFontNames[0]);
+    }
     _menuFont = CreateFontIndirectW(&_menuLogFont);
 
-    if (Global::pDWriteFactory != nullptr && _menuLogFont.lfFaceName[0] != L'\0')
+    if (Global::pDWriteFactory != nullptr && Global::candidateFontNamesCount > 0)
     {
-        LPCWSTR family = _menuLogFont.lfFaceName;
-        FLOAT fontSize = static_cast<FLOAT>(max(1L, abs(_menuLogFont.lfHeight)));
-        WindowAppearance::CreateTextFormat(fontSize, &family, 1, Global::pDWriteMenuFontFallback, &_textFormat);
+        FLOAT fontSize = static_cast<FLOAT>(max(1L, abs(metrics.lfMenuFont.lfHeight)));
+        WindowAppearance::CreateTextFormat(fontSize, Global::candidateFontNames, Global::candidateFontNamesCount, Global::pDWriteCandidateFontFallback, &_textFormat);
         if (_textFormat != nullptr)
         {
             _textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
