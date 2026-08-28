@@ -37,7 +37,7 @@ BEGIN
     IDS_MENU_CHARACTER_VARIANT_HONG_KONG      "傳統漢字・香港"
     IDS_MENU_CHARACTER_VARIANT_TAIWAN         "傳統漢字・臺灣"
     IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED     "简化字"
-    IDS_MENU_MORE_SETTINGS                    "Jyutping v0.7.0"
+    IDS_MENU_MORE_SETTINGS                    "Jyutping v0.8.0"
     IDS_LANGBAR_INPUT_MODE_TOOLTIP            "左鍵切換模式\n右鍵開啓選單"
     IDS_OPTIONS_CHARACTER_VARIANT_TRADITIONAL "傳統漢字"
     IDS_OPTIONS_CHARACTER_VARIANT_HONG_KONG   "傳統漢字・香港"
