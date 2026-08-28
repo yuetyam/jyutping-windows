@@ -225,6 +225,7 @@ instagram	Instagram
 intel	Intel
 inter	Inter
 ios	iOS
+ipa	IPA
 ipad	iPad
 ipadair	iPad Air
 ipadmini	iPad mini
