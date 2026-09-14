@@ -16,6 +16,7 @@ namespace {
 constexpr BYTE MenuAcrylicAlpha = 0xD8;
 constexpr UINT DefaultSubmenuDelay = 400;
 constexpr float MaximumTextLayoutWidth = 4096.0f;
+constexpr WCHAR SelectionBullet[] = L"\u2022";
 
 void SetSettingsMenuCursor()
 {
@@ -586,10 +587,12 @@ void CSettingsMenuLevel::PaintDirect2D(_In_ HDC dcHandle, _In_ const RECT& clien
         FLOAT centerY = static_cast<FLOAT>((row.top + row.bottom) / 2);
         if (item.checked)
         {
-            D2D1_ELLIPSE outer = D2D1::Ellipse(D2D1::Point2F(static_cast<FLOAT>(_leftGutter / 2), centerY), static_cast<FLOAT>(Scale(6)), static_cast<FLOAT>(Scale(6)));
-            D2D1_ELLIPSE inner = D2D1::Ellipse(outer.point, static_cast<FLOAT>(Scale(3)), static_cast<FLOAT>(Scale(3)));
-            _renderTarget->DrawEllipse(outer, textBrush.Get(), 1.0f);
-            _renderTarget->FillEllipse(inner, textBrush.Get());
+            ComPtr<IDWriteTextLayout> bulletLayout;
+            if (Global::pDWriteFactory != nullptr && SUCCEEDED(Global::pDWriteFactory->CreateTextLayout(SelectionBullet, 1, _textFormat.Get(), static_cast<FLOAT>(_leftGutter), static_cast<FLOAT>(_rowHeight), &bulletLayout)))
+            {
+                bulletLayout->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_CENTER);
+                _renderTarget->DrawTextLayout(D2D1::Point2F(0.0f, static_cast<FLOAT>(row.top)), bulletLayout.Get(), textBrush.Get(), D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT);
+            }
         }
         if (item.kind == SettingsMenu::ItemKind::Submenu)
         {
@@ -657,11 +660,8 @@ void CSettingsMenuLevel::PaintGdi(_In_ HDC dcHandle, _In_ const RECT& clientRect
         HPEN previousPen = static_cast<HPEN>(SelectObject(dcHandle, pen));
         if (item.checked)
         {
-            HBRUSH brush = CreateSolidBrush(TextColor(item, selected));
-            HBRUSH previousBrush = static_cast<HBRUSH>(SelectObject(dcHandle, brush));
-            Ellipse(dcHandle, _leftGutter / 2 - Scale(3), centerY - Scale(3), _leftGutter / 2 + Scale(3), centerY + Scale(3));
-            SelectObject(dcHandle, previousBrush);
-            DeleteObject(brush);
+            RECT bulletRect = { 0, row.top, _leftGutter, row.bottom };
+            DrawTextW(dcHandle, SelectionBullet, 1, &bulletRect, DT_CENTER | DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX);
         }
         if (item.kind == SettingsMenu::ItemKind::Submenu)
         {

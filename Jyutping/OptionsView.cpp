@@ -13,7 +13,7 @@ namespace
 {
 constexpr FLOAT limitedMaxSpace = 2000.0f;
 constexpr int OptionsSeparatorHeight = 6;
-constexpr wchar_t OptionsCheckmarkText[] = L"\x2713";
+constexpr wchar_t OptionsCheckmarkText[] = L"\u2713";
 
 // Reuse the candidate-view HStack row layout constants (Define.h):
 // LeftPadding | Number | Spacing | Label | Spacing | Checkmark | RightPadding
