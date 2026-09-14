@@ -66,7 +66,7 @@ jobs:
       working-directory: ./preparing
 
     - name: Upload database
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: core-ime-database
         path: ${{ runner.temp }}\ime.sqlite3
@@ -89,7 +89,7 @@ jobs:
       uses: actions/checkout@v7
 
     - name: Download database
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v8
       with:
         name: core-ime-database
         path: Jyutping/Resources
