@@ -576,18 +576,19 @@ STDAPI CJyutping::Deactivate()
 
     _UninitThreadMgrEventSink();
 
-    CCompartment CompartmentKeyboardOpen(_pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
-    CompartmentKeyboardOpen._ClearCompartment();
-
-    CCompartment CompartmentCharacterForm(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
-    CompartmentCharacterForm._ClearCompartment();
-
-    CCompartment CompartmentPunctuationForm(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentPunctuationForm);
-    CompartmentPunctuationForm._ClearCompartment();
-
     if (_pThreadMgr != nullptr)
     {
+        CCompartment CompartmentKeyboardOpen(_pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
+        CompartmentKeyboardOpen._ClearCompartment();
+
+        CCompartment CompartmentCharacterForm(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentCharacterForm);
+        CompartmentCharacterForm._ClearCompartment();
+
+        CCompartment CompartmentPunctuationForm(_pThreadMgr, _tfClientId, Global::JyutpingGuidCompartmentPunctuationForm);
+        CompartmentPunctuationForm._ClearCompartment();
+
         _pThreadMgr->Release();
+        _pThreadMgr = nullptr;
     }
 
     _tfClientId = TF_CLIENTID_NULL;

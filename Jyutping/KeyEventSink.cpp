@@ -119,9 +119,27 @@ __inline UINT VKeyFromVKPacketAndWchar(UINT vk, WCHAR wch)
 
 BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *pCodeOut, _Out_writes_(1) WCHAR *pwch, _Out_opt_ _KEYSTROKE_STATE *pKeyState)
 {
-    pContext;
+    if (pCodeOut == nullptr)
+    {
+        return FALSE;
+    }
 
     *pCodeOut = codeIn;
+
+    // TSF can offer a key while focus/context teardown is in progress. Pass it through safely.
+    if (pContext == nullptr || _pThreadMgr == nullptr || _pCompositionProcessorEngine == nullptr)
+    {
+        if (pKeyState)
+        {
+            pKeyState->Category = CATEGORY_NONE;
+            pKeyState->Function = FUNCTION_NONE;
+        }
+        if (pwch)
+        {
+            *pwch = L'\0';
+        }
+        return FALSE;
+    }
 
     BOOL isCantoneseMode = FALSE;
     CCompartment CompartmentKeyboardOpen(_pThreadMgr, _tfClientId, GUID_COMPARTMENT_KEYBOARD_OPENCLOSE);
@@ -142,7 +160,7 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     }
 
     // if the keyboard is disabled, we don't eat keys.
-    if (_IsKeyboardDisabled())
+    if (_IsKeyboardDisabled(pContext))
     {
         return FALSE;
     }
@@ -294,47 +312,21 @@ WCHAR CJyutping::ConvertVKey(UINT code)
 //
 //----------------------------------------------------------------------------
 
-BOOL CJyutping::_IsKeyboardDisabled()
+BOOL CJyutping::_IsKeyboardDisabled(_In_ ITfContext *pContext)
 {
-    ITfDocumentMgr* pDocMgrFocus = nullptr;
-    ITfContext* pContext = nullptr;
+    if (pContext == nullptr)
+    {
+        return TRUE;
+    }
+
     BOOL isDisabled = FALSE;
+    CCompartment CompartmentKeyboardDisabled(pContext, _tfClientId, GUID_COMPARTMENT_KEYBOARD_DISABLED);
+    CompartmentKeyboardDisabled._GetCompartmentBOOL(isDisabled);
 
-    if ((_pThreadMgr->GetFocus(&pDocMgrFocus) != S_OK) ||
-        (pDocMgrFocus == nullptr))
-    {
-        // if there is no focus document manager object, the keyboard
-        // is disabled.
-        isDisabled = TRUE;
-    }
-    else if ((pDocMgrFocus->GetTop(&pContext) != S_OK) ||
-        (pContext == nullptr))
-    {
-        // if there is no context object, the keyboard is disabled.
-        isDisabled = TRUE;
-    }
-    else
-    {
-        CCompartment CompartmentKeyboardDisabled(pContext, _tfClientId, GUID_COMPARTMENT_KEYBOARD_DISABLED);
-        CompartmentKeyboardDisabled._GetCompartmentBOOL(isDisabled);
-
-        BOOL isEmptyContext = FALSE;
-        CCompartment CompartmentEmptyContext(pContext, _tfClientId, GUID_COMPARTMENT_EMPTYCONTEXT);
-        CompartmentEmptyContext._GetCompartmentBOOL(isEmptyContext);
-        isDisabled = isDisabled || isEmptyContext;
-    }
-
-    if (pContext)
-    {
-        pContext->Release();
-    }
-
-    if (pDocMgrFocus)
-    {
-        pDocMgrFocus->Release();
-    }
-
-    return isDisabled;
+    BOOL isEmptyContext = FALSE;
+    CCompartment CompartmentEmptyContext(pContext, _tfClientId, GUID_COMPARTMENT_EMPTYCONTEXT);
+    CompartmentEmptyContext._GetCompartmentBOOL(isEmptyContext);
+    return isDisabled || isEmptyContext;
 }
 
 //+---------------------------------------------------------------------------
@@ -360,6 +352,17 @@ STDAPI CJyutping::OnSetFocus(BOOL fForeground)
 
 STDAPI CJyutping::OnTestKeyDown(ITfContext *pContext, WPARAM wParam, LPARAM lParam, BOOL *pIsEaten)
 {
+    if (pIsEaten == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    if (pContext == nullptr)
+    {
+        *pIsEaten = FALSE;
+        return S_OK;
+    }
+
     Global::UpdateModifiers(wParam, lParam);
 
     _KEYSTROKE_STATE KeystrokeState;
@@ -395,12 +398,23 @@ STDAPI CJyutping::OnTestKeyDown(ITfContext *pContext, WPARAM wParam, LPARAM lPar
 
 STDAPI CJyutping::OnKeyDown(ITfContext *pContext, WPARAM wParam, LPARAM lParam, BOOL *pIsEaten)
 {
+    if (pIsEaten == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    if (pContext == nullptr)
+    {
+        *pIsEaten = FALSE;
+        return S_OK;
+    }
+
     Global::UpdateModifiers(wParam, lParam);
 
     UINT rawCode = static_cast<UINT>(wParam);
     if (IsOptionsShortcut(rawCode))
     {
-        *pIsEaten = pContext != nullptr && !_IsKeyboardDisabled() && SUCCEEDED(ToggleOptionsMode(pContext));
+        *pIsEaten = !_IsKeyboardDisabled(pContext) && SUCCEEDED(ToggleOptionsMode(pContext));
         return S_OK;
     }
     if (_optionsMode)
@@ -461,6 +475,12 @@ STDAPI CJyutping::OnTestKeyUp(ITfContext *pContext, WPARAM wParam, LPARAM lParam
         return E_INVALIDARG;
     }
 
+    if (pContext == nullptr)
+    {
+        *pIsEaten = FALSE;
+        return S_OK;
+    }
+
     Global::UpdateModifiers(wParam, lParam);
 
     WCHAR wch = '\0';
@@ -481,6 +501,17 @@ STDAPI CJyutping::OnTestKeyUp(ITfContext *pContext, WPARAM wParam, LPARAM lParam
 
 STDAPI CJyutping::OnKeyUp(ITfContext *pContext, WPARAM wParam, LPARAM lParam, BOOL *pIsEaten)
 {
+    if (pIsEaten == nullptr)
+    {
+        return E_INVALIDARG;
+    }
+
+    if (pContext == nullptr)
+    {
+        *pIsEaten = FALSE;
+        return S_OK;
+    }
+
     Global::UpdateModifiers(wParam, lParam);
 
     WCHAR wch = '\0';
@@ -503,6 +534,12 @@ STDAPI CJyutping::OnPreservedKey(ITfContext *pContext, REFGUID rguid, BOOL *pIsE
     if (pIsEaten == nullptr)
     {
         return E_INVALIDARG;
+    }
+
+    if (_pCompositionProcessorEngine == nullptr || _pThreadMgr == nullptr)
+    {
+        *pIsEaten = FALSE;
+        return S_OK;
     }
 
     CCompositionProcessorEngine *pCompositionProcessorEngine;

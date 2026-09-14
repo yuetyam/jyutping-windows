@@ -67,7 +67,10 @@ VOID CJyutping::_DeleteCandidateList(BOOL isForce, _In_opt_ ITfContext *pContext
 
     CCompositionProcessorEngine* pCompositionProcessorEngine = nullptr;
     pCompositionProcessorEngine = _pCompositionProcessorEngine;
-    pCompositionProcessorEngine->ClearInputKeys();
+    if (pCompositionProcessorEngine != nullptr)
+    {
+        pCompositionProcessorEngine->ClearInputKeys();
+    }
 
     if (_pCandidateListUIPresenter)
     {
@@ -855,6 +858,11 @@ HRESULT CJyutping::_HandleCompositionCharacterForm(TfEditCookie ec, _In_ ITfCont
 HRESULT CJyutping::_InvokeKeyHandler(_In_ ITfContext *pContext, UINT code, WCHAR wch, DWORD flags, _KEYSTROKE_STATE keyState)
 {
     flags;
+
+    if (pContext == nullptr)
+    {
+        return E_INVALIDARG;
+    }
 
     CKeyHandlerEditSession* pEditSession = nullptr;
 
