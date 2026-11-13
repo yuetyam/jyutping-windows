@@ -54,6 +54,27 @@ private:
     std::optional<InputMethodMode> _targetMode;
 };
 
+// Commits the raw input of an open composition without touching the input method mode.
+class CFinalizeCompositionEditSession final : public CEditSessionBase
+{
+public:
+    CFinalizeCompositionEditSession(_In_ CJyutping *pTextService, _In_ ITfContext *pContext) :
+        CEditSessionBase(pTextService, pContext)
+    {
+    }
+
+    STDMETHODIMP DoEditSession(TfEditCookie ec) override
+    {
+        CCompositionProcessorEngine *pCompositionProcessorEngine = _pTextService->GetCompositionProcessorEngine();
+        // The user may have switched back to Cantonese before this asynchronous session ran.
+        if (pCompositionProcessorEngine == nullptr || pCompositionProcessorEngine->CurrentInputMethodMode() != InputMethodMode::ABC)
+        {
+            return S_OK;
+        }
+        return _pTextService->_HandleCompositionFinalizeRaw(ec, _pContext);
+    }
+};
+
 BOOL IsPageNavigationFunction(KEYSTROKE_FUNCTION function)
 {
     return function == FUNCTION_MOVE_PAGE_UP || function == FUNCTION_MOVE_PAGE_DOWN;
@@ -618,6 +639,43 @@ void CJyutping::RefreshCandidateWindowFontSizes()
     if (_pCandidateListUIPresenter)
     {
         _pCandidateListUIPresenter->_UpdateFontSizes();
+    }
+}
+
+// Updates the checked rows of an open options view, for example after another client app changed a setting.
+void CJyutping::RefreshOptionsView()
+{
+    if (!_optionsMode || _pCandidateListUIPresenter == nullptr)
+    {
+        return;
+    }
+
+    COptionsView::Row rows[10] = {};
+    _BuildOptionsRows(rows);
+    _pCandidateListUIPresenter->_RefreshOptions(rows);
+}
+
+void CJyutping::FinalizeCompositionForABCMode()
+{
+    if (_pContext == nullptr || !_IsComposing())
+    {
+        return;
+    }
+
+    // Commit the raw input, the same as switching to ABC mode in this client app. The edit session runs
+    // asynchronously, because this is called from compartment change notifications.
+    CFinalizeCompositionEditSession *pEditSession = new (std::nothrow) CFinalizeCompositionEditSession(this, _pContext);
+    if (pEditSession == nullptr)
+    {
+        return;
+    }
+
+    HRESULT editSessionResult = E_FAIL;
+    HRESULT requestResult = _pContext->RequestEditSession(_tfClientId, pEditSession, TF_ES_ASYNC | TF_ES_READWRITE, &editSessionResult);
+    pEditSession->Release();
+    if (FAILED(requestResult))
+    {
+        Global::Log(L"FinalizeCompositionForABCMode: RequestEditSession failed: hr=0x%08X", static_cast<unsigned int>(requestResult));
     }
 }
 

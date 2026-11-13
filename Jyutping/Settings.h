@@ -49,23 +49,58 @@ struct ImeSettings
     DWORD candidateCommentFontSize = DefaultCandidateCommentFontSize;
 };
 
+// Identifies one user setting, so that storage and cross-process sync can treat all settings uniformly.
+enum class SettingKind : UINT
+{
+    InputMethodMode = 0,
+    CharacterForm,
+    PunctuationForm,
+    CharacterVariant,
+    CandidatePageSize,
+    CandidateFontSize,
+    CandidateNumberFontSize,
+    CandidateCommentFontSize
+};
+
+inline constexpr UINT SettingKindCount = 8;
+
+DWORD SettingValue(const ImeSettings& settings, SettingKind kind);
+// Validates rawValue and stores it into settings. Returns false, leaving settings untouched, when the value is invalid.
+bool SetSettingValue(ImeSettings& settings, SettingKind kind, DWORD rawValue);
+bool AreSettingsEqual(const ImeSettings& left, const ImeSettings& right);
+
+struct SettingsLoadResult
+{
+    ImeSettings settings;
+    // True when the values come from the real per-user registry (or are the genuine defaults of a fresh install).
+    // False when this process only sees a sandboxed or virtualized view, so the values must not be shared with other processes.
+    bool isAuthoritative = false;
+};
+
+// Durable settings storage under HKCU\Software\Jyutping\Preferences.
+//
+// The IME runs inside every client process, and not every process sees the real registry:
+// - Packaged desktop apps (MSIX, such as Notepad) get copy-on-write HKCU virtualization. Their writes land in a private
+//   per-app hive, and once a key is copied there they never see later changes to the real key again.
+// - AppContainer apps cannot write HKCU, and can read only keys that grant them access.
+// So this store writes only from processes that see the real registry, and grants app containers read access to the key.
+// Live values are shared between processes through the TSF global compartments (see GlobalSettings.h).
 class SettingsStore
 {
 public:
-    ImeSettings Load() const;
+    SettingsStore();
+
+    // Loads the persisted settings. In a process that can persist, this also migrates the legacy settings key.
+    SettingsLoadResult Load() const;
+    // Writes every setting that differs from the stored value.
     bool Save(const ImeSettings& settings) const;
-    bool SaveInputMethodMode(InputMethodMode mode) const;
-    bool SaveCharacterForm(CharacterForm form) const;
-    bool SavePunctuationForm(PunctuationForm form) const;
-    bool SaveCharacterVariant(CharacterVariant variant) const;
-    bool SaveCandidatePageSize(DWORD pageSize) const;
-    bool SaveCandidateFontSize(DWORD fontSize) const;
-    bool SaveCandidateNumberFontSize(DWORD fontSize) const;
-    bool SaveCandidateCommentFontSize(DWORD fontSize) const;
+    // Writes one setting if it differs from the stored value.
+    bool SaveSetting(SettingKind kind, DWORD value) const;
+    // False in packaged and AppContainer processes, whose registry writes never reach the real per-user registry.
+    bool CanPersist() const { return _canPersist; }
 
 private:
-    bool ReadDWORD(_In_z_ PCWSTR valueName, _Out_ DWORD& value) const;
-    bool WriteDWORD(_In_z_ PCWSTR valueName, DWORD value) const;
+    bool _canPersist;
 };
 
 InputMethodMode InputMethodModeFromKeyboardOpen(BOOL isOpen);

@@ -66,6 +66,7 @@ public:
     HRESULT _StartOptions(_In_ ITfContext *pContextDocument, TfEditCookie ec);
     void _EndCandidateList();
     void _EnterOptions(_In_reads_(10) const COptionsView::Row* rows, UINT selection);
+    void _RefreshOptions(_In_reads_(10) const COptionsView::Row* rows);
     void _ExitOptions();
     BOOL _IsOptionsMode() const;
     UINT _GetOptionsSelection() const;

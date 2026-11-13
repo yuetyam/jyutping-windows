@@ -5,6 +5,7 @@
 #include "JyutpingBaseStructure.h"
 #include "Compartment.h"
 #include "define.h"
+#include "GlobalSettings.h"
 #include "InputEngine.h"
 #include "LanguageBar.h"
 #include "Settings.h"
@@ -135,6 +136,16 @@ private:
     void PersistPunctuationFormFromCompartment(_In_ ITfThreadMgr *pThreadMgr);
     void ApplySettingsToCompartments(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
 
+    // Settings shared by all client apps
+    void SetupGlobalSettings(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId);
+    ImeSettings LoadSharedSettings();
+    // Applies a change made in this client app, and shares it with every other client app.
+    void ChangeSetting(SettingKind kind, DWORD value);
+    static void GlobalSettingChangedCallback(_In_ void *context, SettingKind kind);
+    void OnGlobalSettingChanged(SettingKind kind);
+    void ApplySharedSettings(const ImeSettings& settings);
+    void ApplyCompartmentsFromSettings(_In_ ITfThreadMgr *pThreadMgr);
+
     BOOL SetupInputEngine();
     std::wstring CurrentInputText() const;
     const std::vector<VirtualInputKey>& CurrentInputKeys() const;
@@ -216,6 +227,7 @@ private:
 
     ImeSettings _settings;
     SettingsStore _settingsStore;
+    CGlobalSettings _globalSettings;
     BOOL _isApplyingSettings;
     BOOL _isMirroringConversionMode;
 

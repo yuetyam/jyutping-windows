@@ -253,6 +253,8 @@ void CCompositionProcessorEngine::SetTextService(_In_opt_ CJyutping *pTextServic
 
 CCompositionProcessorEngine::~CCompositionProcessorEngine()
 {
+    _globalSettings.Uninitialize();
+
     if (_pLanguageBar_InputMethodMode)
     {
         _pLanguageBar_InputMethodMode->CleanUp();
@@ -329,7 +331,7 @@ BOOL CCompositionProcessorEngine::SetupLanguageProfile(LANGID langid, REFGUID gu
     _tfClientId = tfClientId;
 
     SetupPreserved(pThreadMgr, tfClientId);
-    _settings = _settingsStore.Load();
+    SetupGlobalSettings(pThreadMgr, tfClientId);
     _isApplyingSettings = TRUE;
     InitializeJyutpingCompartment(pThreadMgr, tfClientId);
     SetupLanguageBar(pThreadMgr, tfClientId, isSecureMode);
@@ -352,13 +354,160 @@ void CCompositionProcessorEngine::ApplyPersistedSettings(_In_ ITfThreadMgr *pThr
         return;
     }
 
-    _settings = _settingsStore.Load();
-    SetCandidateListRange(_settings.candidatePageSize);
+    // Change notifications keep the settings in sync while the profile is active; this re-reads them in case the
+    // profile was reactivated after missing a change.
+    ApplySharedSettings(LoadSharedSettings());
+    ApplyCompartmentsFromSettings(pThreadMgr);
+}
+
+//+---------------------------------------------------------------------------
+//
+// Global settings
+//
+// Settings are shared by every process that hosts the IME. The TSF global compartments hold the live values for the
+// desktop session, and the registry (see SettingsStore) keeps them across sessions. A change made in any client app is
+// published to the global compartments, and every IME instance applies it from the change notification.
+//----------------------------------------------------------------------------
+
+void CCompositionProcessorEngine::SetupGlobalSettings(_In_ ITfThreadMgr *pThreadMgr, TfClientId tfClientId)
+{
+    _globalSettings.Initialize(pThreadMgr, tfClientId);
+    _settings = LoadSharedSettings();
+    _globalSettings.Advise(GlobalSettingChangedCallback, this);
+}
+
+ImeSettings CCompositionProcessorEngine::LoadSharedSettings()
+{
+    // Fill in from the registry the settings that no IME instance has published in this session yet. Only
+    // authoritative values are published, so that a sandboxed view of the registry never overrides the real settings.
+    SettingsLoadResult persisted = _settingsStore.Load();
+    ImeSettings settings = persisted.settings;
+
+    for (UINT index = 0; index < SettingKindCount; ++index)
+    {
+        SettingKind kind = static_cast<SettingKind>(index);
+        DWORD sharedValue = 0;
+        if (_globalSettings.Read(kind, sharedValue) && SetSettingValue(settings, kind, sharedValue))
+        {
+            // Persist changes made while only sandboxed apps were running, which could not write the registry.
+            if (SettingValue(persisted.settings, kind) != sharedValue)
+            {
+                _settingsStore.SaveSetting(kind, sharedValue);
+            }
+            continue;
+        }
+        if (persisted.isAuthoritative)
+        {
+            _globalSettings.Publish(kind, SettingValue(settings, kind));
+        }
+    }
+
+    return settings;
+}
+
+void CCompositionProcessorEngine::ChangeSetting(SettingKind kind, DWORD value)
+{
+    ImeSettings settings = _settings;
+    if (!SetSettingValue(settings, kind, value))
+    {
+        return;
+    }
+
+    // Apply locally first, so that this client stays responsive even if the global compartment is unavailable.
+    ApplySharedSettings(settings);
+    _settingsStore.SaveSetting(kind, value);
+    _globalSettings.Publish(kind, value);
+}
+
+// static
+void CCompositionProcessorEngine::GlobalSettingChangedCallback(_In_ void *context, SettingKind kind)
+{
+    CCompositionProcessorEngine* pEngine = static_cast<CCompositionProcessorEngine*>(context);
+    if (pEngine != nullptr)
+    {
+        pEngine->OnGlobalSettingChanged(kind);
+    }
+}
+
+void CCompositionProcessorEngine::OnGlobalSettingChanged(SettingKind kind)
+{
+    DWORD sharedValue = 0;
+    if (!_globalSettings.Read(kind, sharedValue) || SettingValue(_settings, kind) == sharedValue)
+    {
+        return;
+    }
+
+    ImeSettings settings = _settings;
+    if (!SetSettingValue(settings, kind, sharedValue))
+    {
+        return;
+    }
+
+    // Any process that can persist keeps the registry in step, so that a change made in a packaged or AppContainer
+    // app still survives a sign-out.
+    _settingsStore.SaveSetting(kind, sharedValue);
+    ApplySharedSettings(settings);
+
+    if (_pTextService != nullptr && _pTextService->_GetThreadMgr() != nullptr)
+    {
+        ApplyCompartmentsFromSettings(_pTextService->_GetThreadMgr());
+    }
+}
+
+void CCompositionProcessorEngine::ApplySharedSettings(const ImeSettings& settings)
+{
+    ImeSettings previousSettings = _settings;
+    _settings = settings;
+
+    if (previousSettings.candidatePageSize != settings.candidatePageSize)
+    {
+        SetCandidateListRange(settings.candidatePageSize);
+    }
+
+    if (previousSettings.characterVariant != settings.characterVariant)
+    {
+        _cachedInputText.clear();
+        _cachedSuggestions.clear();
+    }
+
+    if (_pTextService == nullptr || AreSettingsEqual(previousSettings, settings))
+    {
+        return;
+    }
+
+    if (previousSettings.inputMethodMode != settings.inputMethodMode && settings.inputMethodMode == InputMethodMode::ABC)
+    {
+        // Keys are no longer handled in ABC mode, so an open composition would get stuck, for example when another
+        // client app switched the mode.
+        _pTextService->FinalizeCompositionForABCMode();
+    }
+
+    if (previousSettings.characterVariant != settings.characterVariant ||
+        previousSettings.candidatePageSize != settings.candidatePageSize)
+    {
+        _pTextService->RefreshCandidateListAfterCharacterVariantChange();
+    }
+
+    if (previousSettings.candidateFontSize != settings.candidateFontSize ||
+        previousSettings.candidateNumberFontSize != settings.candidateNumberFontSize ||
+        previousSettings.candidateCommentFontSize != settings.candidateCommentFontSize)
+    {
+        _pTextService->RefreshCandidateWindowFontSizes();
+    }
+
+    _pTextService->RefreshOptionsView();
+}
+
+// Mirrors the settings into this thread's compartments, which drive key handling, the conversion mode and the
+// language bar. Changes made here are not treated as user changes.
+void CCompositionProcessorEngine::ApplyCompartmentsFromSettings(_In_ ITfThreadMgr *pThreadMgr)
+{
+    BOOL wasApplyingSettings = _isApplyingSettings;
     _isApplyingSettings = TRUE;
     ApplySettingsToCompartments(pThreadMgr, _tfClientId);
     PrivateCompartmentsUpdated(pThreadMgr);
     KeyboardOpenCompartmentUpdated(pThreadMgr);
-    _isApplyingSettings = FALSE;
+    _isApplyingSettings = wasApplyingSettings;
 }
 
 //+---------------------------------------------------------------------------
@@ -871,9 +1020,7 @@ void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsE
             return;
         }
 
-        CharacterForm form = CharacterFormFromFullWidth(newIsFullWidth);
-        _settings.characterForm = form;
-        _settingsStore.SaveCharacterForm(form);
+        ChangeSetting(SettingKind::CharacterForm, static_cast<DWORD>(CharacterFormFromFullWidth(newIsFullWidth)));
         *pIsEaten = TRUE;
     }
     else if (IsEqualGUID(rguid, _PreservedKey_PunctuationForm.Guid))
@@ -900,9 +1047,7 @@ void CCompositionProcessorEngine::OnPreservedKey(REFGUID rguid, _Out_ BOOL *pIsE
             return;
         }
 
-        PunctuationForm form = PunctuationFormFromCantonesePunctuation(newIsCantonesePunctuation);
-        _settings.punctuationForm = form;
-        _settingsStore.SavePunctuationForm(form);
+        ChangeSetting(SettingKind::PunctuationForm, static_cast<DWORD>(PunctuationFormFromCantonesePunctuation(newIsCantonesePunctuation)));
         *pIsEaten = TRUE;
     }
     else if (IsEqualGUID(rguid, _PreservedKey_CharacterVariantTraditional.Guid))
@@ -982,9 +1127,7 @@ HRESULT CCompositionProcessorEngine::ToggleInputMethodMode(_In_ ITfThreadMgr *pT
         return hr;
     }
 
-    InputMethodMode mode = InputMethodModeFromKeyboardOpen(newIsOpen);
-    _settings.inputMethodMode = mode;
-    _settingsStore.SaveInputMethodMode(mode);
+    ChangeSetting(SettingKind::InputMethodMode, static_cast<DWORD>(InputMethodModeFromKeyboardOpen(newIsOpen)));
 
     return S_OK;
 }
@@ -1001,8 +1144,7 @@ HRESULT CCompositionProcessorEngine::SetInputMethodMode(InputMethodMode mode)
     {
         return hr;
     }
-    _settings.inputMethodMode = mode;
-    _settingsStore.SaveInputMethodMode(mode);
+    ChangeSetting(SettingKind::InputMethodMode, static_cast<DWORD>(mode));
     return S_OK;
 }
 
@@ -1330,15 +1472,7 @@ void CCompositionProcessorEngine::SetCharacterVariant(CharacterVariant variant)
         return;
     }
 
-    _settings.characterVariant = variant;
-    _settingsStore.SaveCharacterVariant(variant);
-    _cachedInputText.clear();
-    _cachedSuggestions.clear();
-
-    if (_pTextService)
-    {
-        _pTextService->RefreshCandidateListAfterCharacterVariantChange();
-    }
+    ChangeSetting(SettingKind::CharacterVariant, static_cast<DWORD>(variant));
 }
 
 DWORD CCompositionProcessorEngine::CurrentCandidatePageSize() const
@@ -1354,14 +1488,7 @@ void CCompositionProcessorEngine::SetCandidatePageSize(DWORD pageSize)
         return;
     }
 
-    _settings.candidatePageSize = normalizedPageSize;
-    SetCandidateListRange(normalizedPageSize);
-    _settingsStore.SaveCandidatePageSize(normalizedPageSize);
-
-    if (_pTextService)
-    {
-        _pTextService->RefreshCandidateListAfterCharacterVariantChange();
-    }
+    ChangeSetting(SettingKind::CandidatePageSize, normalizedPageSize);
 }
 
 PunctuationForm CCompositionProcessorEngine::CurrentPunctuationForm() const
@@ -1388,8 +1515,7 @@ void CCompositionProcessorEngine::SetPunctuationForm(PunctuationForm form)
         return;
     }
 
-    _settings.punctuationForm = form;
-    _settingsStore.SavePunctuationForm(form);
+    ChangeSetting(SettingKind::PunctuationForm, static_cast<DWORD>(form));
 }
 
 CharacterForm CCompositionProcessorEngine::CurrentCharacterForm() const
@@ -1416,8 +1542,7 @@ void CCompositionProcessorEngine::SetCharacterForm(CharacterForm form)
         return;
     }
 
-    _settings.characterForm = form;
-    _settingsStore.SaveCharacterForm(form);
+    ChangeSetting(SettingKind::CharacterForm, static_cast<DWORD>(form));
 }
 
 DWORD CCompositionProcessorEngine::CurrentCandidateFontSize() const
@@ -1432,12 +1557,7 @@ void CCompositionProcessorEngine::SetCandidateFontSize(DWORD fontSize)
     {
         return;
     }
-    _settings.candidateFontSize = normalizedFontSize;
-    _settingsStore.SaveCandidateFontSize(normalizedFontSize);
-    if (_pTextService)
-    {
-        _pTextService->RefreshCandidateWindowFontSizes();
-    }
+    ChangeSetting(SettingKind::CandidateFontSize, normalizedFontSize);
 }
 
 DWORD CCompositionProcessorEngine::CurrentCandidateNumberFontSize() const
@@ -1452,12 +1572,7 @@ void CCompositionProcessorEngine::SetCandidateNumberFontSize(DWORD fontSize)
     {
         return;
     }
-    _settings.candidateNumberFontSize = normalizedFontSize;
-    _settingsStore.SaveCandidateNumberFontSize(normalizedFontSize);
-    if (_pTextService)
-    {
-        _pTextService->RefreshCandidateWindowFontSizes();
-    }
+    ChangeSetting(SettingKind::CandidateNumberFontSize, normalizedFontSize);
 }
 
 DWORD CCompositionProcessorEngine::CurrentCandidateCommentFontSize() const
@@ -1472,12 +1587,7 @@ void CCompositionProcessorEngine::SetCandidateCommentFontSize(DWORD fontSize)
     {
         return;
     }
-    _settings.candidateCommentFontSize = normalizedFontSize;
-    _settingsStore.SaveCandidateCommentFontSize(normalizedFontSize);
-    if (_pTextService)
-    {
-        _pTextService->RefreshCandidateWindowFontSizes();
-    }
+    ChangeSetting(SettingKind::CandidateCommentFontSize, normalizedFontSize);
 }
 
 void CCompositionProcessorEngine::AppendInputEngineCandidates(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList)
@@ -1730,9 +1840,7 @@ void CCompositionProcessorEngine::PersistInputMethodModeFromCompartment(_In_ ITf
         return;
     }
 
-    InputMethodMode mode = InputMethodModeFromKeyboardOpen(isOpen);
-    _settings.inputMethodMode = mode;
-    _settingsStore.SaveInputMethodMode(mode);
+    ChangeSetting(SettingKind::InputMethodMode, static_cast<DWORD>(InputMethodModeFromKeyboardOpen(isOpen)));
 }
 
 void CCompositionProcessorEngine::PersistCharacterFormFromCompartment(_In_ ITfThreadMgr *pThreadMgr)
@@ -1744,9 +1852,7 @@ void CCompositionProcessorEngine::PersistCharacterFormFromCompartment(_In_ ITfTh
         return;
     }
 
-    CharacterForm form = CharacterFormFromFullWidth(isFullWidth);
-    _settings.characterForm = form;
-    _settingsStore.SaveCharacterForm(form);
+    ChangeSetting(SettingKind::CharacterForm, static_cast<DWORD>(CharacterFormFromFullWidth(isFullWidth)));
 }
 
 void CCompositionProcessorEngine::PersistPunctuationFormFromCompartment(_In_ ITfThreadMgr *pThreadMgr)
@@ -1758,9 +1864,7 @@ void CCompositionProcessorEngine::PersistPunctuationFormFromCompartment(_In_ ITf
         return;
     }
 
-    PunctuationForm form = PunctuationFormFromCantonesePunctuation(isCantonesePunctuation);
-    _settings.punctuationForm = form;
-    _settingsStore.SavePunctuationForm(form);
+    ChangeSetting(SettingKind::PunctuationForm, static_cast<DWORD>(PunctuationFormFromCantonesePunctuation(isCantonesePunctuation)));
 }
 
 //+---------------------------------------------------------------------------

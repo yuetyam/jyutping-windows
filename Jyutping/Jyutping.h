@@ -133,6 +133,8 @@ public:
     CCompositionProcessorEngine* GetCompositionProcessorEngine() { return (_pCompositionProcessorEngine); };
     void RefreshCandidateListAfterCharacterVariantChange();
     void RefreshCandidateWindowFontSizes();
+    void RefreshOptionsView();
+    void FinalizeCompositionForABCMode();
     BOOL IsOptionsMode() const { return _optionsMode; }
     HRESULT ToggleOptionsMode(_In_ ITfContext *pContext);
     HRESULT _HandleOptionsSelection(UINT row);

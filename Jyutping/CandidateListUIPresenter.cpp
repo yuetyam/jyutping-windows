@@ -950,6 +950,15 @@ void CCandidateListUIPresenter::_EnterOptions(_In_reads_(10) const COptionsView:
     }
 }
 
+// Replaces the rows of the open options view, keeping the selection and the current visibility.
+void CCandidateListUIPresenter::_RefreshOptions(_In_reads_(10) const COptionsView::Row* rows)
+{
+    if (_pCandidateWnd != nullptr && _pCandidateWnd->_IsOptionsMode())
+    {
+        _pCandidateWnd->_SetOptions(rows, 10, _pCandidateWnd->_GetOptionsSelection());
+    }
+}
+
 void CCandidateListUIPresenter::_ExitOptions()
 {
     if (_pCandidateWnd != nullptr)
