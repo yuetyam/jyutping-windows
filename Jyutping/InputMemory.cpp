@@ -1,6 +1,7 @@
 #include "Private.h"
 #include "InputMemory.h"
 #include "Logger.h"
+#include "Settings.h"
 
 #include <winsqlite/winsqlite3.h>
 
@@ -9,6 +10,7 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -986,6 +988,55 @@ bool ExecuteDatabaseStatement(sqlite3* database, _In_z_ PCWSTR sql, _In_z_ PCWST
     return true;
 }
 
+bool PrepareMemoryJournal(sqlite3* database, const std::wstring& databasePath, bool canCreate)
+{
+    // Packaged apps redirect newly created files. Reuse an existing journal so every host sees the same recovery data.
+    // OPEN_ALWAYS preserves a hot journal left by a crash; SQLite must recover it before any new writes.
+    std::wstring journalPath = databasePath + L"-journal";
+    DWORD sharing = FILE_SHARE_READ | FILE_SHARE_WRITE | (canCreate ? FILE_SHARE_DELETE : 0);
+    HANDLE journal = CreateFileW(journalPath.c_str(), GENERIC_READ | GENERIC_WRITE, sharing, nullptr,
+        canCreate ? OPEN_ALWAYS : OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (journal == INVALID_HANDLE_VALUE)
+    {
+        Global::Log(L"InputMemory prepare failed: unable to open journal: %s, error=%lu", journalPath.c_str(), GetLastError());
+        return false;
+    }
+    // SQLite may recover a hot journal before applying the pragma, using its initial DELETE mode.
+    // Deny deletion in packaged hosts, which cannot safely replace the journal. An unpackaged host can recover and repair it.
+    std::unique_ptr<void, decltype(&CloseHandle)> journalHandle(journal, CloseHandle);
+
+    // Journal mode is per connection. Set it before schema migration, and check the returned mode because SQLite can refuse it.
+    Statement statement;
+    if (!PrepareMemoryStatement(database, L"PRAGMA journal_mode = TRUNCATE;", statement))
+    {
+        return false;
+    }
+    int result = sqlite3_step(statement.Get());
+    if (result != SQLITE_ROW)
+    {
+        LogSqliteError(database, L"set journal mode", result);
+        return false;
+    }
+    if (ColumnText(statement.Get(), 0) != L"truncate")
+    {
+        Global::Log(L"InputMemory prepare failed: TRUNCATE journal mode is unavailable");
+        return false;
+    }
+    if (canCreate)
+    {
+        // Recovery may have removed the original journal before TRUNCATE mode took effect.
+        HANDLE retainedJournal = CreateFileW(journalPath.c_str(), GENERIC_READ | GENERIC_WRITE, sharing, nullptr,
+            OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+        if (retainedJournal == INVALID_HANDLE_VALUE)
+        {
+            Global::Log(L"InputMemory prepare failed: unable to retain journal: %s, error=%lu", journalPath.c_str(), GetLastError());
+            return false;
+        }
+        CloseHandle(retainedJournal);
+    }
+    return true;
+}
+
 std::optional<int64_t> UserVersion(sqlite3* database)
 {
     Statement statement;
@@ -1160,6 +1211,7 @@ bool InputMemory::Prepare()
 {
     Close();
 
+    bool canCreate = SettingsStore().CanPersist();
     std::wstring directory = InputMemoryDirectory();
     if (directory.empty())
     {
@@ -1167,7 +1219,7 @@ bool InputMemory::Prepare()
         return false;
     }
 
-    if (!CreateDirectoryW(directory.c_str(), nullptr) && GetLastError() != ERROR_ALREADY_EXISTS)
+    if (canCreate && !CreateDirectoryW(directory.c_str(), nullptr) && GetLastError() != ERROR_ALREADY_EXISTS)
     {
         Global::Log(L"InputMemory prepare failed: unable to create directory: %s", directory.c_str());
         return false;
@@ -1183,7 +1235,11 @@ bool InputMemory::Prepare()
         return false;
     }
 
-    int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_FULLMUTEX;
+    int flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_FULLMUTEX;
+    if (canCreate)
+    {
+        flags |= SQLITE_OPEN_CREATE;
+    }
     int result = sqlite3_open_v2(path.c_str(), &_database, flags, nullptr);
     if (result != SQLITE_OK)
     {
@@ -1194,7 +1250,7 @@ bool InputMemory::Prepare()
 
     sqlite3_busy_timeout(_database, 250);
 
-    if (!PrepareMemorySchema(_database))
+    if (!PrepareMemoryJournal(_database, databasePath, canCreate) || !PrepareMemorySchema(_database))
     {
         Close();
         return false;

@@ -1,4 +1,5 @@
 #include "Logger.h"
+#include "Settings.h"
 
 #include <shlobj.h>
 #include <stdarg.h>
@@ -35,18 +36,18 @@ std::wstring JoinPath(const std::wstring& directory, _In_z_ PCWSTR name)
     return path;
 }
 
-bool EnsureDirectory(const std::wstring& directory)
+bool EnsureDirectory(const std::wstring& directory, bool canCreate = true)
 {
     if (directory.empty())
     {
         return false;
     }
 
-    if (CreateDirectoryW(directory.c_str(), nullptr))
+    if (canCreate && CreateDirectoryW(directory.c_str(), nullptr))
     {
         return true;
     }
-    if (GetLastError() != ERROR_ALREADY_EXISTS)
+    if (canCreate && GetLastError() != ERROR_ALREADY_EXISTS)
     {
         return false;
     }
@@ -79,7 +80,7 @@ std::wstring TempDirectoryPath()
     return std::wstring(path, length);
 }
 
-std::wstring CreateAppDirectory(const std::wstring& root)
+std::wstring CreateAppDirectory(const std::wstring& root, bool canCreate = true)
 {
     if (root.empty())
     {
@@ -87,18 +88,20 @@ std::wstring CreateAppDirectory(const std::wstring& root)
     }
 
     std::wstring directory = JoinPath(root, AppDirectoryName);
-    return EnsureDirectory(directory) ? directory : std::wstring();
+    return EnsureDirectory(directory, canCreate) ? directory : std::wstring();
 }
 
 std::wstring ResolveUserDataDirectory()
 {
-    std::wstring directory = CreateAppDirectory(KnownFolderPath(FOLDERID_LocalAppData));
+    // Packaged hosts may reuse user data, but must leave file and directory creation to an unpackaged host.
+    bool canCreate = SettingsStore().CanPersist();
+    std::wstring directory = CreateAppDirectory(KnownFolderPath(FOLDERID_LocalAppData), canCreate);
     if (!directory.empty())
     {
         return directory;
     }
 
-    return CreateAppDirectory(TempDirectoryPath());
+    return CreateAppDirectory(TempDirectoryPath(), canCreate);
 }
 
 std::wstring ResolveLogFilePath()
