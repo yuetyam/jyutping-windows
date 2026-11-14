@@ -1,17 +1,14 @@
 Jyutping
 ======
 
-<a href="https://t.me/jyutping">
-        <img src="images/badge-telegram.png" alt="Telegram" width="150"/>
-</a>
 <a href="https://www.instagram.com/jyutping_app">
         <img src="images/badge-instagram.png" alt="Instagram" width="150"/>
 </a>
 <a href="https://www.threads.net/@jyutping_app">
         <img src="images/badge-threads.png" alt="Threads" width="150"/>
 </a>
-<a href="https://x.com/JyutpingApp">
-        <img src="images/badge-twitter.png" alt="X (formerly Twitter)" width="150"/>
+<a href="https://t.me/jyutping">
+        <img src="images/badge-telegram.png" alt="Telegram" width="150"/>
 </a>
 <a href="https://jq.qq.com/?k=4PR17m3t">
         <img src="images/badge-qq.png" alt="QQ" width="150"/>
@@ -27,9 +24,7 @@ See also:
 - [HarmonyOS](https://github.com/yuetyam/jyutping-harmony)
 
 ## Screenshots
-<a href="https://jyutping.app">
-        <img src="images/screenshot.png" alt="Screenshot of Jyutping for Windows" width="316"/>
-</a>
+<img src="images/screenshot.png" alt="Screenshot of Jyutping for Windows" width="316"/>
 
 ## Download and install
 Please visit our website: https://jyutping.app
@@ -40,7 +35,7 @@ Requirements:
 
 - Windows 11
 - Visual Studio 2026 with the C++ desktop toolchain and the Windows 11 SDK
-- Rust and Cargo for generating the CoreIME database
+- Rust toolchain
 
 Generate `Jyutping\Resources\ime.sqlite3` from the repository root:
 
@@ -69,9 +64,7 @@ Requirements:
 
 - Release payloads for `x64`, `Win32`, and `ARM64EC`
 - Inno Setup 7
-- The official Inno Setup `ChineseSimplified.isl` and
-  `ChineseTraditional.isl` language files installed in the compiler's
-  `Languages` directory, normally `C:\Program Files\Inno Setup 7\Languages`
+- The official Inno Setup `ChineseSimplified.isl` and `ChineseTraditional.isl` language files installed in the compiler's `Languages` directory, normally `C:\Program Files\Inno Setup 7\Languages`
 
 Create both installer EXEs from the repository root:
 
@@ -79,9 +72,7 @@ Create both installer EXEs from the repository root:
 pwsh -File installer\Build-Installers.ps1
 ```
 
-The script builds the required Release configurations, stages the installer
-payloads under `installer\stage`, runs Inno Setup, and writes release artifacts
-under `installer\output`:
+The script builds the required Release configurations, stages the installer payloads under `installer\stage`, runs Inno Setup, and writes release artifacts under `installer\output`:
 
 ```text
 installer\output\jyutping-v0.1.0-x64.exe
