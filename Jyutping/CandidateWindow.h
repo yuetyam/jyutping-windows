@@ -3,7 +3,6 @@
 #include "private.h"
 #include "BaseWindow.h"
 #include "ShadowWindow.h"
-#include "ScrollBarWindow.h"
 #include "JyutpingBaseStructure.h"
 #include "OptionsView.h"
 
@@ -18,7 +17,7 @@ typedef HRESULT (*CANDWNDCALLBACK)(void *pv, enum CANDWND_ACTION action);
 class CCandidateWindow : public CBaseWindow
 {
 public:
-    CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void *pv, _In_ CCandidateRange *pIndexRange, _In_ BOOL isStoreAppMode,
+    CCandidateWindow(_In_ CANDWNDCALLBACK pfnCallback, _In_ void *pv, _In_ CCandidateRange *pIndexRange,
         DWORD candidateFontSize, DWORD numberFontSize, DWORD commentFontSize);
     virtual ~CCandidateWindow();
 
@@ -37,7 +36,6 @@ public:
     void _OnLButtonDown(POINT pt);
     void _OnLButtonUp(POINT pt);
     void _OnMouseMove(POINT pt);
-    void _OnVScroll(DWORD dwSB, _In_ DWORD nPos);
 
     void _AddString(_Inout_ CCandidateListItem *pCandidateItem);
     void _ClearList();
@@ -49,7 +47,6 @@ public:
     {
         return _currentSelection;
     }
-    void _SetScrollInfo(_In_ int nMax, _In_ int nPage);
     void _SetOptions(_In_reads_(count) const COptionsView::Row* rows, UINT count, UINT selection);
     void _ClearOptions();
     BOOL _IsOptionsMode() const { return _optionsMode; }
@@ -61,10 +58,10 @@ public:
     DWORD _GetSelectedCandidateString(_Outptr_result_maybenull_ const WCHAR **ppwchCandidateString);
     DWORD_PTR _GetSelectedCandidateInputCount();
 
-    BOOL _MoveSelection(_In_ int offSet, _In_ BOOL isNotify);
-    BOOL _SetSelection(_In_ int iPage, _In_ BOOL isNotify);
-    void _SetSelection(_In_ int nIndex);
-    BOOL _MovePage(_In_ int offSet, _In_ BOOL isNotify);
+    BOOL _MoveSelection(_In_ int offSet);
+    BOOL _SetSelection(_In_ int selectedIndex);
+    void _SetSelectionIndex(_In_ UINT index);
+    BOOL _MovePage(_In_ int offSet);
     BOOL _SetSelectionInPage(int nPos);
 
     HRESULT _GetPageIndex(UINT *pIndex, _In_ UINT uSize, _Inout_ UINT *puPageCnt);
@@ -77,7 +74,6 @@ private:
     void _DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT *prc);
     void _DrawBorder(_In_ HDC dcHandle, _In_ RECT *prc, _In_ int cx);
     HRESULT _GetPageBounds(_In_ UINT page, _Out_ UINT *pStart, _Out_ UINT *pEnd);
-    BOOL _SetSelectionOffset(_In_ int offSet);
     BOOL _AdjustPageIndexForSelection();
     HRESULT _CurrentPageHasEmptyItems(_Inout_ BOOL *pfHasEmptyItems);
 
@@ -86,12 +82,10 @@ private:
 
     BOOL _CreateMainWindow(ATOM atom, _In_opt_ HWND parentWndHandle);
     BOOL _CreateBackGroundShadowWindow();
-    BOOL _CreateVScrollWindow();
 
     HRESULT _AdjustPageIndex(_Inout_ UINT & currentPage, _Inout_ UINT & currentPageIndex);
 
     void _DeleteShadowWnd();
-    void _DeleteVScrollBarWnd();
     void _InitializeTextFormats(_In_ HWND wndHandle);
     void _DrawOptions(_In_ HDC dcHandle, _In_ const RECT* prc);
 
@@ -130,11 +124,9 @@ private:
 
     // Child windows
     CShadowWindow* _pShadowWnd;         // Drop shadow window
-    CScrollBarWindow* _pVScrollBarWnd;  // Vertical scrollbar window
 
     // Behavioral flags
     BOOL _skipEmptyPageAdjustment; // Skip page index adjustment when page has empty slots
-    BOOL _isStoreAppMode;          // Whether running in Store App mode
     DWORD _candidateFontSize;
     DWORD _numberFontSize;
     DWORD _commentFontSize;

@@ -760,7 +760,7 @@ STDAPI CCandidateListUIPresenter::SetSelection(UINT nIndex)
 {
     if (_pCandidateWnd)
     {
-        _pCandidateWnd->_SetSelection(nIndex);
+        _pCandidateWnd->_SetSelectionIndex(nIndex);
     }
 
     return S_OK;
@@ -1023,7 +1023,7 @@ void CCandidateListUIPresenter::_SetText(_In_ CJyutpingArray<CCandidateListItem>
 
     AddCandidateToCandidateListUI(pCandidateList);
 
-    SetPageIndexWithScrollInfo(pCandidateList);
+    SetCandidatePageIndices(pCandidateList);
 
     if (_isShowMode)
     {
@@ -1072,7 +1072,7 @@ void CCandidateListUIPresenter::AddCandidateToCandidateListUI(_In_ CJyutpingArra
     }
 }
 
-void CCandidateListUIPresenter::SetPageIndexWithScrollInfo(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList)
+void CCandidateListUIPresenter::SetCandidatePageIndices(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList)
 {
     if (_pCandidateWnd == nullptr || pCandidateList == nullptr)
     {
@@ -1103,8 +1103,6 @@ void CCandidateListUIPresenter::SetPageIndexWithScrollInfo(_In_ CJyutpingArray<C
         _pCandidateWnd->_SetPageIndex(puPageIndex, bufferSize);
         delete [] puPageIndex;
     }
-    _pCandidateWnd->_SetScrollInfo(pCandidateList->Count(), candCntInPage);  // nMax:range of max, nPage:number of items in page
-
 }
 //+---------------------------------------------------------------------------
 //
@@ -1210,7 +1208,7 @@ BOOL CCandidateListUIPresenter::_MoveSelection(_In_ int offSet)
         return FALSE;
     }
 
-    BOOL ret = _pCandidateWnd->_MoveSelection(offSet, TRUE);
+    BOOL ret = _pCandidateWnd->_MoveSelection(offSet);
     if (ret)
     {
         if (_isShowMode)
@@ -1240,7 +1238,7 @@ BOOL CCandidateListUIPresenter::_SetSelection(_In_ int selectedIndex)
         return FALSE;
     }
 
-    BOOL ret = _pCandidateWnd->_SetSelection(selectedIndex, TRUE);
+    BOOL ret = _pCandidateWnd->_SetSelection(selectedIndex);
     if (ret)
     {
         if (_isShowMode)
@@ -1270,7 +1268,7 @@ BOOL CCandidateListUIPresenter::_MovePage(_In_ int offSet)
         return FALSE;
     }
 
-    BOOL ret = _pCandidateWnd->_MovePage(offSet, TRUE);
+    BOOL ret = _pCandidateWnd->_MovePage(offSet);
     if (ret)
     {
         if (_isShowMode)
@@ -1586,7 +1584,6 @@ HRESULT CCandidateListUIPresenter::MakeCandidateWindow(_In_ ITfContext *pContext
         _CandWndCallback,
         this,
         _pIndexRange,
-        _pTextService->_IsStoreAppMode(),
         candidateFontSize,
         numberFontSize,
         commentFontSize);

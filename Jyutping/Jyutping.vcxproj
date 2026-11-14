@@ -92,7 +92,6 @@
     <ClInclude Include="RegKey.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="Jyutping.h" />
-    <ClInclude Include="ScrollBarWindow.h" />
     <ClInclude Include="ShadowWindow.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="TfInputProcessorProfile.h" />
@@ -157,7 +156,6 @@
     <ClCompile Include="PunctuationKey.cpp" />
     <ClCompile Include="Register.cpp" />
     <ClCompile Include="RegKey.cpp" />
-    <ClCompile Include="ScrollBarWindow.cpp" />
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="ShadowWindow.cpp" />
     <ClCompile Include="StartComposition.cpp" />

@@ -116,9 +116,6 @@
     <ClInclude Include="resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="ScrollBarWindow.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="ShadowWindow.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -305,9 +302,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="RegKey.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="ScrollBarWindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Server.cpp">

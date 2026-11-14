@@ -94,7 +94,6 @@ extern HINSTANCE dllInstanceHandle;
 
 extern ATOM AtomCandidateWindow;
 extern ATOM AtomShadowWindow;
-extern ATOM AtomScrollBarWindow;
 extern ATOM AtomSettingsMenuWindow;
 
 BOOL RegisterWindowClass();

@@ -80,16 +80,6 @@ public:
         return _pTimerUIObj;
     }
 
-    UINT _GetScrollDelay()
-    {
-        return (GetDoubleClickTime() * 4 / 5);
-    }
-
-    UINT _GetScrollSpeed()
-    {
-        return (_GetScrollDelay() / 8);
-    }
-
 protected:
     LRESULT _NotifyCommand(UINT uMsg, DWORD dwSB, int nPos);
 

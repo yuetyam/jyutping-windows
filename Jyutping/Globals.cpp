@@ -262,9 +262,6 @@ ATOM AtomCandidateWindow;
 extern const WCHAR ShadowClassName[] = L"Jyutping.ShadowWindow";
 ATOM AtomShadowWindow;
 
-extern const WCHAR ScrollBarClassName[] = L"Jyutping.ScrollBarWindow";
-ATOM AtomScrollBarWindow;
-
 extern const WCHAR SettingsMenuClassName[] = L"Jyutping.SettingsMenuWindow";
 ATOM AtomSettingsMenuWindow;
 
@@ -275,10 +272,6 @@ BOOL RegisterWindowClass()
         return FALSE;
     }
     if (!CBaseWindow::_InitWindowClass(ShadowClassName, &AtomShadowWindow))
-    {
-        return FALSE;
-    }
-    if (!CBaseWindow::_InitWindowClass(ScrollBarClassName, &AtomScrollBarWindow))
     {
         return FALSE;
     }

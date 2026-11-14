@@ -122,7 +122,7 @@ private:
 
     void AddCandidateToCandidateListUI(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList);
 
-    void SetPageIndexWithScrollInfo(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList);
+    void SetCandidatePageIndices(_In_ CJyutpingArray<CCandidateListItem> *pCandidateList);
 
 protected:
     CCandidateWindow *_pCandidateWnd;

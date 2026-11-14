@@ -28,7 +28,7 @@
 
 // HStack-style row layout: LeftPadding | NumberLabel | Spacing | CandidateWord | Spacing | Comment | RightPadding
 #define CANDIDATE_ROW_PADDING_LEFT      (10.0f)  // Leading padding of the row
-#define CANDIDATE_ROW_PADDING_RIGHT     (1.0f)   // Trailing padding of the row
+#define CANDIDATE_ROW_PADDING_RIGHT     (10.0f)  // Trailing padding of the row
 #define CANDIDATE_NUMBER_SPACING        (12.0f)  // Spacing between label number and candidate word
 #define CANDIDATE_COMMENT_SPACING       (12.0f)  // Spacing between candidate word and candidate comment (romanization)
 
