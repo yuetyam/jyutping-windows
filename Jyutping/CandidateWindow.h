@@ -71,7 +71,7 @@ public:
 
 private:
     void _HandleMouseMsg(_In_ UINT mouseMsg, _In_ POINT point);
-    void _DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT *prc);
+    HRESULT _DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT *prc);
     void _DrawBorder(_In_ HDC dcHandle, _In_ RECT *prc, _In_ int cx);
     HRESULT _GetPageBounds(_In_ UINT page, _Out_ UINT *pStart, _Out_ UINT *pEnd);
     BOOL _AdjustPageIndexForSelection();
@@ -86,8 +86,9 @@ private:
     HRESULT _AdjustPageIndex(_Inout_ UINT & currentPage, _Inout_ UINT & currentPageIndex);
 
     void _DeleteShadowWnd();
-    void _InitializeTextFormats(_In_ HWND wndHandle);
-    void _DrawOptions(_In_ HDC dcHandle, _In_ const RECT* prc);
+    HRESULT _InitializeTextFormats(_In_ HWND wndHandle);
+    HRESULT _EnsureRenderTarget();
+    HRESULT _DrawOptions(_In_ HDC dcHandle, _In_ const RECT* prc);
 
 private:
     // Selection and display state

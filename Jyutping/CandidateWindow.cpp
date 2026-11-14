@@ -4,6 +4,7 @@
 #include "CandidateWindow.h"
 #include "Settings.h"
 #include "WindowAppearance.h"
+#include "Logger.h"
 
 constexpr auto limitedMaxSpace = 2000.0f;
 constexpr D2D1_DRAW_TEXT_OPTIONS textDrawOptions = D2D1_DRAW_TEXT_OPTIONS_ENABLE_COLOR_FONT;
@@ -128,6 +129,11 @@ BOOL CCandidateWindow::_CreateBackGroundShadowWindow()
 
 void CCandidateWindow::_ResizeWindow()
 {
+    if (!_pDWriteTextFormat || !_pDWriteNumberFormat || !_pDWriteCommentFormat || Global::pDWriteFactory == nullptr)
+    {
+        _InitializeTextFormats(_wndHandle);
+    }
+
     UINT dpi = GetDpiForWindow(_wndHandle);
     float scale = (float)dpi / USER_DEFAULT_SCREEN_DPI;
 
@@ -260,74 +266,115 @@ void CCandidateWindow::_SetFontSizes(DWORD candidateFontSize, DWORD numberFontSi
     _InvalidateRect();
 }
 
-void CCandidateWindow::_InitializeTextFormats(_In_ HWND wndHandle)
+HRESULT CCandidateWindow::_InitializeTextFormats(_In_ HWND wndHandle)
 {
-    if (wndHandle == nullptr || Global::pDWriteFactory == nullptr)
+    if (wndHandle == nullptr)
     {
-        return;
+        return E_INVALIDARG;
+    }
+    if (!Global::InitDirectWrite())
+    {
+        Global::Log(L"CandidateWindow: DirectWrite initialization failed");
+        return E_FAIL;
     }
 
     float scale = static_cast<float>(GetDpiForWindow(wndHandle)) / USER_DEFAULT_SCREEN_DPI;
-    WindowAppearance::CreateTextFormat(
+    ComPtr<IDWriteTextFormat1> candidateFormat;
+    ComPtr<IDWriteTextFormat1> numberFormat;
+    ComPtr<IDWriteTextFormat1> commentFormat;
+    HRESULT hr = WindowAppearance::CreateTextFormat(
         static_cast<float>(_candidateFontSize) * scale,
         Global::candidateFontNames,
         Global::candidateFontNamesCount,
         Global::pDWriteCandidateFontFallback,
-        _pDWriteTextFormat.ReleaseAndGetAddressOf());
-    WindowAppearance::CreateTextFormat(
-        static_cast<float>(_numberFontSize) * scale,
-        Global::numberLabelFontNames,
-        Global::numberLabelFontNamesCount,
-        Global::pDWriteNumberLabelFontFallback,
-        _pDWriteNumberFormat.ReleaseAndGetAddressOf());
-    WindowAppearance::CreateTextFormat(
-        static_cast<float>(_commentFontSize) * scale,
-        Global::commentFontNames,
-        Global::commentFontNamesCount,
-        Global::pDWriteCommentFontFallback,
-        _pDWriteCommentFormat.ReleaseAndGetAddressOf());
+        &candidateFormat);
+    if (SUCCEEDED(hr))
+    {
+        hr = WindowAppearance::CreateTextFormat(
+            static_cast<float>(_numberFontSize) * scale,
+            Global::numberLabelFontNames,
+            Global::numberLabelFontNamesCount,
+            Global::pDWriteNumberLabelFontFallback,
+            &numberFormat);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = WindowAppearance::CreateTextFormat(
+            static_cast<float>(_commentFontSize) * scale,
+            Global::commentFontNames,
+            Global::commentFontNamesCount,
+            Global::pDWriteCommentFontFallback,
+            &commentFormat);
+    }
+    auto measureText = [](LPCWSTR text, IDWriteTextFormat* format, DWRITE_TEXT_METRICS& metrics)
+    {
+        ComPtr<IDWriteTextLayout> layout;
+        HRESULT result = Global::pDWriteFactory->CreateTextLayout(text, 1, format, limitedMaxSpace, limitedMaxSpace, &layout);
+        return SUCCEEDED(result) ? layout->GetMetrics(&metrics) : result;
+    };
+    DWRITE_TEXT_METRICS candidateMetrics = {};
+    DWRITE_TEXT_METRICS numberMetrics = {};
+    DWRITE_TEXT_METRICS commentMetrics = {};
+    if (SUCCEEDED(hr))
+    {
+        hr = measureText(L"A", candidateFormat.Get(), candidateMetrics);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = measureText(L"0", numberFormat.Get(), numberMetrics);
+    }
+    if (SUCCEEDED(hr))
+    {
+        hr = measureText(L"A", commentFormat.Get(), commentMetrics);
+    }
+    if (FAILED(hr))
+    {
+        Global::Log(L"CandidateWindow: text format initialization failed: hr=0x%08X", static_cast<unsigned int>(hr));
+        return hr;
+    }
 
+    // Keep the existing formats and metrics if a font or DPI refresh fails.
+    _pDWriteTextFormat = candidateFormat;
+    _pDWriteNumberFormat = numberFormat;
+    _pDWriteCommentFormat = commentFormat;
     _candidateTextMetric = {};
+    _candidateTextMetric.tmHeight = static_cast<LONG>(ceil(candidateMetrics.height));
+    _candidateTextMetric.tmAveCharWidth = static_cast<LONG>(ceil(candidateMetrics.width));
+    _candidateTextMetric.tmMaxCharWidth = _candidateTextMetric.tmAveCharWidth;
     _numberLabelTextMetric = {};
-    LONG commentTextHeight = 0;
-    if (_pDWriteTextFormat)
-    {
-        ComPtr<IDWriteTextLayout> pTextLayout;
-        if (SUCCEEDED(Global::pDWriteFactory->CreateTextLayout(L"A", 1, _pDWriteTextFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pTextLayout)))
-        {
-            DWRITE_TEXT_METRICS metrics;
-            pTextLayout->GetMetrics(&metrics);
-            _candidateTextMetric.tmHeight = static_cast<LONG>(ceil(metrics.height));
-            _candidateTextMetric.tmAveCharWidth = static_cast<LONG>(ceil(metrics.width));
-            _candidateTextMetric.tmMaxCharWidth = _candidateTextMetric.tmAveCharWidth;
-        }
-    }
-    if (_pDWriteNumberFormat)
-    {
-        ComPtr<IDWriteTextLayout> pTextLayout;
-        if (SUCCEEDED(Global::pDWriteFactory->CreateTextLayout(L"0", 1, _pDWriteNumberFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pTextLayout)))
-        {
-            DWRITE_TEXT_METRICS metrics;
-            pTextLayout->GetMetrics(&metrics);
-            _numberLabelTextMetric.tmHeight = static_cast<LONG>(ceil(metrics.height));
-            _numberLabelTextMetric.tmAveCharWidth = static_cast<LONG>(ceil(metrics.width));
-        }
-    }
-    if (_pDWriteCommentFormat)
-    {
-        ComPtr<IDWriteTextLayout> pTextLayout;
-        if (SUCCEEDED(Global::pDWriteFactory->CreateTextLayout(L"A", 1, _pDWriteCommentFormat.Get(), limitedMaxSpace, limitedMaxSpace, &pTextLayout)))
-        {
-            DWRITE_TEXT_METRICS metrics;
-            pTextLayout->GetMetrics(&metrics);
-            commentTextHeight = static_cast<LONG>(ceil(metrics.height));
-        }
-    }
+    _numberLabelTextMetric.tmHeight = static_cast<LONG>(ceil(numberMetrics.height));
+    _numberLabelTextMetric.tmAveCharWidth = static_cast<LONG>(ceil(numberMetrics.width));
 
     LONG contentHeight = max(_candidateTextMetric.tmHeight, _numberLabelTextMetric.tmHeight);
-    contentHeight = max(contentHeight, commentTextHeight);
+    contentHeight = max(contentHeight, static_cast<LONG>(ceil(commentMetrics.height)));
     _rowHeight = contentHeight + static_cast<int>(ceil(CANDIDATE_ROW_VERTICAL_SPACING * scale));
     _windowWidth = _candidateTextMetric.tmMaxCharWidth;
+    return S_OK;
+}
+
+HRESULT CCandidateWindow::_EnsureRenderTarget()
+{
+    if (_pDirect2DRenderTarget)
+    {
+        return S_OK;
+    }
+
+    ComPtr<ID2D1Factory> factory;
+    HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, factory.GetAddressOf());
+    if (SUCCEEDED(hr))
+    {
+        // Layout uses pixels, so the DC render target always stays at 96 DPI.
+        D2D1_RENDER_TARGET_PROPERTIES properties = D2D1::RenderTargetProperties(
+            D2D1_RENDER_TARGET_TYPE_DEFAULT,
+            D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED),
+            static_cast<FLOAT>(USER_DEFAULT_SCREEN_DPI), static_cast<FLOAT>(USER_DEFAULT_SCREEN_DPI));
+        hr = factory->CreateDCRenderTarget(&properties, _pDirect2DRenderTarget.ReleaseAndGetAddressOf());
+    }
+    if (FAILED(hr))
+    {
+        Global::Log(L"CandidateWindow: render target creation failed: hr=0x%08X", static_cast<unsigned int>(hr));
+    }
+    return hr;
 }
 
 //+---------------------------------------------------------------------------
@@ -431,36 +478,8 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
     switch (uMsg)
     {
     case WM_CREATE:
-    {
-        HDC dcHandle = nullptr;
-
-        dcHandle = GetDC(wndHandle);
-        if (dcHandle)
-        {
-            // Initialize DirectWrite
-            if (Global::pDWriteFactory)
-            {
-                _InitializeTextFormats(wndHandle);
-
-                // Create Direct2D Render Target
-                D2D1_RENDER_TARGET_PROPERTIES props = D2D1::RenderTargetProperties(
-                    D2D1_RENDER_TARGET_TYPE_DEFAULT,
-                    D2D1_PIXEL_FORMAT{ DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED },
-                    (FLOAT)USER_DEFAULT_SCREEN_DPI, (FLOAT)USER_DEFAULT_SCREEN_DPI, D2D1_RENDER_TARGET_USAGE_NONE, D2D1_FEATURE_LEVEL_DEFAULT
-                );
-
-                ID2D1Factory* pD2DFactory = nullptr;
-                if (SUCCEEDED(D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &pD2DFactory)))
-                {
-                    pD2DFactory->CreateDCRenderTarget(&props, _pDirect2DRenderTarget.ReleaseAndGetAddressOf());
-                    pD2DFactory->Release();
-                }
-            }
-
-            ReleaseDC(wndHandle, dcHandle);
-        }
-    }
-    return 0;
+        _InitializeTextFormats(wndHandle);
+        return 0;
 
     case WM_DESTROY:
         _DeleteShadowWnd();
@@ -628,34 +647,56 @@ void CCandidateWindow::_HandleMouseMsg(_In_ UINT mouseMsg, _In_ POINT point)
 
 void CCandidateWindow::_OnPaint(_In_ HDC dcHandle, _In_ PAINTSTRUCT* pPaintStruct)
 {
-    if (_optionsMode)
+    if (dcHandle == nullptr || IsRectEmpty(&pPaintStruct->rcPaint))
     {
-        _DrawOptions(dcHandle, &pPaintStruct->rcPaint);
         return;
     }
-    SetBkMode(dcHandle, TRANSPARENT);
 
-    if (!_pDirect2DRenderTarget)
+    // A failed initialization must be retried without requiring an IME switch.
+    if (!_pDWriteTextFormat || !_pDWriteNumberFormat || !_pDWriteCommentFormat || Global::pDWriteFactory == nullptr)
     {
-        HBRUSH hBrush = CreateSolidBrush(Global::GetCandidateWindowBackgroundColor());
-        FillRect(dcHandle, &pPaintStruct->rcPaint, hBrush);
-        DeleteObject(hBrush);
+        if (SUCCEEDED(_InitializeTextFormats(_wndHandle)))
+        {
+            _ResizeWindow();
+        }
+    }
+
+    RECT clientRect = {};
+    _GetClientRect(&clientRect);
+    if (IsRectEmpty(&clientRect))
+    {
+        return;
     }
 
     UINT currentPageIndex = 0;
     UINT currentPage = 0;
-
-    if (FAILED(_GetCurrentPage(&currentPage)))
+    if (!_optionsMode && SUCCEEDED(_GetCurrentPage(&currentPage)))
     {
-        return;
+        _AdjustPageIndex(currentPage, currentPageIndex);
     }
 
-    _AdjustPageIndex(currentPage, currentPageIndex);
+    // Bind to the full client area to keep drawing coordinates stable during partial paints.
+    // BeginPaint's DC clip still limits the pixels copied back to the invalidated region.
+    for (UINT attempt = 0; attempt < 2; ++attempt)
+    {
+        HRESULT hr = _EnsureRenderTarget();
+        if (SUCCEEDED(hr))
+        {
+            hr = _optionsMode ? _DrawOptions(dcHandle, &clientRect) : _DrawList(dcHandle, currentPageIndex, &clientRect);
+        }
+        if (SUCCEEDED(hr))
+        {
+            return;
+        }
 
-    _DrawList(dcHandle, currentPageIndex, &pPaintStruct->rcPaint);
+        // Direct2D targets can become unusable after a display or device change.
+        // Discard the failed target and retry this paint once, without a repaint loop.
+        Global::Log(L"CandidateWindow: paint failed: hr=0x%08X attempt=%u", static_cast<unsigned int>(hr), attempt + 1);
+        _pDirect2DRenderTarget.Reset();
+    }
 }
 
-void CCandidateWindow::_DrawOptions(_In_ HDC dcHandle, _In_ const RECT* prc)
+HRESULT CCandidateWindow::_DrawOptions(_In_ HDC dcHandle, _In_ const RECT* prc)
 {
     RECT clientRect = {};
     _GetClientRect(&clientRect);
@@ -664,14 +705,18 @@ void CCandidateWindow::_DrawOptions(_In_ HDC dcHandle, _In_ const RECT* prc)
     {
         IntersectClipRect(dcHandle, prc->left, prc->top, prc->right, prc->bottom);
     }
+    HRESULT hr = S_OK;
     if (_pDirect2DRenderTarget && _pDWriteTextFormat && _pDWriteNumberFormat)
     {
-        _pDirect2DRenderTarget->BindDC(dcHandle, prc);
-        _pDirect2DRenderTarget->BeginDraw();
-        _pDirect2DRenderTarget->SetTransform(D2D1::IdentityMatrix());
-        _pDirect2DRenderTarget->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
-        _optionsView.DrawD2D(_pDirect2DRenderTarget.Get(), _pDWriteTextFormat.Get(), _pDWriteNumberFormat.Get(), clientRect, GetDpiForWindow(_wndHandle));
-        _pDirect2DRenderTarget->EndDraw();
+        hr = _pDirect2DRenderTarget->BindDC(dcHandle, prc);
+        if (SUCCEEDED(hr))
+        {
+            _pDirect2DRenderTarget->BeginDraw();
+            _pDirect2DRenderTarget->SetTransform(D2D1::IdentityMatrix());
+            _pDirect2DRenderTarget->Clear(D2D1::ColorF(0.0f, 0.0f, 0.0f, 0.0f));
+            _optionsView.DrawD2D(_pDirect2DRenderTarget.Get(), _pDWriteTextFormat.Get(), _pDWriteNumberFormat.Get(), clientRect, GetDpiForWindow(_wndHandle));
+            hr = _pDirect2DRenderTarget->EndDraw();
+        }
     }
     else
     {
@@ -681,6 +726,7 @@ void CCandidateWindow::_DrawOptions(_In_ HDC dcHandle, _In_ const RECT* prc)
     {
         RestoreDC(dcHandle, savedDc);
     }
+    return hr;
 }
 
 //+---------------------------------------------------------------------------
@@ -803,8 +849,13 @@ void CCandidateWindow::_OnMouseMove(POINT pt)
 //
 //----------------------------------------------------------------------------
 
-void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT* prc)
+HRESULT CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT* prc)
 {
+    if (!_pDirect2DRenderTarget || !_pDWriteTextFormat || !_pDWriteNumberFormat || !_pDWriteCommentFormat || Global::pDWriteFactory == nullptr)
+    {
+        return E_UNEXPECTED;
+    }
+
     int pageCount = 0;
     int candidateListPageCnt = _pIndexRange->Count();
     int cyLine = max(_rowHeight, _candidateTextMetric.tmHeight);
@@ -821,13 +872,18 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
 
     if (_pDirect2DRenderTarget)
     {
-        _pDirect2DRenderTarget->BindDC(dcHandle, prc);
+        HRESULT hr = _pDirect2DRenderTarget->BindDC(dcHandle, prc);
+        if (FAILED(hr))
+        {
+            return hr;
+        }
         _pDirect2DRenderTarget->BeginDraw();
         _pDirect2DRenderTarget->SetTransform(D2D1::IdentityMatrix());
         _pDirect2DRenderTarget->Clear(WindowAppearance::ColorFromColorRef(Global::GetCandidateWindowBackgroundColor(), _isAcrylic ? candidateWindowClearAlpha : 1.0f));
     }
 
     const size_t lenOfPageCount = 16;
+    HRESULT drawResult = S_OK;
     for (;
         (iIndex < _candidateList.Count()) && (pageCount < candidateListPageCnt);
         iIndex++, pageCount++)
@@ -859,7 +915,11 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                     static_cast<FLOAT>(rc.bottom)
                 );
                 ComPtr<ID2D1SolidColorBrush> pBkBrush;
-                _pDirect2DRenderTarget->CreateSolidColorBrush(WindowAppearance::ColorFromColorRef(crBk), &pBkBrush);
+                drawResult = _pDirect2DRenderTarget->CreateSolidColorBrush(WindowAppearance::ColorFromColorRef(crBk), &pBkBrush);
+                if (FAILED(drawResult))
+                {
+                    break;
+                }
                 if (pBkBrush)
                 {
                     _pDirect2DRenderTarget->FillRectangle(&rcRow, pBkBrush.Get());
@@ -870,7 +930,11 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         ComPtr<ID2D1SolidColorBrush> pTextBrush;
         if (_pDirect2DRenderTarget)
         {
-            _pDirect2DRenderTarget->CreateSolidColorBrush(WindowAppearance::ColorFromColorRef(crText), &pTextBrush);
+            drawResult = _pDirect2DRenderTarget->CreateSolidColorBrush(WindowAppearance::ColorFromColorRef(crText), &pTextBrush);
+            if (FAILED(drawResult))
+            {
+                break;
+            }
         }
 
         // HStack layout: accumulate x position as we draw each element
@@ -890,11 +954,20 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                 static_cast<FLOAT>(cyLine),
                 &pNumLayout
             );
+            if (FAILED(hr))
+            {
+                drawResult = hr;
+                break;
+            }
 
             if (SUCCEEDED(hr))
             {
                 DWRITE_TEXT_METRICS numberMetrics;
-                pNumLayout->GetMetrics(&numberMetrics);
+                drawResult = pNumLayout->GetMetrics(&numberMetrics);
+                if (FAILED(drawResult))
+                {
+                    break;
+                }
                 numberWidth = numberMetrics.width;
 
                 D2D1_POINT_2F numberPosition = D2D1::Point2F(xPosition, static_cast<FLOAT>(rc.top));
@@ -920,11 +993,20 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                 static_cast<FLOAT>(cyLine),
                 &pTextLayout
             );
+            if (FAILED(hr))
+            {
+                drawResult = hr;
+                break;
+            }
 
             if (SUCCEEDED(hr))
             {
                 DWRITE_TEXT_METRICS candidateMetrics;
-                pTextLayout->GetMetrics(&candidateMetrics);
+                drawResult = pTextLayout->GetMetrics(&candidateMetrics);
+                if (FAILED(drawResult))
+                {
+                    break;
+                }
                 candidateWidth = candidateMetrics.width;
 
                 D2D1_POINT_2F candidatePosition = D2D1::Point2F(xPosition, static_cast<FLOAT>(rc.top));
@@ -948,6 +1030,11 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
                     static_cast<FLOAT>(cyLine),
                     &pCommentLayout
                 );
+                if (FAILED(hr))
+                {
+                    drawResult = hr;
+                    break;
+                }
 
                 if (SUCCEEDED(hr))
                 {
@@ -963,10 +1050,8 @@ void CCandidateWindow::_DrawList(_In_ HDC dcHandle, _In_ UINT iIndex, _In_ RECT*
         _DrawBorder(dcHandle, prc, CANDWND_BORDER_WIDTH);
     }
 
-    if (_pDirect2DRenderTarget)
-    {
-        _pDirect2DRenderTarget->EndDraw();
-    }
+    HRESULT hr = _pDirect2DRenderTarget->EndDraw();
+    return FAILED(hr) ? hr : drawResult;
 }
 
 //+---------------------------------------------------------------------------
