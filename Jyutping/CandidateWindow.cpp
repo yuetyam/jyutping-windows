@@ -657,8 +657,10 @@ LRESULT CALLBACK CCandidateWindow::_WindowProcCallback(_In_ HWND wndHandle, UINT
 
     case WM_DPICHANGED:
     {
-        // Re-initialize resources with new DPI
-        SendMessage(wndHandle, WM_CREATE, 0, 0);
+        // Refresh the DPI-dependent fonts directly. WM_CREATE requires a valid
+        // CREATESTRUCT in lParam, which CBaseWindow::_WindowProc dereferences.
+        // The Direct2D DC render target stays at 96 DPI because layout uses pixels.
+        _InitializeTextFormats(wndHandle);
         _ResizeWindow();
         _InvalidateRect();
         return 0;
