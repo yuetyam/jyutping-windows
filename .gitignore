@@ -496,9 +496,11 @@ $RECYCLE.BIN/
 
 
 ### Editors and Agents ###
+.vscode/
 .claude/
 .codex/
 .copilot/
+.zcode/
 
 
 ### Rust & Cargo ###
@@ -507,6 +509,7 @@ $RECYCLE.BIN/
 
 ### Databases ###
 /Jyutping/Resources/*.sqlite3
+
 
 ### Installer payloads ###
 /packaging/output/

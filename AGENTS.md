@@ -76,6 +76,7 @@ Runtime logging is implemented in `Jyutping\Logger.cpp`.
 ## Coding
 Check the root `.editorconfig` for code style and formatting.
 
+C++ code:
 - Match the style of the surrounding file, especially in COM and TSF interface implementations.
 - Prefer descriptive names over cryptic abbreviations.
 - For new private members, use a leading underscore, for example `_renderTarget`.
