@@ -69,15 +69,15 @@ Requirements:
 Create both installer EXEs from the repository root:
 
 ```powershell
-pwsh -File installer\Build-Installers.ps1
+pwsh -File packaging\Build-Installers.ps1
 ```
 
-The script builds the required Release configurations, stages the installer payloads under `installer\stage`, runs Inno Setup, and writes release artifacts under `installer\output`:
+The script builds the required Release configurations, stages the installer payloads under `packaging\stage`, runs Inno Setup, and writes release artifacts under `packaging\output`:
 
 ```text
-installer\output\jyutping-v0.1.0-x64.exe
-installer\output\jyutping-v0.1.0-arm64.exe
-installer\output\SHA256SUMS.txt
+packaging\output\jyutping-v0.1.0-x64.exe
+packaging\output\jyutping-v0.1.0-arm64.exe
+packaging\output\SHA256SUMS.txt
 ```
 
 The x64 installer contains x64 and x86 DLL payloads.

@@ -509,6 +509,6 @@ $RECYCLE.BIN/
 /Jyutping/Resources/*.sqlite3
 
 ### Installer payloads ###
-/installer/output/
-/installer/stage/*
-!/installer/stage/.gitkeep
+/packaging/output/
+/packaging/stage/*
+!/packaging/stage/.gitkeep

@@ -28,21 +28,21 @@ msbuild Jyutping.sln /p:Configuration=Release /p:Platform=ARM64EC
 The build links against `d2d1.lib`, `dwrite.lib`, `shlwapi.lib`, and `winsqlite3.lib`, and copies the generated `Jyutping\Resources\ime.sqlite3` into the target output after build.
 
 ## Packaging
-- Packaging requires Inno Setup 7. `installer\Build-Installers.ps1` searches `Program Files\Inno Setup 7\ISCC.exe` first, then Inno Setup 6, then `ISCC.exe` on `PATH`.
+- Packaging requires Inno Setup 7. `packaging\Build-Installers.ps1` searches `Program Files\Inno Setup 7\ISCC.exe` first, then Inno Setup 6, then `ISCC.exe` on `PATH`.
 - The selected Inno Setup compiler must have the official `ChineseSimplified.isl` and `ChineseTraditional.isl` files installed in its `Languages` directory. For the standard Inno Setup 7 installation, place them under `C:\Program Files\Inno Setup 7\Languages`.
 - Build both installer packages from the repository root:
 
 ```powershell
-pwsh -File installer\Build-Installers.ps1
+pwsh -File packaging\Build-Installers.ps1
 ```
 
-- The script builds `Release|x64`, `Release|Win32`, and `Release|ARM64EC`, stages payloads under `installer\stage`, compiles both Inno Setup scripts, and writes artifacts to `installer\output`.
+- The script builds `Release|x64`, `Release|Win32`, and `Release|ARM64EC`, stages payloads under `packaging\stage`, compiles both Inno Setup scripts, and writes artifacts to `packaging\output`.
 - Output filenames are:
 
 ```text
-installer\output\jyutping-v0.1.0-x64.exe
-installer\output\jyutping-v0.1.0-arm64.exe
-installer\output\SHA256SUMS.txt
+packaging\output\jyutping-v0.1.0-x64.exe
+packaging\output\jyutping-v0.1.0-arm64.exe
+packaging\output\SHA256SUMS.txt
 ```
 
 - Use `-AppVersion <version>` to change the output version and filenames. The script converts versions like `0.1.0` to a four-part installer file version like `0.1.0.0`.
@@ -51,16 +51,16 @@ installer\output\SHA256SUMS.txt
 - x64 installer payloads:
 
 ```text
-installer\stage\x64\x64\Jyutping.dll
-installer\stage\x64\x86\Jyutping.dll
-installer\stage\x64\ime.sqlite3
+packaging\stage\x64\x64\Jyutping.dll
+packaging\stage\x64\x86\Jyutping.dll
+packaging\stage\x64\ime.sqlite3
 ```
 
 - ARM64 installer payloads:
 
 ```text
-installer\stage\ARM64\Jyutping.dll
-installer\stage\ARM64\ime.sqlite3
+packaging\stage\ARM64\Jyutping.dll
+packaging\stage\ARM64\ime.sqlite3
 ```
 
 - The ARM64 installer uses `ARM64EC\Release\Jyutping.dll` as the ARM64X root DLL. Do not add an x86 fallback to the ARM64 installer.
