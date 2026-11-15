@@ -437,6 +437,17 @@ HRESULT CJyutping::_HandleCompositionFinalizeRaw(TfEditCookie ec, _In_ ITfContex
         return _HandleCancel(ec, pContext);
     }
 
+    if (_pCompositionProcessorEngine->CurrentCharacterForm() == CharacterForm::FullWidth)
+    {
+        for (WCHAR& character : rawInput)
+        {
+            if (_pCompositionProcessorEngine->IsCharacterFormConvertible(character))
+            {
+                character = Global::FullWidthCharTable[character - 0x20];
+            }
+        }
+    }
+
     CStringRange rawInputString;
     rawInputString.Set(rawInput.c_str(), rawInput.length());
 
