@@ -80,6 +80,9 @@ HRESULT CKeyStateCategory::KeyStateHandler(KEYSTROKE_FUNCTION function, KeyHandl
     case FUNCTION_FINALIZE_TEXTSTORE:
         return HandleKeyFinalizeTextStore(dto);
 
+    case FUNCTION_FINALIZE_RAW_INPUT:
+        return _pTextService->_HandleCompositionFinalizeRaw(dto.ec, dto.pContext);
+
     case FUNCTION_FINALIZE_CANDIDATELIST_AND_INPUT:
         return HandleKeyFinalizeCandidatelistAndInput(dto);
 

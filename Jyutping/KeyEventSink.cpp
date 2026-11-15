@@ -16,6 +16,11 @@
 
 namespace {
 
+BOOL IsCapsLockOn()
+{
+    return (GetKeyState(VK_CAPITAL) & 0x0001) != 0;
+}
+
 class CInputMethodModeEditSession final : public CEditSessionBase
 {
 public:
@@ -183,6 +188,18 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     // if the keyboard is disabled, we don't eat keys.
     if (_IsKeyboardDisabled(pContext))
     {
+        return FALSE;
+    }
+
+    // Caps Lock temporarily bypasses the IME. Finalize an open buffer before passing keys through,
+    // including the Caps Lock key itself, without changing the selected input method mode.
+    if (IsCapsLockOn() || codeIn == VK_CAPITAL)
+    {
+        if (pKeyState != nullptr && (_IsComposing() || _optionsMode))
+        {
+            pKeyState->Category = CATEGORY_INVOKE_COMPOSITION_EDIT_SESSION;
+            pKeyState->Function = FUNCTION_FINALIZE_RAW_INPUT;
+        }
         return FALSE;
     }
 
@@ -391,11 +408,6 @@ STDAPI CJyutping::OnTestKeyDown(ITfContext *pContext, WPARAM wParam, LPARAM lPar
     UINT code = 0;
     *pIsEaten = _IsKeyEaten(pContext, (UINT)wParam, &code, &wch, &KeystrokeState);
 
-    if (IsOptionsShortcut(code) || _optionsMode)
-    {
-        *pIsEaten = TRUE;
-    }
-
     if (KeystrokeState.Category == CATEGORY_INVOKE_COMPOSITION_EDIT_SESSION)
     {
         //
@@ -432,18 +444,6 @@ STDAPI CJyutping::OnKeyDown(ITfContext *pContext, WPARAM wParam, LPARAM lParam, 
 
     Global::UpdateModifiers(wParam, lParam);
 
-    UINT rawCode = static_cast<UINT>(wParam);
-    if (IsOptionsShortcut(rawCode))
-    {
-        *pIsEaten = !_IsKeyboardDisabled(pContext) && SUCCEEDED(ToggleOptionsMode(pContext));
-        return S_OK;
-    }
-    if (_optionsMode)
-    {
-        *pIsEaten = _HandleOptionsKey(pContext, rawCode);
-        return S_OK;
-    }
-
     _KEYSTROKE_STATE KeystrokeState;
     WCHAR wch = '\0';
     UINT code = 0;
@@ -452,6 +452,17 @@ STDAPI CJyutping::OnKeyDown(ITfContext *pContext, WPARAM wParam, LPARAM lParam, 
 
     if (*pIsEaten)
     {
+        if (IsOptionsShortcut(code))
+        {
+            *pIsEaten = SUCCEEDED(ToggleOptionsMode(pContext));
+            return S_OK;
+        }
+        if (_optionsMode)
+        {
+            *pIsEaten = _HandleOptionsKey(pContext, code);
+            return S_OK;
+        }
+
         bool needInvokeKeyHandler = true;
         //
         // Invoke key handler edit session
@@ -557,7 +568,7 @@ STDAPI CJyutping::OnPreservedKey(ITfContext *pContext, REFGUID rguid, BOOL *pIsE
         return E_INVALIDARG;
     }
 
-    if (_pCompositionProcessorEngine == nullptr || _pThreadMgr == nullptr)
+    if (IsCapsLockOn() || _pCompositionProcessorEngine == nullptr || _pThreadMgr == nullptr)
     {
         *pIsEaten = FALSE;
         return S_OK;
