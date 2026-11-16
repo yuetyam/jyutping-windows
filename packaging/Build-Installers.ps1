@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$AppVersion = "0.10.0",
+    [string]$AppVersion = "0.11.0",
     [string]$Configuration = "Release",
     [string]$MSBuildPath = "msbuild",
     [string]$InnoSetupCompiler = "",
