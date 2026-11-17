@@ -1,0 +1,42 @@
+#include <windows.h>
+#include "../Jyutping/resource.h"
+#include "JyutpingVersion.h"
+#pragma code_page(65001)
+
+IDIS_IME ICON "../Jyutping/Resources/ime.ico"
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+1 VERSIONINFO
+ FILEVERSION JYUTPING_FILE_VERSION
+ PRODUCTVERSION JYUTPING_FILE_VERSION
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0
+ FILEOS VOS_NT_WINDOWS32
+ FILETYPE VFT_APP
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "Jyutping.org"
+            VALUE "FileDescription", "Jyutping Updater"
+            VALUE "FileVersion", JYUTPING_VERSION
+            VALUE "InternalName", "JyutpingUpdater"
+            VALUE "LegalCopyright", "CC0 1.0 Public Domain"
+            VALUE "OriginalFilename", "JyutpingUpdater.exe"
+            VALUE "ProductName", "Jyutping"
+            VALUE "ProductVersion", JYUTPING_VERSION
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+#include "../Jyutping/Resources/Strings.en-US.rc2"
+#include "../Jyutping/Resources/Strings.zh-CN.rc2"
+#include "../Jyutping/Resources/Strings.zh-HK.rc2"
+#include "../Jyutping/Resources/Strings.zh-MO.rc2"
+#include "../Jyutping/Resources/Strings.zh-SG.rc2"
+#include "../Jyutping/Resources/Strings.zh-TW.rc2"

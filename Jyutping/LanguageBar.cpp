@@ -6,6 +6,7 @@
 #include "Compartment.h"
 #include "SettingsMenuModel.h"
 #include "SettingsMenuWindow.h"
+#include "UpdaterLauncher.h"
 
 namespace {
 
@@ -494,6 +495,8 @@ STDAPI CLangBarItemButton::OnMenuSelect(UINT wID)
 
     switch (wID)
     {
+    case SettingsMenu::CheckForUpdates:
+        return UpdaterLauncher::CheckForUpdates(_isSecureMode);
     case SettingsMenu::PunctuationFormCantonese:
         _pSettingsMenuHandler->SetPunctuationForm(PunctuationForm::Cantonese);
         break;

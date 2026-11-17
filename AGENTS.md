@@ -36,16 +36,16 @@ The build links against `d2d1.lib`, `dwrite.lib`, `shlwapi.lib`, and `winsqlite3
 pwsh -File packaging\Build-Installers.ps1
 ```
 
-- The script builds `Release|x64`, `Release|Win32`, and `Release|ARM64EC`, stages payloads under `packaging\stage`, compiles both Inno Setup scripts, and writes artifacts to `packaging\output`.
+- The script builds `Release|x64`, `Release|Win32`, and `Release|ARM64EC`, including the native x64/ARM64 updater helpers, stages payloads under `packaging\stage`, compiles both Inno Setup scripts, and writes artifacts to `packaging\output`.
 - Output filenames are:
 
 ```text
-packaging\output\jyutping-v0.1.0-x64.exe
-packaging\output\jyutping-v0.1.0-arm64.exe
+packaging\output\jyutping-v<version>-x64.exe
+packaging\output\jyutping-v<version>-arm64.exe
 packaging\output\SHA256SUMS.txt
 ```
 
-- Use `-AppVersion <version>` to change the output version and filenames. The script converts versions like `0.1.0` to a four-part installer file version like `0.1.0.0`.
+- The default product version comes from `version.txt`. `Version.targets` generates matching IME and updater metadata. Use `-AppVersion <version>` to override the version consistently in product builds, installer metadata, and filenames. Packaging rejects mismatched payload versions, including with `-SkipBuild`.
 - Use `-SkipBuild` only when the required Release payloads already exist.
 - Use `-SignToolCommand "<command>"` to sign staged DLLs before packaging and final installer EXEs after packaging. The script appends each file path to the command.
 - x64 installer payloads:
@@ -54,6 +54,8 @@ packaging\output\SHA256SUMS.txt
 packaging\stage\x64\x64\Jyutping.dll
 packaging\stage\x64\x86\Jyutping.dll
 packaging\stage\x64\ime.sqlite3
+packaging\stage\x64\Updater\JyutpingUpdater.exe
+packaging\stage\x64\Updater\WinSparkle.dll
 ```
 
 - ARM64 installer payloads:
@@ -61,10 +63,14 @@ packaging\stage\x64\ime.sqlite3
 ```text
 packaging\stage\ARM64\Jyutping.dll
 packaging\stage\ARM64\ime.sqlite3
+packaging\stage\ARM64\Updater\JyutpingUpdater.exe
+packaging\stage\ARM64\Updater\WinSparkle.dll
 ```
 
 - The ARM64 installer uses `ARM64EC\Release\Jyutping.dll` as the ARM64X root DLL. Do not add an x86 fallback to the ARM64 installer.
 - The installers use Inno Setup's generated `unins000.exe` and Windows Apps & Features uninstall entry. Do not add a dedicated `uninstall.exe` launcher unless the roadmap is explicitly changed.
+- Manual update checks run in the separate native helper, with WinSparkle 0.9.4 pinned under `third_party`. Automatic checks and their opt-in prompt stay disabled. Both IME architectures read the native installation path from the 64-bit view of `HKLM\Software\Jyutping\InstallPath`.
+- `packaging\New-WindowsAppcast.ps1` verifies final installer signatures against the shared Mac public key before generating the Windows feed. Production signing and publication require the existing private key in the release environment. See `packaging\README.md` for the release workflow and test commands.
 
 ## Debugging
 Runtime logging is implemented in `Jyutping\Logger.cpp`.

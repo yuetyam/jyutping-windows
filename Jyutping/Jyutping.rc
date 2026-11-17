@@ -1,6 +1,7 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
+#include "JyutpingVersion.h"
 #pragma code_page(65001)
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -24,8 +25,8 @@ IDI_INPUT_MODE_ABC_ALT        ICON  "Resources\\abc-alt.ico"
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 
 IDR_VERSION VERSIONINFO
- FILEVERSION 0,11,0,0
- PRODUCTVERSION 0,11,0,0
+ FILEVERSION JYUTPING_FILE_VERSION
+ PRODUCTVERSION JYUTPING_FILE_VERSION
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -42,67 +43,67 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Jyutping.org"
             VALUE "FileDescription", "Jyutping Input Method"
-            VALUE "FileVersion", "0.11.0"
+            VALUE "FileVersion", JYUTPING_VERSION
             VALUE "InternalName", "Jyutping"
             VALUE "LegalCopyright", "CC0 1.0 Public Domain"
             VALUE "OriginalFilename", "Jyutping.dll"
             VALUE "ProductName", "Jyutping"
-            VALUE "ProductVersion", "0.11.0"
+            VALUE "ProductVersion", JYUTPING_VERSION
         END
         BLOCK "0c0404b0"
         BEGIN
             VALUE "CompanyName", "Jyutping.org"
             VALUE "FileDescription", "粵拼輸入法"
-            VALUE "FileVersion", "0.11.0"
+            VALUE "FileVersion", JYUTPING_VERSION
             VALUE "InternalName", "Jyutping"
             VALUE "LegalCopyright", "CC0 1.0 Public Domain"
             VALUE "OriginalFilename", "Jyutping.dll"
             VALUE "ProductName", "粵拼"
-            VALUE "ProductVersion", "0.11.0"
+            VALUE "ProductVersion", JYUTPING_VERSION
         END
         BLOCK "040404b0"
         BEGIN
             VALUE "CompanyName", "Jyutping.org"
             VALUE "FileDescription", "粵拼輸入法"
-            VALUE "FileVersion", "0.11.0"
+            VALUE "FileVersion", JYUTPING_VERSION
             VALUE "InternalName", "Jyutping"
             VALUE "LegalCopyright", "CC0 1.0 Public Domain"
             VALUE "OriginalFilename", "Jyutping.dll"
             VALUE "ProductName", "粵拼"
-            VALUE "ProductVersion", "0.11.0"
+            VALUE "ProductVersion", JYUTPING_VERSION
         END
         BLOCK "080404b0"
         BEGIN
             VALUE "CompanyName", "Jyutping.org"
             VALUE "FileDescription", "粤拼输入法"
-            VALUE "FileVersion", "0.11.0"
+            VALUE "FileVersion", JYUTPING_VERSION
             VALUE "InternalName", "Jyutping"
             VALUE "LegalCopyright", "CC0 1.0 Public Domain"
             VALUE "OriginalFilename", "Jyutping.dll"
             VALUE "ProductName", "粤拼"
-            VALUE "ProductVersion", "0.11.0"
+            VALUE "ProductVersion", JYUTPING_VERSION
         END
         BLOCK "100404b0"
         BEGIN
             VALUE "CompanyName", "Jyutping.org"
             VALUE "FileDescription", "粤拼输入法"
-            VALUE "FileVersion", "0.11.0"
+            VALUE "FileVersion", JYUTPING_VERSION
             VALUE "InternalName", "Jyutping"
             VALUE "LegalCopyright", "CC0 1.0 Public Domain"
             VALUE "OriginalFilename", "Jyutping.dll"
             VALUE "ProductName", "粤拼"
-            VALUE "ProductVersion", "0.11.0"
+            VALUE "ProductVersion", JYUTPING_VERSION
         END
         BLOCK "140404b0"
         BEGIN
             VALUE "CompanyName", "Jyutping.org"
             VALUE "FileDescription", "粵拼輸入法"
-            VALUE "FileVersion", "0.11.0"
+            VALUE "FileVersion", JYUTPING_VERSION
             VALUE "InternalName", "Jyutping"
             VALUE "LegalCopyright", "CC0 1.0 Public Domain"
             VALUE "OriginalFilename", "Jyutping.dll"
             VALUE "ProductName", "粵拼"
-            VALUE "ProductVersion", "0.11.0"
+            VALUE "ProductVersion", JYUTPING_VERSION
         END
     END
     BLOCK "VarFileInfo"

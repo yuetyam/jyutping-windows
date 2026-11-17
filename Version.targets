@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <AppVersion Condition="'$(AppVersion)' == ''">$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)version.txt').Trim())</AppVersion>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <ResourceCompile>
+      <AdditionalIncludeDirectories>$(IntDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <Target Name="GenerateJyutpingVersion" BeforeTargets="ClCompile;ResourceCompile">
+    <Error Condition="!$([System.Text.RegularExpressions.Regex]::IsMatch('$(AppVersion)', '^\d+\.\d+\.\d+(\.\d+)?$'))" Text="AppVersion must contain three or four numeric components." />
+    <PropertyGroup>
+      <_ProductVersion>$([System.Version]::Parse('$(AppVersion)'))</_ProductVersion>
+      <_VersionMajor>$([System.Version]::Parse('$(_ProductVersion)').Major)</_VersionMajor>
+      <_VersionMinor>$([System.Version]::Parse('$(_ProductVersion)').Minor)</_VersionMinor>
+      <_VersionBuild>$([System.Version]::Parse('$(_ProductVersion)').Build)</_VersionBuild>
+      <_VersionRevision>$([System.Version]::Parse('$(_ProductVersion)').Revision)</_VersionRevision>
+      <_VersionRevision Condition="$(_VersionRevision) &lt; 0">0</_VersionRevision>
+    </PropertyGroup>
+    <Error Condition="$(_VersionMajor) &gt; 65535 Or $(_VersionMinor) &gt; 65535 Or $(_VersionBuild) &gt; 65535 Or $(_VersionRevision) &gt; 65535" Text="AppVersion components must not exceed 65535." />
+    <ItemGroup>
+      <_VersionHeaderLine Include="#pragma once" />
+      <_VersionHeaderLine Include="#define JYUTPING_VERSION &quot;$(AppVersion)&quot;" />
+      <_VersionHeaderLine Include="#define JYUTPING_VERSION_WIDE L&quot;$(AppVersion)&quot;" />
+      <_VersionHeaderLine Include="#define JYUTPING_FILE_VERSION $(_VersionMajor),$(_VersionMinor),$(_VersionBuild),$(_VersionRevision)" />
+    </ItemGroup>
+    <MakeDir Directories="$(IntDir)" />
+    <WriteLinesToFile File="$(IntDir)JyutpingVersion.h" Lines="@(_VersionHeaderLine)" Overwrite="true" WriteOnlyWhenDifferent="true" Encoding="UTF-8" />
+  </Target>
+</Project>

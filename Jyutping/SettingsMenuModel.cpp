@@ -4,6 +4,7 @@
 #include "SettingsMenuModel.h"
 #include "Localization.h"
 #include "resource.h"
+#include "JyutpingVersion.h"
 
 #include <set>
 
@@ -184,7 +185,8 @@ Snapshot BuildSnapshot(_In_ const ILangBarItemButtonSettingsMenuHandler& handler
     snapshot.items.push_back(SubmenuItem(CharacterVariant, LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variants"), std::move(variantItems)));
 
     snapshot.items.push_back(SeparatorItem());
-    snapshot.items.push_back(CommandItem(Version, LoadMenuString(IDS_MENU_VERSION, L"Version 0.11.0"), FALSE, FALSE));
+    snapshot.items.push_back(CommandItem(CheckForUpdates, LoadMenuString(IDS_MENU_CHECK_FOR_UPDATES, L"Check for updates")));
+    snapshot.items.push_back(CommandItem(Version, LoadMenuString(IDS_MENU_VERSION, L"Version") + L" " + JYUTPING_VERSION_WIDE, FALSE, FALSE));
 
     assert(ValidateSnapshot(snapshot));
     return snapshot;

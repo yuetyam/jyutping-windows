@@ -5,6 +5,13 @@ on:
     branches: [ master, develop ]
     paths:
       - 'Jyutping/**'
+      - 'JyutpingUpdater/**'
+      - 'Shared/**'
+      - 'third_party/WinSparkle/**'
+      - 'Version.targets'
+      - 'version.txt'
+      - 'packaging/**'
+      - 'tests/**'
       - 'preparing/**'
       - 'Jyutping.sln'
       - '.github/workflows/**'
@@ -12,6 +19,13 @@ on:
     branches: [ master, develop ]
     paths:
       - 'Jyutping/**'
+      - 'JyutpingUpdater/**'
+      - 'Shared/**'
+      - 'third_party/WinSparkle/**'
+      - 'Version.targets'
+      - 'version.txt'
+      - 'packaging/**'
+      - 'tests/**'
       - 'preparing/**'
       - 'Jyutping.sln'
       - '.github/workflows/**'
@@ -21,6 +35,16 @@ permissions:
   contents: read
 
 jobs:
+  test_update_release:
+    name: Update release tooling tests
+    runs-on: windows-2025-vs2026
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v7
+    - name: Test signing and feed generation with temporary keys
+      shell: pwsh
+      run: ./tests/Test-UpdateRelease.ps1 -CreateFixtures
+
   build_preparing:
     name: Build Preparing
     runs-on: windows-2025-vs2026
@@ -102,3 +126,11 @@ jobs:
 
     - name: Build solution
       run: msbuild Jyutping.sln -m -p:Configuration=${{ matrix.configuration }} -p:Platform=${{ matrix.platform }} -p:PreferredToolArchitecture=x64 -v:minimal
+
+    - name: Archive updater
+      if: matrix.platform == 'x64' || matrix.platform == 'ARM64'
+      uses: actions/upload-artifact@v7
+      with:
+        name: updater-${{ matrix.platform }}-${{ matrix.configuration }}
+        path: JyutpingUpdater/bin/${{ matrix.platform }}/${{ matrix.configuration }}/
+        if-no-files-found: error

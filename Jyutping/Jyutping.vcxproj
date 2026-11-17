@@ -66,6 +66,8 @@
     <ClInclude Include="Localization.h" />
     <ClInclude Include="OptionsView.h" />
     <ClInclude Include="SettingsMenuModel.h" />
+    <ClInclude Include="UpdaterLauncher.h" />
+    <ClInclude Include="..\Shared\UpdateConfiguration.h" />
     <ClInclude Include="SettingsMenuWindow.h" />
     <ClInclude Include="PinyinSegmenter.h" />
     <ClInclude Include="SearchCandidateProvider.h" />
@@ -110,6 +112,7 @@
     <ClCompile Include="CandidateWindow.cpp" />
     <ClCompile Include="OptionsView.cpp" />
     <ClCompile Include="SettingsMenuModel.cpp" />
+    <ClCompile Include="UpdaterLauncher.cpp" />
     <ClCompile Include="SettingsMenuWindow.cpp" />
     <ClCompile Include="CharacterStandard.cpp" />
     <ClCompile Include="Compartment.cpp" />
@@ -481,6 +484,7 @@
       <ModuleDefinitionFile>Jyutping.def</ModuleDefinitionFile>
     </Link>
   </ItemDefinitionGroup>
+  <Import Project="..\Version.targets" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="VerifyImeDatabase" BeforeTargets="PrepareForBuild">
     <Error Condition="!Exists('$(ProjectDir)Resources\ime.sqlite3')" Text="Missing generated CoreIME database: $(ProjectDir)Resources\ime.sqlite3. Run cargo run --release --manifest-path preparing\Cargo.toml from the repository root." />

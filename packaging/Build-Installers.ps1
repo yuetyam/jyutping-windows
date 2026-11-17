@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$AppVersion = "0.11.0",
+    [string]$AppVersion = "",
     [string]$Configuration = "Release",
     [string]$MSBuildPath = "msbuild",
     [string]$InnoSetupCompiler = "",
@@ -10,34 +10,12 @@ param(
 
 $ErrorActionPreference = "Stop"
 Set-StrictMode -Version Latest
+Import-Module (Join-Path $PSScriptRoot 'ReleaseTools.psm1') -Force
+$AppVersion = Get-JyutpingVersion $AppVersion
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $StageRoot = Join-Path $PSScriptRoot "stage"
 $OutputDirectory = Join-Path $PSScriptRoot "output"
-
-function Convert-ToVersionInfoVersion {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$Version
-    )
-
-    $parts = $Version -split "\."
-    if ($parts.Count -gt 4) {
-        throw "VersionInfoVersion supports at most four numeric parts: $Version"
-    }
-
-    foreach ($part in $parts) {
-        if ($part -notmatch "^\d+$") {
-            throw "VersionInfoVersion requires numeric version parts: $Version"
-        }
-    }
-
-    while ($parts.Count -lt 4) {
-        $parts += "0"
-    }
-
-    return ($parts -join ".")
-}
 
 function Invoke-External {
     param(
@@ -140,7 +118,10 @@ function Build-Platform {
     Invoke-External -FilePath $MSBuildPath -Arguments @(
         (Join-Path $RepoRoot "Jyutping.sln"),
         "/m",
+        "/v:minimal",
+        "/nologo",
         "/p:Configuration=$Configuration",
+        "/p:AppVersion=$AppVersion",
         "/p:Platform=$Platform"
     )
 }
@@ -156,13 +137,23 @@ $payloads = @{
     X86Dll = Join-Path $RepoRoot "Win32\$Configuration\Jyutping.dll"
     Arm64Dll = Join-Path $RepoRoot "ARM64EC\$Configuration\Jyutping.dll"
     Database = Join-Path $RepoRoot "Jyutping\Resources\ime.sqlite3"
+    X64Updater = Join-Path $RepoRoot "JyutpingUpdater\bin\x64\$Configuration\JyutpingUpdater.exe"
+    Arm64Updater = Join-Path $RepoRoot "JyutpingUpdater\bin\ARM64\$Configuration\JyutpingUpdater.exe"
 }
 
-$versionInfoVersion = Convert-ToVersionInfoVersion -Version $AppVersion
+$versionInfoVersion = Convert-ToFileVersion -Version $AppVersion
 
 foreach ($payloadPath in $payloads.Values) {
     Assert-FileExists -Path $payloadPath
 }
+foreach ($payloadName in @('X64Dll', 'X86Dll', 'Arm64Dll', 'X64Updater', 'Arm64Updater')) {
+    Assert-ProductVersion -Path $payloads[$payloadName] -Version $AppVersion
+}
+Assert-BinaryArchitecture -Path $payloads.X64Dll -Architecture x64
+Assert-BinaryArchitecture -Path $payloads.X86Dll -Architecture x86
+Assert-BinaryArchitecture -Path $payloads.Arm64Dll -Architecture ARM64X
+Assert-BinaryArchitecture -Path $payloads.X64Updater -Architecture x64
+Assert-BinaryArchitecture -Path $payloads.Arm64Updater -Architecture ARM64
 
 if (Test-Path -LiteralPath $StageRoot) {
     Get-ChildItem -LiteralPath $StageRoot -Force |
@@ -173,7 +164,7 @@ if (Test-Path -LiteralPath $StageRoot) {
 }
 
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
-foreach ($outputPattern in @("*.exe", "SHA256SUMS.txt")) {
+foreach ($outputPattern in @("*.exe", "SHA256SUMS.txt", "windows.xml")) {
     Get-ChildItem -LiteralPath $OutputDirectory -Filter $outputPattern -File -Force |
         Remove-Item -Force
 }
@@ -188,10 +179,26 @@ Copy-RequiredFile -Source $payloads.Database -Destination (Join-Path $x64StageRo
 Copy-RequiredFile -Source $payloads.Arm64Dll -Destination (Join-Path $arm64StageRoot "Jyutping.dll")
 Copy-RequiredFile -Source $payloads.Database -Destination (Join-Path $arm64StageRoot "ime.sqlite3")
 
+$sdkRoot = Join-Path $RepoRoot 'third_party\WinSparkle\0.9.4'
+foreach ($package in @(
+    @{ Stage = $x64StageRoot; Platform = 'x64'; Updater = $payloads.X64Updater },
+    @{ Stage = $arm64StageRoot; Platform = 'ARM64'; Updater = $payloads.Arm64Updater }
+)) {
+    Copy-RequiredFile -Source $package.Updater -Destination (Join-Path $package.Stage 'Updater\JyutpingUpdater.exe')
+    $sparkleDll = Join-Path $sdkRoot "$($package.Platform)\Release\WinSparkle.dll"
+    Assert-BinaryArchitecture -Path $sparkleDll -Architecture $package.Platform
+    Copy-RequiredFile -Source $sparkleDll -Destination (Join-Path $package.Stage 'Updater\WinSparkle.dll')
+    foreach ($notice in @('COPYING', 'COPYING.expat', 'AUTHORS')) {
+        Copy-RequiredFile -Source (Join-Path $sdkRoot $notice) -Destination (Join-Path $package.Stage "Updater\$notice")
+    }
+}
+
 $stagedBinaries = @(
     (Join-Path $x64StageRoot "x64\Jyutping.dll"),
     (Join-Path $x64StageRoot "x86\Jyutping.dll"),
-    (Join-Path $arm64StageRoot "Jyutping.dll")
+    (Join-Path $arm64StageRoot "Jyutping.dll"),
+    (Join-Path $x64StageRoot "Updater\JyutpingUpdater.exe"),
+    (Join-Path $arm64StageRoot "Updater\JyutpingUpdater.exe")
 )
 Invoke-SignTool -Paths $stagedBinaries
 

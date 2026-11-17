@@ -74,6 +74,12 @@
 #define IDS_DESC_INPUT_MODE_CANTONESE             71
 #define IDS_DESC_INPUT_MODE_ABC                   72
 
+#define IDS_MENU_CHECK_FOR_UPDATES                73
+#define IDS_UPDATER_UNAVAILABLE                   74
+#define IDS_UPDATER_START_FAILED                  75
+#define IDS_UPDATER_CONFIG_FAILED                 76
+#define IDS_UPDATER_TITLE                         77
+
 #define IDR_VERSION                               1
 
 // Next default values for new objects

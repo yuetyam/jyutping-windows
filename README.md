@@ -58,6 +58,8 @@ msbuild Jyutping.sln /p:Configuration=Release /p:Platform=ARM64EC
 
 The build copies `Jyutping\Resources\ime.sqlite3` beside each built `Jyutping.dll` and fails when the generated database is missing.
 
+The solution also builds the native updater for x64 and ARM64. Release versions come from `version.txt`; packaging can override them consistently with `-AppVersion`. See [Windows installers and updates](packaging/README.md) for manual update checks, signing, appcast generation, and validation.
+
 ## Packaging
 
 Requirements:

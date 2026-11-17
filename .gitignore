@@ -515,3 +515,15 @@ $RECYCLE.BIN/
 /packaging/output/
 /packaging/stage/*
 !/packaging/stage/.gitkeep
+
+### Pinned WinSparkle SDK ###
+!/third_party/WinSparkle/0.9.4/x64/
+!/third_party/WinSparkle/0.9.4/x64/Release/
+!/third_party/WinSparkle/0.9.4/x64/Release/WinSparkle.dll
+!/third_party/WinSparkle/0.9.4/x64/Release/WinSparkle.lib
+!/third_party/WinSparkle/0.9.4/ARM64/
+!/third_party/WinSparkle/0.9.4/ARM64/Release/
+!/third_party/WinSparkle/0.9.4/ARM64/Release/WinSparkle.dll
+!/third_party/WinSparkle/0.9.4/ARM64/Release/WinSparkle.lib
+!/third_party/WinSparkle/0.9.4/bin/
+!/third_party/WinSparkle/0.9.4/bin/winsparkle-tool.exe

@@ -37,7 +37,7 @@ BEGIN
     IDS_MENU_CHARACTER_VARIANT_HONG_KONG      "Traditional, HK"
     IDS_MENU_CHARACTER_VARIANT_TAIWAN         "Traditional, TW"
     IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED     "Simplified"
-    IDS_MENU_VERSION                          "Version 0.11.0"
+    IDS_MENU_VERSION                          "Version"
     IDS_LANGBAR_INPUT_MODE_TOOLTIP            "Left-click to switch modes\nRight-click for more options"
     IDS_OPTIONS_CHARACTER_VARIANT_TRADITIONAL "Traditional"
     IDS_OPTIONS_CHARACTER_VARIANT_HONG_KONG   "Traditional, HK"
@@ -49,4 +49,9 @@ BEGIN
     IDS_OPTIONS_PUNCTUATION_FORM_ENGLISH      "English Punctuation"
     IDS_OPTIONS_INPUT_MODE_CANTONESE          "Cantonese Mode"
     IDS_OPTIONS_INPUT_MODE_ABC                "ABC Mode"
+    IDS_MENU_CHECK_FOR_UPDATES                "Check for updates"
+    IDS_UPDATER_UNAVAILABLE                   "The updater is unavailable. Reinstall Jyutping from https://jyutping.app/windows."
+    IDS_UPDATER_START_FAILED                  "Could not open the updater. Try again from a desktop application, or download Jyutping from https://jyutping.app/windows."
+    IDS_UPDATER_CONFIG_FAILED                 "The updater could not be configured. Reinstall Jyutping from https://jyutping.app/windows."
+    IDS_UPDATER_TITLE                         "Jyutping Update"
 END

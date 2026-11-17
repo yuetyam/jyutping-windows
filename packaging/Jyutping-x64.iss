@@ -2,6 +2,7 @@
 #define StageRoot "stage\x64"
 #endif
 
+#define PackageArchitecture "x64"
 #include "Jyutping.common.iss"
 
 [Setup]
@@ -11,9 +12,9 @@ ArchitecturesInstallIn64BitMode=x64compatible and not arm64
 
 [Files]
 Source: "{#StageRoot}\x64\Jyutping.dll"; DestDir: "{autopf64}\Jyutping"; DestName: "Jyutping.dll"; Flags: ignoreversion restartreplace
-Source: "{#StageRoot}\ime.sqlite3"; DestDir: "{autopf64}\Jyutping"; DestName: "ime.sqlite3"; Flags: ignoreversion
+Source: "{#StageRoot}\ime.sqlite3"; DestDir: "{autopf64}\Jyutping"; DestName: "ime.sqlite3"; Flags: ignoreversion restartreplace
 Source: "{#StageRoot}\x86\Jyutping.dll"; DestDir: "{autopf32}\Jyutping"; DestName: "Jyutping.dll"; Flags: ignoreversion restartreplace
-Source: "{#StageRoot}\ime.sqlite3"; DestDir: "{autopf32}\Jyutping"; DestName: "ime.sqlite3"; Flags: ignoreversion
+Source: "{#StageRoot}\ime.sqlite3"; DestDir: "{autopf32}\Jyutping"; DestName: "ime.sqlite3"; Flags: ignoreversion restartreplace
 
 [UninstallDelete]
 Type: dirifempty; Name: "{autopf32}\Jyutping"

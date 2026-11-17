@@ -37,7 +37,7 @@ BEGIN
     IDS_MENU_CHARACTER_VARIANT_HONG_KONG      "傳統漢字・香港"
     IDS_MENU_CHARACTER_VARIANT_TAIWAN         "傳統漢字・臺灣"
     IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED     "简化字"
-    IDS_MENU_VERSION                          "版本 0.11.0"
+    IDS_MENU_VERSION                          "版本"
     IDS_LANGBAR_INPUT_MODE_TOOLTIP            "左鍵切換模式\n右鍵開啓選單"
     IDS_OPTIONS_CHARACTER_VARIANT_TRADITIONAL "傳統漢字"
     IDS_OPTIONS_CHARACTER_VARIANT_HONG_KONG   "傳統漢字・香港"
@@ -49,4 +49,9 @@ BEGIN
     IDS_OPTIONS_PUNCTUATION_FORM_ENGLISH      "英文標點"
     IDS_OPTIONS_INPUT_MODE_CANTONESE          "粵拼模式"
     IDS_OPTIONS_INPUT_MODE_ABC                "ABC 模式"
+    IDS_MENU_CHECK_FOR_UPDATES                "檢查更新"
+    IDS_UPDATER_UNAVAILABLE                   "更新程式不可用。請前往 https://jyutping.app/windows 重新安裝粵拼輸入法。"
+    IDS_UPDATER_START_FAILED                  "無法開啓更新程式。請從桌面應用程式再試，或前往 https://jyutping.app/windows 下載粵拼輸入法。"
+    IDS_UPDATER_CONFIG_FAILED                 "無法設定更新程式。請前往 https://jyutping.app/windows 重新安裝粵拼輸入法。"
+    IDS_UPDATER_TITLE                         "粵拼輸入法更新"
 END
