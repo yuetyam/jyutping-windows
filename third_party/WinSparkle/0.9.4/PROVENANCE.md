@@ -4,6 +4,8 @@ Upstream release: https://github.com/vslavik/winsparkle/releases/tag/v0.9.4
 
 These files were copied without modification from the official WinSparkle 0.9.4 binary distribution. `SHA256SUMS.txt` records every imported upstream file. x64 and ARM64 are the only runtime architectures needed by the updater. PDBs, Win32 binaries, and legacy DSA signing scripts are omitted.
 
+The root `.gitattributes` disables Git text conversion under `third_party/WinSparkle` so checkouts preserve the upstream bytes and hashes, including the distribution's mixed line endings.
+
 `COPYING`, `COPYING.expat`, and `AUTHORS` accompany installed WinSparkle DLLs. The signing tool is a release-tooling dependency and is not installed on user machines. The bundled DLLs depend on Windows system libraries; the helper uses the static C++ runtime.
 
 Verify these hashes after changing the pinned distribution. Update the project paths, packaging scripts, and notices together when upgrading WinSparkle.

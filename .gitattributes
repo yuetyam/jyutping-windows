@@ -28,3 +28,10 @@
 *.sqlite binary
 *.sqlite3 binary
 *.db binary
+
+# Preserve the pinned WinSparkle distribution bytes for SHA256 verification.
+/third_party/WinSparkle/** -text
+
+/third_party/WinSparkle/**/*.dll binary
+/third_party/WinSparkle/**/*.lib binary
+/third_party/WinSparkle/**/*.exe binary

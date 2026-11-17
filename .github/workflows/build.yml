@@ -4,6 +4,7 @@ on:
   push:
     branches: [ master, develop ]
     paths:
+      - '.gitattributes'
       - 'Jyutping/**'
       - 'JyutpingUpdater/**'
       - 'Shared/**'
@@ -18,6 +19,7 @@ on:
   pull_request:
     branches: [ master, develop ]
     paths:
+      - '.gitattributes'
       - 'Jyutping/**'
       - 'JyutpingUpdater/**'
       - 'Shared/**'
