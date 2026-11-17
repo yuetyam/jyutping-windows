@@ -39,11 +39,11 @@ Alternatively, sign final Windows installer files in the existing Mac release en
 pwsh -File packaging\New-WindowsAppcast.ps1 -X64Signature '<base64 signature>' -Arm64Signature '<base64 signature>' -ReleaseNotes 'Release notes for this version.'
 ```
 
-Pass `-PreviousAppcast <path>` to retain earlier items. Generation verifies both final installers against the embedded production public key, checks version and architecture metadata, and writes `packaging\output\windows.xml` with correct lengths and HTTPS URLs. A failed validation leaves the previous output untouched. Rebuilding installers invalidates their old signatures and removes the generated output feed.
+By default, generation includes only the current release's x64 and ARM64 items. Pass `-PreviousAppcast <path>` only when earlier signed release items need to be retained. Generation verifies both final installers against the embedded production public key, checks version and architecture metadata, and writes `packaging\output\windows.xml` with correct lengths and HTTPS URLs. A failed validation leaves the previous output untouched. Rebuilding installers invalidates their old signatures and removes the generated output feed.
 
 Upload installers under `https://dl.jyutping.app/jyutping-windows/<version>/` first, verify the downloaded bytes, then copy the generated feed to the website repository's root `windows.xml` and publish through its usual process. Coordinate the four localized Windows download pages, checksums, release notes, and sitemap dates. Feed publication is a release operation; ordinary development builds do not publish files or require a signing key.
 
-`packaging\website\windows.xml` is the initial feed for the already published 0.11.0 release. It links to the download page and has no downloadable enclosure, so it does not pretend that existing installers have Ed25519 signatures. It gives the first updater-enabled 0.11.0 build a current-version item. Replace it with generated signed entries for the next release. Earlier installations without the helper must first update through the website's installer.
+Earlier installations without the updater helper must first update through the website's installer.
 
 ## Validation
 
