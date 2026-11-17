@@ -137,3 +137,6 @@ class Fixture { static void Main() {} }
         Remove-Item -LiteralPath $temporaryRoot -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
+
+# Expected native-tool rejections leave LASTEXITCODE nonzero; report success to CI only after all assertions and cleanup complete.
+exit 0
