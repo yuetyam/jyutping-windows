@@ -184,7 +184,7 @@ Snapshot BuildSnapshot(_In_ const ILangBarItemButtonSettingsMenuHandler& handler
     snapshot.items.push_back(SubmenuItem(CharacterVariant, LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variants"), std::move(variantItems)));
 
     snapshot.items.push_back(SeparatorItem());
-    snapshot.items.push_back(CommandItem(MoreSettings, LoadMenuString(IDS_MENU_MORE_SETTINGS, L"More Settings…"), FALSE, FALSE));
+    snapshot.items.push_back(CommandItem(Version, LoadMenuString(IDS_MENU_VERSION, L"Version 0.11.0"), FALSE, FALSE));
 
     assert(ValidateSnapshot(snapshot));
     return snapshot;

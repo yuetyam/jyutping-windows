@@ -55,7 +55,7 @@ constexpr UINT CharacterVariantHongKong = CharacterVariantTraditional + 1;
 constexpr UINT CharacterVariantTaiwan = CharacterVariantHongKong + 1;
 constexpr UINT CharacterVariantSimplified = CharacterVariantTaiwan + 1;
 constexpr UINT Separator = CharacterVariantSimplified + 1;
-constexpr UINT MoreSettings = Separator + 1;
+constexpr UINT Version = Separator + 1;
 
 Snapshot BuildSnapshot(_In_ const ILangBarItemButtonSettingsMenuHandler& handler);
 HRESULT PopulateTfMenu(_In_ ITfMenu* menu, _In_ const Snapshot& snapshot);

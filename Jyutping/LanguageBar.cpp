@@ -518,7 +518,6 @@ STDAPI CLangBarItemButton::OnMenuSelect(UINT wID)
     case SettingsMenu::CharacterVariantSimplified:
         _pSettingsMenuHandler->SetCharacterVariant(CharacterVariant::Simplified);
         break;
-    case SettingsMenu::MoreSettings:
     default:
         break;
     }
