@@ -4,8 +4,7 @@
 #include "Define.h"
 #include "Globals.h"
 #include "Logger.h"
-
-#include <winsqlite/winsqlite3.h>
+#include "WinSqlite.h"
 
 #include <string>
 

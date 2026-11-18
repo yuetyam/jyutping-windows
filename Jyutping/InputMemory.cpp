@@ -2,8 +2,7 @@
 #include "InputMemory.h"
 #include "Logger.h"
 #include "Settings.h"
-
-#include <winsqlite/winsqlite3.h>
+#include "WinSqlite.h"
 
 #include <algorithm>
 #include <bit>

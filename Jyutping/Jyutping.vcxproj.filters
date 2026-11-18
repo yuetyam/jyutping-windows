@@ -164,6 +164,9 @@
     <ClInclude Include="ImeDatabase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="WinSqlite.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="ImeTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -93,6 +93,8 @@ class Fixture { static void Main() {} }
         $item = $feed.SelectSingleNode("/rss/channel/item[enclosure/@sparkle:os='windows-$architecture']", $namespaces)
         Assert-True ($null -ne $item) "Missing $architecture item."
         Assert-True ($item.SelectSingleNode('sparkle:version', $namespaces).InnerText -eq $version) 'Wrong feed version.'
+        $expectedMinimum = @{ x64 = '10.0.17763'; arm64 = '10.0.22000' }[$architecture]
+        Assert-True ($item.SelectSingleNode('sparkle:minimumSystemVersion', $namespaces).InnerText -eq $expectedMinimum) "Wrong minimum Windows version for $architecture."
         Assert-True ($item.pubDate -eq 'Tue, 17 Nov 2026 12:34:56 +0800') 'Invalid RSS publication date.'
         Assert-True ($item.description -eq $arguments.ReleaseNotes) 'Release notes were not escaped correctly.'
         Assert-True (-not $item.enclosure.HasAttribute('installerArguments', $namespaces.LookupNamespace('sparkle'))) 'Installer arguments should be omitted.'

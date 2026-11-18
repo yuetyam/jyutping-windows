@@ -53,7 +53,7 @@ foreach ($architecture in @('arm64', 'x64')) {
         @('pubDate', $publicationDate, ''),
         @('version', $AppVersion, $sparkle),
         @('shortVersionString', $AppVersion, $sparkle),
-        @('minimumSystemVersion', $(if ($architecture -eq 'arm64') { '10.0.22000' } else { '10.0' }), $sparkle),
+        @('minimumSystemVersion', $(if ($architecture -eq 'arm64') { '10.0.22000' } else { '10.0.17763' }), $sparkle),
         @('description', $ReleaseNotes, '')
     )) {
         $element = if ($field[2]) { $feed.CreateElement('sparkle', $field[0], $sparkle) } else { $feed.CreateElement($field[0]) }

@@ -38,7 +38,7 @@ VersionInfoVersion={#VersionInfoVersion}
 #if PackageArchitecture == "arm64"
 MinVersion=10.0.22000
 #else
-MinVersion=10.0
+MinVersion=10.0.17763
 #endif
 CloseApplications=no
 RestartApplications=no

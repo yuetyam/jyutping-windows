@@ -11,7 +11,9 @@ pwsh -File packaging\Build-Installers.ps1
 pwsh -File packaging\Build-Installers.ps1 -AppVersion 0.12.0
 ```
 
-The solution maps x64 to the x64 helper, and ARM64/ARM64EC to the native ARM64 helper. Win32 builds compile the IME without a separate x86 helper. Packaging retains the existing x64+x86 IME and ARM64X IME layouts, adds one native helper per package, and installs WinSparkle's complete bundled notices. The ARM64 package requires Windows 11 because it ships the ARM64X IME.
+The solution maps x64 to the x64 helper, and ARM64/ARM64EC to the native ARM64 helper. Win32 builds compile the IME without a separate x86 helper. Packaging retains the existing x64+x86 IME and ARM64X IME layouts, adds one native helper per package, and installs WinSparkle's complete bundled notices.
+
+The x64 package requires Windows 10 version 1809 (build 17763) or later. The ARM64 package requires Windows 11 (build 22000) or later because it ships the ARM64X IME. The generated appcast declares the corresponding minimum for each package.
 
 The installer records its native location in the 64-bit view of `HKLM\Software\Jyutping\InstallPath`. Both x86 and x64 callers read that same location. Developer DLL registration alone does not install the updater: use an installer for end-to-end checks, or stage `Updater\JyutpingUpdater.exe` and its matching `WinSparkle.dll` under a test installation and explicitly provision that installation value.
 

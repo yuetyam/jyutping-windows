@@ -27,6 +27,10 @@ Also available on other systems:
 <img src="images/screenshot.png" alt="Screenshot of Jyutping for Windows" width="316"/>
 
 ## Download and install
+
+- The x64 installer requires Windows 10 version 1809 (build 17763) or later.
+- The ARM64 installer requires Windows 11 (build 22000) or later.
+
 Please visit our website: https://jyutping.app
 
 ## How to build
