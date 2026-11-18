@@ -31,7 +31,6 @@ on:
       - 'preparing/**'
       - 'Jyutping.sln'
       - '.github/workflows/**'
-  workflow_dispatch:
 
 permissions:
   contents: read

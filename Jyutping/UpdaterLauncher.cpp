@@ -45,14 +45,14 @@ HRESULT CheckForUpdates(BOOL isSecureMode)
     // Only the installer-owned absolute native path is authoritative, including in x86 hosts.
     if (installPath.length() < 3 || installPath[1] != L':' || installPath[2] != L'\\')
     {
-        return ReportError(IDS_UPDATER_UNAVAILABLE, L"The updater is unavailable. Reinstall Jyutping from https://jyutping.app/windows.", ERROR_PATH_NOT_FOUND);
+        return ReportError(IDS_UPDATER_UNAVAILABLE, L"The updater is unavailable. Reinstall Jyutping from https://jyutping.app", ERROR_PATH_NOT_FOUND);
     }
 
     std::wstring updaterDirectory = installPath + L"\\Updater";
     std::wstring helperPath = installPath + L"\\" + UpdateConfiguration::HelperRelativePath;
     if (GetFileAttributesW(helperPath.c_str()) == INVALID_FILE_ATTRIBUTES || GetFileAttributesW((updaterDirectory + L"\\WinSparkle.dll").c_str()) == INVALID_FILE_ATTRIBUTES)
     {
-        return ReportError(IDS_UPDATER_UNAVAILABLE, L"The updater is unavailable. Reinstall Jyutping from https://jyutping.app/windows.", ERROR_FILE_NOT_FOUND);
+        return ReportError(IDS_UPDATER_UNAVAILABLE, L"The updater is unavailable. Reinstall Jyutping from https://jyutping.app", ERROR_FILE_NOT_FOUND);
     }
 
     std::wstring command = L"\"" + helperPath + L"\" --check-for-updates";
@@ -62,7 +62,7 @@ HRESULT CheckForUpdates(BOOL isSecureMode)
     if (!CreateProcessW(helperPath.c_str(), command.data(), nullptr, nullptr, FALSE, 0, nullptr, updaterDirectory.c_str(), &startup, &process))
     {
         DWORD error = GetLastError();
-        return ReportError(IDS_UPDATER_START_FAILED, L"Could not open the updater. Try again from a desktop application, or download Jyutping from https://jyutping.app/windows.", error);
+        return ReportError(IDS_UPDATER_START_FAILED, L"Could not open the updater. Try again from a desktop application, or download Jyutping from https://jyutping.app", error);
     }
     AllowSetForegroundWindow(process.dwProcessId);
     CloseHandle(process.hThread);

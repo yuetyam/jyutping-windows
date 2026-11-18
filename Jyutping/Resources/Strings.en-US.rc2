@@ -2,7 +2,7 @@
 // English (United States) localized resources
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
-#pragma code_page(1252)
+#pragma code_page(65001)
 
 STRINGTABLE
 BEGIN
@@ -49,9 +49,9 @@ BEGIN
     IDS_OPTIONS_PUNCTUATION_FORM_ENGLISH      "English Punctuation"
     IDS_OPTIONS_INPUT_MODE_CANTONESE          "Cantonese Mode"
     IDS_OPTIONS_INPUT_MODE_ABC                "ABC Mode"
-    IDS_MENU_CHECK_FOR_UPDATES                "Check for updates"
-    IDS_UPDATER_UNAVAILABLE                   "The updater is unavailable. Reinstall Jyutping from https://jyutping.app/windows."
-    IDS_UPDATER_START_FAILED                  "Could not open the updater. Try again from a desktop application, or download Jyutping from https://jyutping.app/windows."
-    IDS_UPDATER_CONFIG_FAILED                 "The updater could not be configured. Reinstall Jyutping from https://jyutping.app/windows."
+    IDS_MENU_CHECK_FOR_UPDATES                "Check for updates…"
+    IDS_UPDATER_UNAVAILABLE                   "The updater is unavailable. Reinstall Jyutping from https://jyutping.app"
+    IDS_UPDATER_START_FAILED                  "Could not open the updater. Try again from a desktop application, or download Jyutping from https://jyutping.app"
+    IDS_UPDATER_CONFIG_FAILED                 "The updater could not be configured. Reinstall Jyutping from https://jyutping.app"
     IDS_UPDATER_TITLE                         "Jyutping Update"
 END

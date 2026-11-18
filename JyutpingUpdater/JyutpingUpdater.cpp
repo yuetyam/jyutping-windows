@@ -38,7 +38,7 @@ void ReportError(UINT resourceId)
     HINSTANCE instance = GetModuleHandleW(nullptr);
     if (!LoadStringW(instance, resourceId, message, ARRAYSIZE(message)))
     {
-        wcscpy_s(message, L"Could not open the updater. Reinstall Jyutping from https://jyutping.app/windows.");
+        wcscpy_s(message, L"Could not open the updater. Reinstall Jyutping from https://jyutping.app");
     }
     if (!LoadStringW(instance, IDS_UPDATER_TITLE, title, ARRAYSIZE(title)))
     {

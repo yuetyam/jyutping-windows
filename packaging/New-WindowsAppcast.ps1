@@ -38,7 +38,7 @@ if ($PreviousAppcast) {
     $feed.Load((Resolve-Path -LiteralPath $PreviousAppcast).Path)
     if ($feed.DocumentType -or $feed.DocumentElement.Name -ne 'rss' -or -not $feed.SelectSingleNode('/rss/channel')) { throw 'PreviousAppcast must be an RSS feed without a document type.' }
 } else {
-    $feed.LoadXml('<?xml version="1.0" encoding="utf-8"?><rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel><title>Jyutping for Windows</title><link>https://jyutping.app/windows</link><description>Jyutping Windows updates</description></channel></rss>')
+    $feed.LoadXml('<?xml version="1.0" encoding="utf-8"?><rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel><title>Jyutping for Windows</title><link>https://jyutping.app</link><description>Jyutping Windows updates</description></channel></rss>')
 }
 $channel = $feed.SelectSingleNode('/rss/channel')
 $publicationDate = $ReleaseDate.ToString('ddd, dd MMM yyyy HH:mm:ss zzz', [System.Globalization.CultureInfo]::InvariantCulture) -replace '([+-]\d{2}):(\d{2})$', '$1$2'
