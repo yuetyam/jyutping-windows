@@ -135,6 +135,12 @@ public:
     void RefreshCandidateWindowFontSizes();
     void RefreshOptionsView();
     void FinalizeCompositionForABCMode();
+#ifdef JYUTPING_IPC_PROBE
+    void _InvalidateIpcProbe();
+#endif
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    void _QueueIpcTypingUpdate(uint64_t revision);
+#endif
     BOOL IsOptionsMode() const { return _optionsMode; }
     HRESULT ToggleOptionsMode(_In_ ITfContext *pContext);
     HRESULT _HandleOptionsSelection(UINT row);
@@ -150,6 +156,11 @@ public:
 
 private:
     // functions for the composition object.
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    friend class CIpcTypingEditSession;
+    HRESULT _ApplyIpcTypingUpdate(TfEditCookie ec, ITfContext* context, ITfComposition* composition, uint64_t revision);
+    HRESULT _CommitIpcTypingSelection(TfEditCookie ec, ITfContext* context);
+#endif
     HRESULT _HandleCompositionInputWorker(_In_ CCompositionProcessorEngine *pCompositionProcessorEngine, TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _CreateAndStartCandidate(_In_ CCompositionProcessorEngine *pCompositionProcessorEngine, TfEditCookie ec, _In_ ITfContext *pContext);
     HRESULT _HandleCandidateWorker(TfEditCookie ec, _In_ ITfContext *pContext);

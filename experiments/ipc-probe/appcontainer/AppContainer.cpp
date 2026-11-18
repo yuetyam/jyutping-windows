@@ -11,9 +11,9 @@ HINSTANCE Global::dllInstanceHandle = GetModuleHandleW(nullptr);
 
 #ifdef PROBE_RPC
 #include "RpcProbeClient.h"
-unsigned long StartRpc(const wchar_t* endpoint, PSID containerSid, PSECURITY_DESCRIPTOR* descriptor, const wchar_t* path);
+unsigned long StartRpc(const wchar_t* endpoint, PSID containerSid, PSECURITY_DESCRIPTOR* descriptor, const wchar_t* path, DWORD delay);
 
-int Serve(const wchar_t* dictionaryPath, const wchar_t* packageFamily)
+int Serve(const wchar_t* dictionaryPath, const wchar_t* packageFamily, DWORD delay)
 {
     ProbeIdentity identity;
     Reply reply = ReadProbeIdentity(identity);
@@ -21,7 +21,7 @@ int Serve(const wchar_t* dictionaryPath, const wchar_t* packageFamily)
     {
         return 1;
     }
-    const std::wstring endpoint = L"Jyutping.RpcProbe.v0." + identity.suffix;
+    const std::wstring endpoint = L"Jyutping.RpcProbe.v2." + identity.suffix;
     PSID rawPackageSid = nullptr;
     if (packageFamily && FAILED(DeriveAppContainerSidFromAppContainerName(packageFamily, &rawPackageSid)))
     {
@@ -29,7 +29,7 @@ int Serve(const wchar_t* dictionaryPath, const wchar_t* packageFamily)
     }
     std::unique_ptr<void, decltype(&FreeSid)> packageSid(rawPackageSid, FreeSid);
     PSECURITY_DESCRIPTOR rawDescriptor = nullptr;
-    const auto status = StartRpc(endpoint.c_str(), packageSid.get(), &rawDescriptor, dictionaryPath);
+    const auto status = StartRpc(endpoint.c_str(), packageSid.get(), &rawDescriptor, dictionaryPath, delay);
     std::unique_ptr<void, decltype(&LocalFree)> descriptor(rawDescriptor, LocalFree);
     if (status != RPC_S_OK)
     {
@@ -50,7 +50,7 @@ int TryContainer(const wchar_t* dictionaryPath)
     if (FAILED(status)) { printf("AppContainer profile=0x%08lx\n", status); return 1; }
 #ifdef PROBE_RPC
     PSECURITY_DESCRIPTOR descriptor = nullptr;
-    auto rpcStatus = StartRpc(name.c_str(), sid, &descriptor, dictionaryPath);
+    auto rpcStatus = StartRpc(name.c_str(), sid, &descriptor, dictionaryPath, 0);
     printf("RPC listen=%lu\n", rpcStatus);
     const auto desktopStatus = rpcStatus == RPC_S_OK ? CallRpc(name.c_str()) : rpcStatus;
     printf("RPC desktop=%lu\n", desktopStatus);
@@ -117,9 +117,16 @@ int TryContainer(const wchar_t* dictionaryPath)
 int wmain(int argc, wchar_t** argv)
 {
 #ifdef PROBE_RPC
-    if ((argc == 3 || argc == 4) && wcscmp(argv[1], L"serve") == 0)
+    if (argc >= 3 && argc <= 5 && wcscmp(argv[1], L"serve") == 0)
     {
-        return Serve(argv[2], argc == 4 ? argv[3] : nullptr);
+        const wchar_t* packageFamily = argc >= 4 && wcscmp(argv[3], L"-") != 0 ? argv[3] : nullptr;
+        wchar_t* end = nullptr;
+        const unsigned long delay = argc == 5 ? wcstoul(argv[4], &end, 10) : 0;
+        if (end && (end == argv[4] || *end || delay > 5000))
+        {
+            return 2;
+        }
+        return Serve(argv[2], packageFamily, delay);
     }
 #endif
     if (argc < 2 || wcscmp(argv[1], L"child") != 0)

@@ -11,10 +11,13 @@ if ($Rpc) {
     $client = Join-Path $target 'Smoke.exe'
 }
 
-function Test-Client($expected, [switch]$Invalidate) {
+function Test-Client($expected, [switch]$Invalidate, [switch]$Empty) {
     $arguments = @($expected)
     if ($Invalidate) {
         $arguments += 'invalidate'
+    }
+    if ($Empty) {
+        $arguments += 'empty'
     }
     & $client @arguments
     if ($LASTEXITCODE -ne 0) {
@@ -26,7 +29,7 @@ function Test-WithBackend($delay, [scriptblock]$test) {
     $run = [guid]::NewGuid()
     $stdout = Join-Path $target "backend-$run.stdout"
     $stderr = Join-Path $target "backend-$run.stderr"
-    $backendArguments = if ($Rpc) { 'serve "{0}"' -f $dictionary } else { '"{0}" {1}' -f $dictionary, $delay }
+    $backendArguments = if ($Rpc) { 'serve "{0}" - {1}' -f $dictionary, $delay } else { '"{0}" {1}' -f $dictionary, $delay }
     $process = Start-Process -FilePath $backend -ArgumentList $backendArguments -PassThru -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     try {
         $deadline = [Environment]::TickCount64 + 4000
@@ -54,9 +57,10 @@ function Test-WithBackend($delay, [scriptblock]$test) {
 
 if ($Rpc) {
     Test-Client 'current=1 stage=local RPC error=1722 candidate=0'
-    Test-WithBackend 0 {
+    Test-WithBackend 75 {
         Test-Client 'current=1 stage=local RPC error=0 candidate=1'
         Test-Client 'current=0 stage=local RPC error=0 candidate=1' -Invalidate
+        Test-Client 'current=1 stage=local RPC error=0 candidate=0' -Empty
     }
     Test-WithBackend 0 {
         Test-Client 'current=1 stage=local RPC error=0 candidate=1'

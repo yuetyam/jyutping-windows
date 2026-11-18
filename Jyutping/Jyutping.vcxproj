@@ -319,6 +319,11 @@
       <AdditionalIncludeDirectories>$(IntDir)ProbeRpc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='Rpc' And '$(EnableIpcTypingProbe)'=='true'">
+    <ClCompile>
+      <PreprocessorDefinitions>JYUTPING_IPC_TYPING_PROBE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
   <ItemGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='Rpc'">
     <ClCompile Include="..\experiments\ipc-probe\appcontainer\RpcProbeClient.cpp" />
     <ClCompile Include="$(IntDir)ProbeRpc\ProbeRpc_c.c" />

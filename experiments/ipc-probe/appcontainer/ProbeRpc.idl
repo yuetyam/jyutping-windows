@@ -1,8 +1,10 @@
 [
     uuid(cfaac1a8-73a1-4406-90a7-c8cd83c5f333),
-    version(1.0)
+    version(2.0)
 ]
 interface ProbeRpc
 {
-    long Suggest([in] handle_t binding, [out] byte candidate[256]);
+    const long ProbeSpellCapacity = 9;
+    const long ProbeReplyCapacity = 256;
+    long Suggest([in] handle_t binding, [in] byte spell[ProbeSpellCapacity], [out] byte candidate[ProbeReplyCapacity]);
 }

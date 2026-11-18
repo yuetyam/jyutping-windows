@@ -24,7 +24,9 @@
 namespace {
 
 constexpr UINT ResultMessage = WM_APP + 1;
-#ifndef JYUTPING_RPC_PROBE
+#ifdef JYUTPING_RPC_PROBE
+constexpr auto SelectionTimeout = std::chrono::milliseconds(300);
+#else
 constexpr DWORD ReplyTimeoutMs = 250;
 #endif
 
@@ -43,6 +45,9 @@ struct Reply
     DWORD error = ERROR_SUCCESS;
     bool candidate = false;
     LONGLONG connectMicroseconds = 0;
+#ifdef JYUTPING_RPC_PROBE
+    RpcProbeCandidate suggestion;
+#endif
 };
 
 LONGLONG Microseconds(IpcProbe::Clock::duration duration)
@@ -82,7 +87,11 @@ Reply ReadProbeIdentity(ProbeIdentity& identity)
     return {};
 }
 
+#ifdef JYUTPING_RPC_PROBE
+Reply RequestCandidate(std::wstring_view spell)
+#else
 Reply RequestCandidate()
+#endif
 {
 #ifndef JYUTPING_RPC_PROBE
     auto connectStart = IpcProbe::Clock::now();
@@ -94,9 +103,16 @@ Reply RequestCandidate()
         return identityResult;
     }
 #ifdef JYUTPING_RPC_PROBE
-    const std::wstring endpoint = L"Jyutping.RpcProbe.v0." + identity.suffix;
-    const DWORD status = CallRpc(endpoint.c_str());
-    return {L"local RPC", status, status == ERROR_SUCCESS};
+    const std::wstring endpoint = L"Jyutping.RpcProbe.v2." + identity.suffix;
+    if (spell.empty())
+    {
+        const DWORD status = CallRpc(endpoint.c_str());
+        return {L"local RPC", status, status == ERROR_SUCCESS};
+    }
+    Reply reply{L"local RPC"};
+    reply.error = QueryRpcProbe(endpoint.c_str(), spell, reply.suggestion);
+    reply.candidate = !reply.suggestion.text.empty();
+    return reply;
 #else
     std::wstring pipeName = L"\\\\.\\pipe\\Jyutping.IpcProbe.v0." + identity.suffix;
     DWORD access = FILE_READ_DATA | FILE_WRITE_DATA | FILE_READ_ATTRIBUTES | FILE_WRITE_ATTRIBUTES | READ_CONTROL | SYNCHRONIZE;
@@ -190,6 +206,7 @@ struct IpcProbe::State
         Clock::time_point queuedAt;
         Clock::time_point startedAt;
         Clock::time_point completedAt;
+        bool typingQuery;
     };
 
     std::mutex mutex;
@@ -203,6 +220,9 @@ struct IpcProbe::Work
     std::shared_ptr<State> state;
     uint64_t revision;
     Clock::time_point queuedAt;
+#ifdef JYUTPING_RPC_PROBE
+    std::wstring spell;
+#endif
 };
 
 IpcProbe::~IpcProbe()
@@ -256,10 +276,56 @@ void IpcProbe::Invalidate()
     ++_revision;
     _pending = false;
     _changedAt = Clock::now();
+#ifdef JYUTPING_RPC_PROBE
+    _pendingSpell.clear();
+    StopSelectionTimer();
+#endif
 }
+
+#ifdef JYUTPING_RPC_PROBE
+void IpcProbe::SetResultCallback(ResultCallback callback, void* context)
+{
+    _callback = callback;
+    _callbackContext = context;
+}
+
+void IpcProbe::Query(std::wstring spell)
+{
+    _pendingSpell = std::move(spell);
+    _queuedAt = Clock::now();
+    _pending = true;
+    Submit();
+    wchar_t line[180];
+    swprintf_s(line, L"Jyutping IPC probe: pid=%lu tid=%lu revision=%llu input_to_submit_us=%lld submit_us=%lld",
+        GetCurrentProcessId(), GetCurrentThreadId(), _revision, Microseconds(_queuedAt - _changedAt), Microseconds(Clock::now() - _queuedAt));
+    WriteProbeLog(line);
+}
+
+bool IpcProbe::ArmSelectionTimeout()
+{
+    if (!_selectionTimer)
+    {
+        _selectionDeadline = Clock::now() + SelectionTimeout;
+        _selectionTimer = SetTimer(_window, ++_nextTimer, static_cast<UINT>(SelectionTimeout.count()), nullptr);
+    }
+    return _selectionTimer != 0;
+}
+
+void IpcProbe::StopSelectionTimer()
+{
+    if (_selectionTimer)
+    {
+        KillTimer(_window, _selectionTimer);
+        _selectionTimer = 0;
+    }
+}
+#endif
 
 void IpcProbe::Measure(Clock::duration localLookup)
 {
+#ifdef JYUTPING_RPC_PROBE
+    _pendingSpell.clear();
+#endif
     _queuedAt = Clock::now();
     _pending = true;
     Submit();
@@ -283,7 +349,11 @@ void IpcProbe::Submit()
     }
 
     _pending = false;
-    auto work = new (std::nothrow) Work{_state, _revision, _queuedAt};
+    auto work = new (std::nothrow) Work{_state, _revision, _queuedAt
+#ifdef JYUTPING_RPC_PROBE
+        , std::move(_pendingSpell)
+#endif
+    };
     if (!work)
     {
         return;
@@ -306,9 +376,15 @@ void CALLBACK IpcProbe::Run(PTP_CALLBACK_INSTANCE instance, void* context)
     std::unique_ptr<Work> work(static_cast<Work*>(context));
     auto startedAt = Clock::now();
     Reply reply;
+    bool typingQuery = false;
     try
     {
+#ifdef JYUTPING_RPC_PROBE
+        typingQuery = !work->spell.empty();
+        reply = RequestCandidate(work->spell);
+#else
         reply = RequestCandidate();
+#endif
     }
     catch (const std::bad_alloc&)
     {
@@ -319,7 +395,7 @@ void CALLBACK IpcProbe::Run(PTP_CALLBACK_INSTANCE instance, void* context)
     work->state->busy = false;
     if (work->state->window && PostMessageW(work->state->window, ResultMessage, 0, 0))
     {
-        work->state->result = State::Result{work->revision, reply, work->queuedAt, startedAt, completedAt};
+        work->state->result = State::Result{work->revision, std::move(reply), work->queuedAt, startedAt, completedAt, typingQuery};
     }
 }
 
@@ -340,6 +416,21 @@ void IpcProbe::OnResult()
         WriteProbeLog(line);
     }
     Submit();
+#ifdef JYUTPING_RPC_PROBE
+    if (result)
+    {
+        _hasListener = result->reply.error == ERROR_SUCCESS;
+        if (result->typingQuery && result->revision == _revision && _callback)
+        {
+            if (_selectionTimer && Clock::now() >= _selectionDeadline)
+            {
+                result->reply.suggestion = {};
+            }
+            StopSelectionTimer();
+            _callback(_callbackContext, _revision, result->reply.suggestion);
+        }
+    }
+#endif
 }
 
 LRESULT CALLBACK IpcProbe::WindowProc(HWND window, UINT message, WPARAM wParam, LPARAM lParam, UINT_PTR subclassId, DWORD_PTR reference)
@@ -349,6 +440,15 @@ LRESULT CALLBACK IpcProbe::WindowProc(HWND window, UINT message, WPARAM wParam, 
         reinterpret_cast<IpcProbe*>(reference)->OnResult();
         return 0;
     }
+#ifdef JYUTPING_RPC_PROBE
+    auto* probe = reinterpret_cast<IpcProbe*>(reference);
+    if (message == WM_TIMER && probe->_selectionTimer && wParam == probe->_selectionTimer && probe->_callback)
+    {
+        probe->StopSelectionTimer();
+        probe->_callback(probe->_callbackContext, probe->_revision, {});
+        return 0;
+    }
+#endif
     if (message == WM_NCDESTROY)
     {
         RemoveWindowSubclass(window, WindowProc, subclassId);

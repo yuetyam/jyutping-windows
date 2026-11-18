@@ -253,6 +253,19 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
     BOOL isUnshiftedApostrophe = shouldHandlePunctuation && !isShifting &&
         punctuationKey->keyCode == VK_OEM_7;
 
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    if (isNoModifier && pContext == _pContext && _candidateMode == CANDIDATE_NONE &&
+        pCompositionProcessorEngine->IsIpcTypingRevision() && (*pCodeOut == VK_SPACE || *pCodeOut == '1'))
+    {
+        if (pKeyState)
+        {
+            pKeyState->Category = CATEGORY_COMPOSING;
+            pKeyState->Function = FUNCTION_CONVERT;
+        }
+        return TRUE;
+    }
+#endif
+
     if (isCantoneseMode)
     {
         //

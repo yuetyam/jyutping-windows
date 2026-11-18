@@ -224,6 +224,12 @@ HRESULT CJyutping::_HandleCompositionInput(TfEditCookie ec, _In_ ITfContext *pCo
 
 HRESULT CJyutping::_HandleCompositionInputWorker(_In_ CCompositionProcessorEngine *pCompositionProcessorEngine, TfEditCookie ec, _In_ ITfContext *pContext)
 {
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    if (_pContext == pContext)
+    {
+        pCompositionProcessorEngine->PrepareIpcSuggestions();
+    }
+#endif
     HRESULT hr = S_OK;
     CJyutpingArray<CStringRange> readingStrings;
 
@@ -266,6 +272,117 @@ HRESULT CJyutping::_HandleCompositionInputWorker(_In_ CCompositionProcessorEngin
     }
     return hr;
 }
+
+#ifdef JYUTPING_IPC_PROBE
+void CJyutping::_InvalidateIpcProbe()
+{
+    if (!_pCompositionProcessorEngine)
+    {
+        return;
+    }
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    const bool dismissCandidates = _pCompositionProcessorEngine->IsIpcTypingRevision() && _pCandidateListUIPresenter;
+#endif
+    _pCompositionProcessorEngine->InvalidateIpcProbe();
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    if (dismissCandidates)
+    {
+        _pCandidateListUIPresenter->_EndCandidateList();
+        delete _pCandidateListUIPresenter;
+        _pCandidateListUIPresenter = nullptr;
+        _candidateMode = CANDIDATE_NONE;
+    }
+#endif
+}
+#endif
+
+#ifdef JYUTPING_IPC_TYPING_PROBE
+class CIpcTypingEditSession : public CEditSessionBase
+{
+public:
+    CIpcTypingEditSession(CJyutping* service, ITfContext* context, ITfComposition* composition, uint64_t revision) :
+        CEditSessionBase(service, context), _composition(composition), _revision(revision)
+    {
+        _composition->AddRef();
+    }
+
+    ~CIpcTypingEditSession() override { _composition->Release(); }
+
+    STDMETHODIMP DoEditSession(TfEditCookie ec) override
+    {
+        return _pTextService->_ApplyIpcTypingUpdate(ec, _pContext, _composition, _revision);
+    }
+
+private:
+    ITfComposition* _composition;
+    uint64_t _revision;
+};
+
+void CJyutping::_QueueIpcTypingUpdate(uint64_t revision)
+{
+    if (!_pThreadMgr || !_pContext || !_pComposition)
+    {
+        return;
+    }
+    auto* session = new (std::nothrow) CIpcTypingEditSession(this, _pContext, _pComposition, revision);
+    if (!session)
+    {
+        return;
+    }
+    HRESULT sessionResult = E_FAIL;
+    const HRESULT requestResult = _pContext->RequestEditSession(_tfClientId, session, TF_ES_ASYNC | TF_ES_READWRITE, &sessionResult);
+    session->Release();
+    if (FAILED(requestResult) || FAILED(sessionResult))
+    {
+        Global::Log(L"Jyutping IPC probe: edit session request=0x%08X result=0x%08X", requestResult, sessionResult);
+    }
+}
+
+HRESULT CJyutping::_ApplyIpcTypingUpdate(TfEditCookie ec, ITfContext* context, ITfComposition* composition, uint64_t revision)
+{
+    if (composition != _pComposition || context != _pContext || !_pCompositionProcessorEngine ||
+        !_pCompositionProcessorEngine->IsCurrentIpcSuggestion(revision))
+    {
+        return S_FALSE;
+    }
+
+    TF_SELECTION selection;
+    ULONG fetched = 0;
+    if (context->GetSelection(ec, TF_DEFAULT_SELECTION, 1, &selection, &fetched) != S_OK || fetched != 1)
+    {
+        return S_FALSE;
+    }
+    ITfRange* compositionRange = nullptr;
+    bool covered = false;
+    if (SUCCEEDED(composition->GetRange(&compositionRange)) && compositionRange)
+    {
+        covered = _IsRangeCovered(ec, selection.range, compositionRange);
+        compositionRange->Release();
+    }
+    selection.range->Release();
+    if (!covered)
+    {
+        return S_FALSE;
+    }
+
+    if (_pCompositionProcessorEngine->TakeDeferredIpcSelection())
+    {
+        return _CommitIpcTypingSelection(ec, context);
+    }
+    return _HandleCompositionInputWorker(_pCompositionProcessorEngine, ec, context);
+}
+
+HRESULT CJyutping::_CommitIpcTypingSelection(TfEditCookie ec, ITfContext* context)
+{
+    HRESULT hr = _HandleCompositionInputWorker(_pCompositionProcessorEngine, ec, context);
+    if (FAILED(hr))
+    {
+        return hr;
+    }
+    return _pCandidateListUIPresenter ? _HandleCandidateConvert(ec, context) : _HandleCompositionFinalizeRaw(ec, context);
+}
+#endif
+
 //+---------------------------------------------------------------------------
 //
 // _CreateAndStartCandidate
@@ -476,6 +593,16 @@ HRESULT CJyutping::_HandleCompositionFinalizeRaw(TfEditCookie ec, _In_ ITfContex
 
 HRESULT CJyutping::_HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *pContext)
 {
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    if (pContext == _pContext && _pCompositionProcessorEngine->IsIpcTypingRevision())
+    {
+        if (_pCompositionProcessorEngine->DeferIpcSelection())
+        {
+            return S_OK;
+        }
+        return _CommitIpcTypingSelection(ec, pContext);
+    }
+#endif
     HRESULT hr = S_OK;
 
     CJyutpingArray<CCandidateListItem> candidateList;

@@ -3,9 +3,6 @@
 #include "Jyutping.h"
 #include "CandidateListUIPresenter.h"
 
-#ifdef JYUTPING_IPC_PROBE
-#include "CompositionProcessorEngine.h"
-#endif
 
 //+---------------------------------------------------------------------------
 //
@@ -48,9 +45,9 @@ STDAPI CJyutping::OnSetFocus(_In_ ITfDocumentMgr *pDocMgrFocus, _In_ ITfDocument
 {
     pDocMgrPrevFocus;
 #ifdef JYUTPING_IPC_PROBE
-    if (_pCompositionProcessorEngine && pDocMgrFocus != pDocMgrPrevFocus)
+    if (pDocMgrFocus != pDocMgrPrevFocus)
     {
-        _pCompositionProcessorEngine->InvalidateIpcProbe();
+        _InvalidateIpcProbe();
     }
 #endif
 
@@ -107,6 +104,9 @@ STDAPI CJyutping::OnSetFocus(_In_ ITfDocumentMgr *pDocMgrFocus, _In_ ITfDocument
 STDAPI CJyutping::OnPushContext(_In_ ITfContext *pContext)
 {
     pContext;
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    _InvalidateIpcProbe();
+#endif
 
     return E_NOTIMPL;
 }
@@ -121,6 +121,9 @@ STDAPI CJyutping::OnPushContext(_In_ ITfContext *pContext)
 STDAPI CJyutping::OnPopContext(_In_ ITfContext *pContext)
 {
     pContext;
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    _InvalidateIpcProbe();
+#endif
 
     return E_NOTIMPL;
 }

@@ -46,10 +46,17 @@ int wmain(int argc, wchar_t** argv)
         return 3;
     }
 
-    const bool invalidate = argc == 3;
+    const bool invalidate = argc == 3 && wcscmp(argv[2], L"invalidate") == 0;
     auto submit = [&]()
     {
         probe.Invalidate();
+#ifdef JYUTPING_RPC_PROBE
+        if (argc == 3 && wcscmp(argv[2], L"empty") == 0)
+        {
+            probe.Query(L"zzzzzzzzz");
+            return;
+        }
+#endif
         probe.Measure(IpcProbe::Clock::duration::zero());
         if (invalidate)
         {

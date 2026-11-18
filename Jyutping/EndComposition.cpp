@@ -46,6 +46,9 @@ void CJyutping::_TerminateComposition(TfEditCookie ec, _In_ ITfContext *pContext
 
     if (_pComposition != nullptr)
     {
+#ifdef JYUTPING_IPC_TYPING_PROBE
+        _InvalidateIpcProbe();
+#endif
         // remove the display attribute from the composition range.
         _ClearCompositionDisplayAttributes(ec, pContext);
 

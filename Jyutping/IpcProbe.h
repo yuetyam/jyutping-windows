@@ -7,6 +7,11 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
+#include <string>
+
+#ifdef JYUTPING_RPC_PROBE
+struct RpcProbeCandidate;
+#endif
 
 class IpcProbe
 {
@@ -21,6 +26,14 @@ public:
     void Invalidate();
     void Measure(Clock::duration localLookup);
     bool IsEnabled() const { return _window != nullptr; }
+#ifdef JYUTPING_RPC_PROBE
+    using ResultCallback = void (*)(void*, uint64_t, const RpcProbeCandidate&);
+    void SetResultCallback(ResultCallback callback, void* context);
+    void Query(std::wstring spell);
+    bool ArmSelectionTimeout();
+    bool HasListener() const { return _hasListener; }
+    uint64_t Revision() const { return _revision; }
+#endif
 
 private:
     struct State;
@@ -36,6 +49,16 @@ private:
     bool _pending = false;
     Clock::time_point _changedAt;
     Clock::time_point _queuedAt;
+#ifdef JYUTPING_RPC_PROBE
+    std::wstring _pendingSpell;
+    ResultCallback _callback = nullptr;
+    void* _callbackContext = nullptr;
+    bool _hasListener = false;
+    UINT_PTR _selectionTimer = 0;
+    UINT_PTR _nextTimer = 0;
+    Clock::time_point _selectionDeadline;
+    void StopSelectionTimer();
+#endif
 };
 
 #endif

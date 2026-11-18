@@ -33,9 +33,16 @@ impl Dictionary {
         }
 
         pub fn suggest(&self) -> io::Result<Option<String>> {
-                // One exact-spell match against the shipped lexicon. hoeng has five letters and gong has four.
-                let spell = b"hoenggong".iter().fold(0_i64, |code, letter| code.wrapping_mul(100).wrapping_add(i64::from(letter - b'a' + 20)));
-                let sql = CString::new(format!("SELECT word || char(9) || romanization FROM lexicon_core WHERE spell = {spell} AND complexity = 54 ORDER BY rowid LIMIT 1"))?;
+                self.suggest_exact(b"hoenggong")
+        }
+
+        pub fn suggest_exact(&self, input: &[u8]) -> io::Result<Option<String>> {
+                if input.is_empty() || input.len() > 9 || !input.iter().all(u8::is_ascii_lowercase) {
+                        return Err(io::Error::new(io::ErrorKind::InvalidInput, "expected one to nine lowercase ASCII letters"));
+                }
+                // Nine base-100 digits fit in a signed 64-bit integer without wrapping.
+                let spell = input.iter().fold(0_i64, |code, letter| code * 100 + i64::from(letter - b'a' + 20));
+                let sql = CString::new(format!("SELECT word || char(9) || romanization FROM lexicon_core WHERE spell = {spell} ORDER BY rowid LIMIT 1"))?;
                 let mut result: Option<String> = None;
                 let status = unsafe { sqlite3_exec(self.0, sql.as_ptr(), read_candidate, ptr::from_mut(&mut result).cast(), ptr::null_mut()) };
                 if status != 0 {

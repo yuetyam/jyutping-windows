@@ -51,7 +51,14 @@ public:
     std::vector<Ime::BasicInputEvent> GetCandidateTailInputEvents(size_t inputCount) const;
     void SetInputEvents(const std::vector<Ime::BasicInputEvent>& inputEvents);
 #ifdef JYUTPING_IPC_PROBE
-    void InvalidateIpcProbe() { _ipcProbe.Invalidate(); }
+    void InvalidateIpcProbe();
+#endif
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    void PrepareIpcSuggestions();
+    bool IsIpcTypingRevision() const { return _isIpcTypingRevision; }
+    bool IsCurrentIpcSuggestion(uint64_t revision) const;
+    bool DeferIpcSelection();
+    bool TakeDeferredIpcSelection();
 #endif
 
     void GetReadingStrings(_Inout_ CJyutpingArray<CStringRange> *pReadingStrings);
@@ -243,6 +250,13 @@ private:
     Ime::InputEngine _inputEngine;
 #ifdef JYUTPING_IPC_PROBE
     IpcProbe _ipcProbe;
+#endif
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    bool _isIpcTypingRevision = false;
+    bool _awaitingIpcSuggestion = false;
+    bool _deferredIpcSelection = false;
+    std::vector<Ime::Candidate> _ipcSuggestions;
+    static void OnIpcSuggestion(void* context, uint64_t revision, const RpcProbeCandidate& candidate);
 #endif
     BOOL _isInputEngineReady;
     std::wstring _cachedInputText;
