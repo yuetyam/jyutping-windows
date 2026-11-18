@@ -441,4 +441,10 @@
     <ClInclude Include="..\Shared\UpdateConfiguration.h"><Filter>Header Files</Filter></ClInclude>
     <ClCompile Include="UpdaterLauncher.cpp"><Filter>Source Files</Filter></ClCompile>
   </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='BackendRpc'">
+    <ClInclude Include="BackendRpcClient.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="..\Shared\Protocol\LocalRpcIdentity.h"><Filter>Header Files</Filter></ClInclude>
+    <ClCompile Include="BackendRpcClient.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="$(IntDir)BackendRpc\JyutpingRpc_c.c"><Filter>Source Files</Filter></ClCompile>
+  </ItemGroup>
 </Project>

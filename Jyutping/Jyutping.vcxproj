@@ -319,7 +319,13 @@
       <AdditionalIncludeDirectories>$(IntDir)ProbeRpc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='Rpc' And '$(EnableIpcTypingProbe)'=='true'">
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='BackendRpc'">
+    <ClCompile>
+      <PreprocessorDefinitions>JYUTPING_RPC_PROBE;JYUTPING_BACKEND_RPC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir)BackendRpc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And ('$(IpcProbeTransport)'=='Rpc' Or '$(IpcProbeTransport)'=='BackendRpc') And '$(EnableIpcTypingProbe)'=='true'">
     <ClCompile>
       <PreprocessorDefinitions>JYUTPING_IPC_TYPING_PROBE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -328,6 +334,12 @@
     <ClCompile Include="..\experiments\ipc-probe\appcontainer\RpcProbeClient.cpp" />
     <ClCompile Include="$(IntDir)ProbeRpc\ProbeRpc_c.c" />
     <ClInclude Include="..\experiments\ipc-probe\appcontainer\RpcProbeClient.h" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='BackendRpc'">
+    <ClCompile Include="BackendRpcClient.cpp" />
+    <ClCompile Include="$(IntDir)BackendRpc\JyutpingRpc_c.c" />
+    <ClInclude Include="BackendRpcClient.h" />
+    <ClInclude Include="..\Shared\Protocol\LocalRpcIdentity.h" />
   </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -524,6 +536,12 @@
           Inputs="..\experiments\ipc-probe\appcontainer\ProbeRpc.idl" Outputs="$(IntDir)ProbeRpc\ProbeRpc.h;$(IntDir)ProbeRpc\ProbeRpc_c.c">
     <MakeDir Directories="$(IntDir)ProbeRpc" />
     <Exec Command="&quot;$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x86\midl.exe&quot; /nologo /env arm64 /prefix client Client_ /prefix server Server_ /out &quot;$(IntDir)ProbeRpc&quot; &quot;..\experiments\ipc-probe\appcontainer\ProbeRpc.idl&quot;" />
+  </Target>
+  <Target Name="GenerateBackendRpc" BeforeTargets="ClCompile"
+          Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='BackendRpc'"
+          Inputs="..\Shared\Protocol\JyutpingRpc.idl" Outputs="$(IntDir)BackendRpc\JyutpingRpc.h;$(IntDir)BackendRpc\JyutpingRpc_c.c">
+    <MakeDir Directories="$(IntDir)BackendRpc" />
+    <Exec Command="&quot;$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x86\midl.exe&quot; /nologo /robust /env arm64 /prefix client Client_ /prefix server Server_ /out &quot;$(IntDir)BackendRpc&quot; &quot;..\Shared\Protocol\JyutpingRpc.idl&quot;" />
   </Target>
   <Target Name="VerifyImeDatabase" BeforeTargets="PrepareForBuild">
     <Error Condition="!Exists('$(ProjectDir)Resources\ime.sqlite3')" Text="Missing generated CoreIME database: $(ProjectDir)Resources\ime.sqlite3. Run cargo run --release --manifest-path preparing\Cargo.toml from the repository root." />

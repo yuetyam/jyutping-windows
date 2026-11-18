@@ -23,7 +23,7 @@ public:
     IpcProbe& operator=(const IpcProbe&) = delete;
     ~IpcProbe();
     void Initialize();
-    void Invalidate();
+    void Invalidate(bool replaceComposition = false);
     void Measure(Clock::duration localLookup);
     bool IsEnabled() const { return _window != nullptr; }
 #ifdef JYUTPING_RPC_PROBE
@@ -46,6 +46,9 @@ private:
     std::shared_ptr<State> _state;
     HWND _window = nullptr;
     uint64_t _revision = 0;
+#ifdef JYUTPING_BACKEND_RPC
+    uint64_t _generation = 1;
+#endif
     bool _pending = false;
     Clock::time_point _changedAt;
     Clock::time_point _queuedAt;

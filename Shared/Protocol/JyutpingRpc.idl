@@ -1,0 +1,64 @@
+[
+    uuid(9cddf5be-87d3-49a2-85ac-b8c711a87693),
+    version(1.0)
+]
+interface JyutpingRpc
+{
+    const unsigned long JyutpingProtocolVersion = 1;
+    const unsigned long JyutpingExactSpell = 1;
+    const unsigned long JyutpingSpellingCapacity = 9;
+    const unsigned long JyutpingCandidateCapacity = 256;
+
+    const unsigned long JyutpingOk = 0;
+    const unsigned long JyutpingEmpty = 1;
+    const unsigned long JyutpingInvalidRequest = 2;
+    const unsigned long JyutpingUnsupportedVersion = 3;
+    const unsigned long JyutpingStaleInstance = 4;
+    const unsigned long JyutpingStorageFailure = 5;
+
+    typedef struct JyutpingHelloRequest
+    {
+        unsigned long minimumVersion;
+        unsigned long maximumVersion;
+    } JyutpingHelloRequest;
+
+    typedef struct JyutpingHelloReply
+    {
+        unsigned long status;
+        unsigned long version;
+        unsigned long capabilities;
+        byte instance[16];
+    } JyutpingHelloReply;
+
+    typedef struct JyutpingRequestIdentity
+    {
+        byte instance[16];
+        byte client[16];
+        unsigned hyper context;
+        unsigned hyper generation;
+        unsigned hyper revision;
+        unsigned hyper request;
+    } JyutpingRequestIdentity;
+
+    typedef struct JyutpingSuggestRequest
+    {
+        unsigned long version;
+        JyutpingRequestIdentity identity;
+        unsigned long inputCount;
+        byte spelling[JyutpingSpellingCapacity];
+    } JyutpingSuggestRequest;
+
+    typedef struct JyutpingSuggestReply
+    {
+        unsigned long status;
+        JyutpingRequestIdentity identity;
+        unsigned long consumedInput;
+        unsigned long textLength;
+        byte text[JyutpingCandidateCapacity];
+        unsigned long romanizationLength;
+        byte romanization[JyutpingCandidateCapacity];
+    } JyutpingSuggestReply;
+
+    void Hello([in] handle_t binding, [in] const JyutpingHelloRequest* request, [out] JyutpingHelloReply* reply);
+    void Suggest([in] handle_t binding, [in] const JyutpingSuggestRequest* request, [out] JyutpingSuggestReply* reply);
+}

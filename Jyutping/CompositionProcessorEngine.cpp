@@ -594,7 +594,7 @@ void CCompositionProcessorEngine::RemoveInputKey(size_t index)
 void CCompositionProcessorEngine::ClearInputKeys()
 {
 #ifdef JYUTPING_IPC_PROBE
-    InvalidateIpcProbe();
+    InvalidateIpcProbe(true);
 #endif
     _inputKeys.clear();
     _inputEvents.clear();
@@ -625,7 +625,7 @@ std::vector<Ime::BasicInputEvent> CCompositionProcessorEngine::GetCandidateTailI
 void CCompositionProcessorEngine::SetInputEvents(const std::vector<Ime::BasicInputEvent>& inputEvents)
 {
 #ifdef JYUTPING_IPC_PROBE
-    InvalidateIpcProbe();
+    InvalidateIpcProbe(true);
 #endif
     _inputEvents = inputEvents;
     _inputKeys.clear();
@@ -1435,9 +1435,9 @@ BOOL CCompositionProcessorEngine::IsNonAlphabeticInputKey(UINT uCode) const
 }
 
 #ifdef JYUTPING_IPC_PROBE
-void CCompositionProcessorEngine::InvalidateIpcProbe()
+void CCompositionProcessorEngine::InvalidateIpcProbe(bool replaceComposition)
 {
-    _ipcProbe.Invalidate();
+    _ipcProbe.Invalidate(replaceComposition);
 #ifdef JYUTPING_IPC_TYPING_PROBE
     _isIpcTypingRevision = false;
     _awaitingIpcSuggestion = false;

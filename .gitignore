@@ -505,6 +505,7 @@ $RECYCLE.BIN/
 
 ### Rust & Cargo ###
 /preparing/target/
+/backend/target/
 /experiments/ipc-probe/target/
 
 

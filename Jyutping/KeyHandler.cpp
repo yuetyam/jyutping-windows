@@ -283,7 +283,7 @@ void CJyutping::_InvalidateIpcProbe()
 #ifdef JYUTPING_IPC_TYPING_PROBE
     const bool dismissCandidates = _pCompositionProcessorEngine->IsIpcTypingRevision() && _pCandidateListUIPresenter;
 #endif
-    _pCompositionProcessorEngine->InvalidateIpcProbe();
+    _pCompositionProcessorEngine->InvalidateIpcProbe(true);
 #ifdef JYUTPING_IPC_TYPING_PROBE
     if (dismissCandidates)
     {

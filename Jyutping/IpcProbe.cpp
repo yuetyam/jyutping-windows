@@ -8,6 +8,9 @@
 #ifdef JYUTPING_RPC_PROBE
 #include "../experiments/ipc-probe/appcontainer/RpcProbeClient.h"
 #endif
+#ifdef JYUTPING_BACKEND_RPC
+#include "BackendRpcClient.h"
+#endif
 
 #include <Aclapi.h>
 #include <CommCtrl.h>
@@ -55,6 +58,7 @@ LONGLONG Microseconds(IpcProbe::Clock::duration duration)
     return std::chrono::duration_cast<std::chrono::microseconds>(duration).count();
 }
 
+#ifndef JYUTPING_BACKEND_RPC
 struct ProbeIdentity
 {
     DWORD sessionId = 0;
@@ -194,6 +198,7 @@ Reply RequestCandidate()
     return {L"reply", ERROR_SUCCESS, true, connectMicroseconds};
 #endif
 }
+#endif
 
 } // namespace
 
@@ -213,6 +218,9 @@ struct IpcProbe::State
     HWND window = nullptr;
     bool busy = false;
     std::optional<Result> result;
+#ifdef JYUTPING_BACKEND_RPC
+    BackendRpcClient client;
+#endif
 };
 
 struct IpcProbe::Work
@@ -222,6 +230,9 @@ struct IpcProbe::Work
     Clock::time_point queuedAt;
 #ifdef JYUTPING_RPC_PROBE
     std::wstring spell;
+#endif
+#ifdef JYUTPING_BACKEND_RPC
+    uint64_t generation;
 #endif
 };
 
@@ -271,9 +282,17 @@ void IpcProbe::Initialize()
 #endif
 }
 
-void IpcProbe::Invalidate()
+void IpcProbe::Invalidate(bool replaceComposition)
 {
     ++_revision;
+#ifdef JYUTPING_BACKEND_RPC
+    if (replaceComposition)
+    {
+        ++_generation;
+    }
+#else
+    (void)replaceComposition;
+#endif
     _pending = false;
     _changedAt = Clock::now();
 #ifdef JYUTPING_RPC_PROBE
@@ -353,6 +372,9 @@ void IpcProbe::Submit()
 #ifdef JYUTPING_RPC_PROBE
         , std::move(_pendingSpell)
 #endif
+#ifdef JYUTPING_BACKEND_RPC
+        , _generation
+#endif
     };
     if (!work)
     {
@@ -379,7 +401,15 @@ void CALLBACK IpcProbe::Run(PTP_CALLBACK_INSTANCE instance, void* context)
     bool typingQuery = false;
     try
     {
-#ifdef JYUTPING_RPC_PROBE
+#ifdef JYUTPING_BACKEND_RPC
+        typingQuery = !work->spell.empty();
+        BackendRpcCandidate candidate;
+        reply.stage = L"backend RPC";
+        reply.error = work->state->client.Suggest(typingQuery ? std::wstring_view(work->spell) : L"hoenggong",
+            1, work->generation, work->revision, candidate);
+        reply.candidate = !candidate.text.empty();
+        reply.suggestion = {std::move(candidate.text), std::move(candidate.romanization)};
+#elif defined(JYUTPING_RPC_PROBE)
         typingQuery = !work->spell.empty();
         reply = RequestCandidate(work->spell);
 #else

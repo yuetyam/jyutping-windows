@@ -1,0 +1,14 @@
+[package]
+name = "jyutping-server"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "JyutpingServer"
+path = "src/main.rs"
+
+[dependencies]
+jyutping-core = { path = "../core" }
+
+[lints]
+workspace = true

@@ -51,7 +51,7 @@ public:
     std::vector<Ime::BasicInputEvent> GetCandidateTailInputEvents(size_t inputCount) const;
     void SetInputEvents(const std::vector<Ime::BasicInputEvent>& inputEvents);
 #ifdef JYUTPING_IPC_PROBE
-    void InvalidateIpcProbe();
+    void InvalidateIpcProbe(bool replaceComposition = false);
 #endif
 #ifdef JYUTPING_IPC_TYPING_PROBE
     void PrepareIpcSuggestions();
