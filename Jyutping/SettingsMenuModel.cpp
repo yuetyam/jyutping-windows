@@ -38,11 +38,11 @@ Item SubmenuItem(UINT id, std::wstring text, std::vector<Item> children)
     return item;
 }
 
-Item SeparatorItem()
+Item SeparatorItem(UINT id)
 {
     Item item;
     item.kind = ItemKind::Separator;
-    item.id = Separator;
+    item.id = id;
     item.enabled = FALSE;
     return item;
 }
@@ -184,8 +184,9 @@ Snapshot BuildSnapshot(_In_ const ILangBarItemButtonSettingsMenuHandler& handler
     variantItems.push_back(CommandItem(CharacterVariantSimplified, LoadMenuString(IDS_MENU_CHARACTER_VARIANT_SIMPLIFIED, L"Simplified"), variant == ::CharacterVariant::Simplified));
     snapshot.items.push_back(SubmenuItem(CharacterVariant, LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variants"), std::move(variantItems)));
 
-    snapshot.items.push_back(SeparatorItem());
+    snapshot.items.push_back(SeparatorItem(Separator));
     snapshot.items.push_back(CommandItem(CheckForUpdates, LoadMenuString(IDS_MENU_CHECK_FOR_UPDATES, L"Check for updates")));
+    snapshot.items.push_back(SeparatorItem(VersionSeparator));
     snapshot.items.push_back(CommandItem(Version, LoadMenuString(IDS_MENU_VERSION, L"Version") + L" " + JYUTPING_VERSION_WIDE, FALSE, FALSE));
 
     assert(ValidateSnapshot(snapshot));
