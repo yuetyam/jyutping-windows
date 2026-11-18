@@ -1,0 +1,13 @@
+[package]
+name = "jyutping-ipc-probe"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["rlib", "staticlib"]
+
+[features]
+rpc-probe = []
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"

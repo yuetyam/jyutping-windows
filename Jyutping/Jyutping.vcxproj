@@ -84,6 +84,7 @@
     <ClInclude Include="CoreImeEngine.h" />
     <ClInclude Include="ExtraEntry.h" />
     <ClInclude Include="InputEngine.h" />
+    <ClInclude Include="IpcProbe.h" />
     <ClInclude Include="InputMemory.h" />
     <ClInclude Include="ImeDatabase.h" />
     <ClInclude Include="ImeTypes.h" />
@@ -144,6 +145,7 @@
     <ClCompile Include="InputEngineCangjie.cpp" />
     <ClCompile Include="InputEngine.cpp" />
     <ClCompile Include="InputEngineFacade.cpp" />
+    <ClCompile Include="IpcProbe.cpp" />
     <ClCompile Include="InputMemory.cpp" />
     <ClCompile Include="InputEnginePinyin.cpp" />
     <ClCompile Include="InputEngineReverseLookup.cpp" />
@@ -306,6 +308,22 @@
       <PreprocessorDefinitions>NTDDI_VERSION=$(WindowsTargetNtddiVersion);%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug' And '$(EnableIpcProbe)'=='true'">
+    <ClCompile>
+      <PreprocessorDefinitions>JYUTPING_IPC_PROBE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='Rpc'">
+    <ClCompile>
+      <PreprocessorDefinitions>JYUTPING_RPC_PROBE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>$(IntDir)ProbeRpc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='Rpc'">
+    <ClCompile Include="..\experiments\ipc-probe\appcontainer\RpcProbeClient.cpp" />
+    <ClCompile Include="$(IntDir)ProbeRpc\ProbeRpc_c.c" />
+    <ClInclude Include="..\experiments\ipc-probe\appcontainer\RpcProbeClient.h" />
+  </ItemGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <PrecompiledHeader>
@@ -496,6 +514,12 @@
   </ItemDefinitionGroup>
   <Import Project="..\Version.targets" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="GenerateIpcProbeRpc" BeforeTargets="ClCompile"
+          Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='Rpc'"
+          Inputs="..\experiments\ipc-probe\appcontainer\ProbeRpc.idl" Outputs="$(IntDir)ProbeRpc\ProbeRpc.h;$(IntDir)ProbeRpc\ProbeRpc_c.c">
+    <MakeDir Directories="$(IntDir)ProbeRpc" />
+    <Exec Command="&quot;$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x86\midl.exe&quot; /nologo /env arm64 /prefix client Client_ /prefix server Server_ /out &quot;$(IntDir)ProbeRpc&quot; &quot;..\experiments\ipc-probe\appcontainer\ProbeRpc.idl&quot;" />
+  </Target>
   <Target Name="VerifyImeDatabase" BeforeTargets="PrepareForBuild">
     <Error Condition="!Exists('$(ProjectDir)Resources\ime.sqlite3')" Text="Missing generated CoreIME database: $(ProjectDir)Resources\ime.sqlite3. Run cargo run --release --manifest-path preparing\Cargo.toml from the repository root." />
   </Target>

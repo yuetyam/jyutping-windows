@@ -3,6 +3,10 @@
 #include "Jyutping.h"
 #include "CandidateListUIPresenter.h"
 
+#ifdef JYUTPING_IPC_PROBE
+#include "CompositionProcessorEngine.h"
+#endif
+
 //+---------------------------------------------------------------------------
 //
 // ITfThreadMgrEventSink::OnInitDocumentMgr
@@ -43,6 +47,12 @@ STDAPI CJyutping::OnUninitDocumentMgr(_In_ ITfDocumentMgr *pDocMgr)
 STDAPI CJyutping::OnSetFocus(_In_ ITfDocumentMgr *pDocMgrFocus, _In_ ITfDocumentMgr *pDocMgrPrevFocus)
 {
     pDocMgrPrevFocus;
+#ifdef JYUTPING_IPC_PROBE
+    if (_pCompositionProcessorEngine && pDocMgrFocus != pDocMgrPrevFocus)
+    {
+        _pCompositionProcessorEngine->InvalidateIpcProbe();
+    }
+#endif
 
     _InitTextEditSink(pDocMgrFocus);
 

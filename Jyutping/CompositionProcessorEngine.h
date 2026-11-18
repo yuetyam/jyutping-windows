@@ -7,6 +7,7 @@
 #include "define.h"
 #include "GlobalSettings.h"
 #include "InputEngine.h"
+#include "IpcProbe.h"
 #include "LanguageBar.h"
 #include "Settings.h"
 #include "VirtualInputKey.h"
@@ -49,6 +50,9 @@ public:
     std::wstring GetRawInputText() const;
     std::vector<Ime::BasicInputEvent> GetCandidateTailInputEvents(size_t inputCount) const;
     void SetInputEvents(const std::vector<Ime::BasicInputEvent>& inputEvents);
+#ifdef JYUTPING_IPC_PROBE
+    void InvalidateIpcProbe() { _ipcProbe.Invalidate(); }
+#endif
 
     void GetReadingStrings(_Inout_ CJyutpingArray<CStringRange> *pReadingStrings);
     void GetCandidateList(_Inout_ CJyutpingArray<CCandidateListItem> *pCandidateList);
@@ -237,6 +241,9 @@ private:
     UINT _candidateListPhraseModifier;
 
     Ime::InputEngine _inputEngine;
+#ifdef JYUTPING_IPC_PROBE
+    IpcProbe _ipcProbe;
+#endif
     BOOL _isInputEngineReady;
     std::wstring _cachedInputText;
     Ime::ReverseLookupMethod _cachedReverseLookupMethod;

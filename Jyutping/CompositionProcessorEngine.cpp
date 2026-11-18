@@ -341,6 +341,12 @@ BOOL CCompositionProcessorEngine::SetupLanguageProfile(LANGID langid, REFGUID gu
     SetupKeystroke();
     SetupConfiguration();
     BOOL isInputEngineReady = SetupInputEngine();
+#ifdef JYUTPING_IPC_PROBE
+    if (!isSecureMode)
+    {
+        _ipcProbe.Initialize();
+    }
+#endif
 
     Global::Log(L"CompositionProcessorEngine setup success: inputEngineReady=%d", isInputEngineReady);
 
@@ -458,6 +464,12 @@ void CCompositionProcessorEngine::ApplySharedSettings(const ImeSettings& setting
 {
     ImeSettings previousSettings = _settings;
     _settings = settings;
+#ifdef JYUTPING_IPC_PROBE
+    if (previousSettings.inputMethodMode != settings.inputMethodMode || previousSettings.characterVariant != settings.characterVariant)
+    {
+        _ipcProbe.Invalidate();
+    }
+#endif
 
     if (previousSettings.candidatePageSize != settings.candidatePageSize)
     {
@@ -529,6 +541,9 @@ BOOL CCompositionProcessorEngine::AddInputKey(const VirtualInputKey& inputKey, B
 
     _inputKeys.push_back(inputKey);
     _inputEvents.push_back(Ime::BasicInputEvent(inputKey, isShifting != FALSE));
+#ifdef JYUTPING_IPC_PROBE
+    _ipcProbe.Invalidate();
+#endif
     return TRUE;
 }
 
@@ -548,6 +563,9 @@ void CCompositionProcessorEngine::RemoveInputKey(size_t index)
     {
         _inputKeys.erase(_inputKeys.begin() + index);
         _inputEvents.erase(_inputEvents.begin() + index);
+#ifdef JYUTPING_IPC_PROBE
+        _ipcProbe.Invalidate();
+#endif
     }
 }
 
@@ -563,6 +581,9 @@ void CCompositionProcessorEngine::RemoveInputKey(size_t index)
 
 void CCompositionProcessorEngine::ClearInputKeys()
 {
+#ifdef JYUTPING_IPC_PROBE
+    _ipcProbe.Invalidate();
+#endif
     _inputKeys.clear();
     _inputEvents.clear();
     ClearSelectedCandidateMemory();
@@ -591,6 +612,9 @@ std::vector<Ime::BasicInputEvent> CCompositionProcessorEngine::GetCandidateTailI
 
 void CCompositionProcessorEngine::SetInputEvents(const std::vector<Ime::BasicInputEvent>& inputEvents)
 {
+#ifdef JYUTPING_IPC_PROBE
+    _ipcProbe.Invalidate();
+#endif
     _inputEvents = inputEvents;
     _inputKeys.clear();
     _inputKeys.reserve(inputEvents.size());
@@ -1423,7 +1447,16 @@ const std::vector<Ime::Candidate>& CCompositionProcessorEngine::GetInputSuggesti
         _cachedReverseLookupMethod = reverseLookupMethod;
         if (reverseLookupMethod == Ime::ReverseLookupMethod::None)
         {
+#ifdef JYUTPING_IPC_PROBE
+            auto lookupStart = IpcProbe::Clock::now();
+#endif
             _cachedSuggestions = _inputEngine.Suggest(inputKeys, CurrentCharacterStandard());
+#ifdef JYUTPING_IPC_PROBE
+            if (_ipcProbe.IsEnabled())
+            {
+                _ipcProbe.Measure(IpcProbe::Clock::now() - lookupStart);
+            }
+#endif
         }
         else
         {

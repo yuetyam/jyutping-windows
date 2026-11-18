@@ -2,6 +2,10 @@
 #include "Jyutping.h"
 #include "CandidateListUIPresenter.h"
 
+#ifdef JYUTPING_IPC_PROBE
+#include "CompositionProcessorEngine.h"
+#endif
+
 //+---------------------------------------------------------------------------
 //
 // ITfTextLayoutSink::OnSetThreadFocus
@@ -37,6 +41,12 @@ STDAPI CJyutping::OnSetThreadFocus()
 
 STDAPI CJyutping::OnKillThreadFocus()
 {
+#ifdef JYUTPING_IPC_PROBE
+    if (_pCompositionProcessorEngine)
+    {
+        _pCompositionProcessorEngine->InvalidateIpcProbe();
+    }
+#endif
     if (_pCandidateListUIPresenter)
     {
         ITfDocumentMgr* pCandidateListDocumentMgr = nullptr;

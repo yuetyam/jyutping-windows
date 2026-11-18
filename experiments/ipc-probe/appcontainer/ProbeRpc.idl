@@ -1,0 +1,8 @@
+[
+    uuid(cfaac1a8-73a1-4406-90a7-c8cd83c5f333),
+    version(1.0)
+]
+interface ProbeRpc
+{
+    long Suggest([in] handle_t binding, [out] byte candidate[256]);
+}

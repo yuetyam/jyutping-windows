@@ -176,6 +176,12 @@
     <ClInclude Include="InputEngine.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="IpcProbe.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\experiments\ipc-probe\appcontainer\RpcProbeClient.h" Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='Rpc'">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Candidate.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -380,6 +386,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="InputEngineFacade.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="IpcProbe.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\experiments\ipc-probe\appcontainer\RpcProbeClient.cpp" Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='Rpc'">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="$(IntDir)ProbeRpc\ProbeRpc_c.c" Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='Rpc'">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="InputMemory.cpp">
