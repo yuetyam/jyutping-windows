@@ -16,9 +16,9 @@ Jyutping
 <br>
 <br>
 
-Cantonese input method for Windows using Text Services Framework (TSF).
+Cantonese input method for Windows.
 
-See also:
+Also available on other systems:
 - [iOS and macOS](https://github.com/yuetyam/jyutping)
 - [Android](https://github.com/yuetyam/jyutping-android)
 - [HarmonyOS](https://github.com/yuetyam/jyutping-harmony)
@@ -34,8 +34,9 @@ Please visit our website: https://jyutping.app
 Requirements:
 
 - Windows 11
-- Visual Studio 2026 with the C++ desktop toolchain and the Windows 11 SDK
+- Visual Studio 2026, with Windows 11 SDK, the C++ desktop toolchain, and the WinUI toolchain
 - Rust toolchain
+- SQLite3
 
 Generate `Jyutping\Resources\ime.sqlite3` from the repository root:
 
