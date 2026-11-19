@@ -19,6 +19,20 @@ The installer records its native location in the 64-bit view of `HKLM\Software\J
 
 The updater uses `HKCU\Software\Jyutping\WinSparkle` for its preferences. Input settings and input memory are separate. The helper is unique per user/session; repeat invocations activate its current dialog without restarting the network request.
 
+## Client-server preview
+
+Build either preview package from a Visual Studio 2026 Developer PowerShell with the .NET 10 SDK or later and both Windows MSVC Rust targets installed.
+
+```powershell
+pwsh -File packaging/Build-Installers.ps1 -BackendPreview
+```
+
+This builds native ARM64 and x64 servers and self-contained C# WinUI 3 settings payloads with Windows App SDK 1.8 and .NET 10. The installer includes their license notices and the architecture-matched app-local Visual C++ 2026 runtime from the installed Visual Studio toolchain. Both preview installers and checksums are under `packaging/output/BackendPreview`. The script can sign the staged server and settings binaries using the same `-SignToolCommand` as the other product binaries.
+
+The preview registers the backend to run as the signed-in user and adds a Start menu shortcut for Jyutping Settings. Upgrades and uninstall signal the current session's backend to drain RPC and exit. The existing file-in-use checks can defer an upgrade while another session or a host holds a file. Uninstall preserves persisted preferences and learned words. Preview builds use separate DLL output directories.
+
+The preview needs installed-product checks for sign-in, clean-machine runtime loading, multiple logon sessions, minimum supported Windows versions, upgrades with old clients, and uninstall.
+
 ## Upgrading while files are in use
 
 Before unregistering or copying files, the installer checks whether existing IME, lexicon, and updater files can be replaced. If files remain in use, it asks the user to close applications and retry. Switching to another input method and signing out or restarting Windows may be necessary. The installer does not automatically close host applications. Replacement flags also cover the lexicon and updater if a file becomes busy after that check. Follow any restart prompt before relying on the new IME version.

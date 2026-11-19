@@ -1,0 +1,65 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+        <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
+        <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
+        <TargetPlatformMinVersion Condition="'$(RuntimeIdentifier)' != 'win-arm64'">10.0.17763.0</TargetPlatformMinVersion>
+        <TargetPlatformMinVersion Condition="'$(RuntimeIdentifier)' == 'win-arm64'">10.0.22000.0</TargetPlatformMinVersion>
+        <SupportedOSPlatformVersion>$(TargetPlatformMinVersion)</SupportedOSPlatformVersion>
+        <PlatformTarget Condition="'$(RuntimeIdentifier)' == 'win-arm64'">ARM64</PlatformTarget>
+        <PlatformTarget Condition="'$(RuntimeIdentifier)' == 'win-x64'">x64</PlatformTarget>
+        <AppVersion Condition="'$(AppVersion)' == ''">$([System.IO.File]::ReadAllText('$(MSBuildProjectDirectory)/../version.txt').Trim())</AppVersion>
+        <Version>$(AppVersion)</Version>
+        <Product>Jyutping</Product>
+        <Company>Jyutping.org</Company>
+        <Description>Jyutping Settings</Description>
+        <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+        <UseWinUI>true</UseWinUI>
+        <WinUISDKReferences>false</WinUISDKReferences>
+        <WindowsPackageType>None</WindowsPackageType>
+        <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+        <SelfContained>true</SelfContained>
+        <PublishSingleFile>false</PublishSingleFile>
+        <PublishTrimmed>false</PublishTrimmed>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+        <NativePath>$(MSBuildProjectDirectory)/obj/native/$(Configuration)/$(RuntimeIdentifier)</NativePath>
+        <MidlArchitecture Condition="'$(RuntimeIdentifier)' == 'win-arm64'">arm64</MidlArchitecture>
+        <MidlArchitecture Condition="'$(RuntimeIdentifier)' == 'win-x64'">x64</MidlArchitecture>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.4948" />
+        <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.8.260921001" GeneratePathProperty="true" />
+        <Content Include="$(NativePath)/JyutpingSettingsRpc.dll" Link="JyutpingSettingsRpc.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
+    <Target Name="BuildSettingsRpc" BeforeTargets="PrepareForBuild"
+            Inputs="SettingsRpc.cpp;../Jyutping/BackendRpcClient.cpp;../Jyutping/BackendRpcClient.h;../Shared/Protocol/JyutpingRpc.idl;../Shared/Protocol/LocalRpcIdentity.h"
+            Outputs="$(NativePath)/JyutpingSettingsRpc.dll">
+        <Error Condition="'$(VSCMD_ARG_TGT_ARCH)' != '$(MidlArchitecture)'" Text="Build in a Visual Studio Developer PowerShell targeting $(MidlArchitecture)." />
+        <MakeDir Directories="$(NativePath)" />
+        <Exec WorkingDirectory="$(NativePath)" Command="midl.exe /nologo /robust /env $(MidlArchitecture) /prefix client Client_ /prefix server Server_ &quot;$(MSBuildProjectDirectory)/../Shared/Protocol/JyutpingRpc.idl&quot;" />
+        <Exec WorkingDirectory="$(NativePath)" Command="cl.exe /nologo /LD /MT /EHsc /std:c++20 /W4 /I. &quot;$(MSBuildProjectDirectory)/SettingsRpc.cpp&quot; &quot;$(MSBuildProjectDirectory)/../Jyutping/BackendRpcClient.cpp&quot; JyutpingRpc_c.c /link /OUT:JyutpingSettingsRpc.dll" />
+    </Target>
+    <Target Name="IncludeWinUIResourcesInPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+        <!-- The WinUI build generates these resources, which unpackaged apps need beside the executable. -->
+        <ItemGroup>
+            <_WinUIResources Include="$(ProjectPriFullPath);$(TargetDir)App.xbf" Exclude="@(ResolvedFileToPublish)" />
+            <ResolvedFileToPublish Include="@(_WinUIResources)">
+                <RelativePath>%(_WinUIResources.Filename)%(_WinUIResources.Extension)</RelativePath>
+                <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+            </ResolvedFileToPublish>
+        </ItemGroup>
+    </Target>
+    <Target Name="IncludeRuntimeNotices" AfterTargets="Publish">
+        <ItemGroup>
+            <_WindowsAppSdkNotice Include="$(PkgMicrosoft_WindowsAppSDK)/license.txt;$(PkgMicrosoft_WindowsAppSDK)/NOTICE.txt" />
+            <_DotNetRuntimePack Include="@(ResolvedRuntimePack)" Condition="'%(ResolvedRuntimePack.NuGetPackageId)' == 'Microsoft.NETCore.App.Runtime.$(RuntimeIdentifier)'" />
+            <_DotNetNotice Include="@(_DotNetRuntimePack->'%(PackageDirectory)/LICENSE.TXT');@(_DotNetRuntimePack->'%(PackageDirectory)/THIRD-PARTY-NOTICES.TXT')" />
+        </ItemGroup>
+        <Copy SourceFiles="@(_WindowsAppSdkNotice)" DestinationFolder="$(PublishDir)Notices/WindowsAppSDK" SkipUnchangedFiles="true" />
+        <Error Condition="'@(_DotNetRuntimePack)' == ''" Text="The .NET runtime pack could not be located for license collection." />
+        <Copy SourceFiles="@(_DotNetNotice)" DestinationFolder="$(PublishDir)Notices/DotNet" SkipUnchangedFiles="true" />
+    </Target>
+</Project>

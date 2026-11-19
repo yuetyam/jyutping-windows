@@ -497,6 +497,8 @@ STDAPI CLangBarItemButton::OnMenuSelect(UINT wID)
     {
     case SettingsMenu::CheckForUpdates:
         return UpdaterLauncher::CheckForUpdates(_isSecureMode);
+    case SettingsMenu::MoreSettings:
+        return UpdaterLauncher::OpenSettings(_isSecureMode);
     case SettingsMenu::PunctuationFormCantonese:
         _pSettingsMenuHandler->SetPunctuationForm(PunctuationForm::Cantonese);
         break;

@@ -50,6 +50,7 @@ BEGIN
     IDS_OPTIONS_INPUT_MODE_CANTONESE          "粵拼模式"
     IDS_OPTIONS_INPUT_MODE_ABC                "ABC 模式"
     IDS_MENU_CHECK_FOR_UPDATES                "檢查更新…"
+    IDS_MENU_MORE_SETTINGS                    "更多設定…"
     IDS_UPDATER_UNAVAILABLE                   "更新程式不可用。請前往官網 https://jyutping.app 重新下載安裝粵拼輸入法。"
     IDS_UPDATER_START_FAILED                  "無法開啓更新程式。試下切換到其他應用程式再開啓，或前往官網 https://jyutping.app 重新下載安裝粵拼輸入法。"
     IDS_UPDATER_CONFIG_FAILED                 "無法設置更新程式。請前往官網 https://jyutping.app 重新下載安裝粵拼輸入法。"

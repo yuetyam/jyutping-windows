@@ -5,7 +5,8 @@ param(
     [string]$MSBuildPath = "msbuild",
     [string]$InnoSetupCompiler = "",
     [string]$SignToolCommand = "",
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$BackendPreview
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,6 +17,21 @@ $AppVersion = Get-JyutpingVersion $AppVersion
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $StageRoot = Join-Path $PSScriptRoot "stage"
 $OutputDirectory = Join-Path $PSScriptRoot "output"
+if ($BackendPreview) {
+    function Copy-PreviewRuntime([string]$Architecture, [string]$Destination) {
+        $source = Join-Path $env:VCToolsRedistDir "$Architecture\Microsoft.VC145.CRT"
+        Assert-FileExists -Path (Join-Path $source 'vcruntime140.dll')
+        Get-ChildItem -LiteralPath $source -Filter '*.dll' -File | Copy-Item -Destination $Destination
+    }
+
+    $StageRoot = Join-Path $StageRoot "BackendPreview"
+    $OutputDirectory = Join-Path $OutputDirectory "BackendPreview"
+}
+$PreviewPayloads = Join-Path $RepoRoot "backend\target\installer-$Configuration"
+[string[]]$previewDefine = @()
+if ($BackendPreview) {
+    $previewDefine = @('/DBackendPreview=1')
+}
 
 function Invoke-External {
     param(
@@ -122,8 +138,43 @@ function Build-Platform {
         "/nologo",
         "/p:Configuration=$Configuration",
         "/p:AppVersion=$AppVersion",
+        "/p:EnableBackendClient=$($BackendPreview.IsPresent.ToString().ToLowerInvariant())",
+        "/p:BackendPreviewBuildRoot=$(Join-Path $PreviewPayloads 'IME')",
         "/p:Platform=$Platform"
     )
+}
+
+if ($BackendPreview -and -not $SkipBuild) {
+    $developerShell = Join-Path $env:VSINSTALLDIR 'Common7\Tools\Microsoft.VisualStudio.DevShell.dll'
+    Import-Module $developerShell
+    $hostArchitecture = [System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString().ToLowerInvariant()
+    $cargoMode = if ($Configuration -eq 'Release') { 'release' } else { 'debug' }
+    $cargoProfile = if ($Configuration -eq 'Release') { @('--release') } else { @() }
+    $previousVersion = $env:JYUTPING_APP_VERSION
+    try {
+        $env:JYUTPING_APP_VERSION = $AppVersion
+        foreach ($package in @(
+            @{ Architecture = 'x64'; Target = 'x86_64-pc-windows-msvc' },
+            @{ Architecture = 'arm64'; Target = 'aarch64-pc-windows-msvc' }
+        )) {
+            $architecture = $package.Architecture
+            Enter-VsDevShell -VsInstallPath $env:VSINSTALLDIR -DevCmdArguments "-arch=$architecture -host_arch=$hostArchitecture" -SkipAutomaticLocation | Out-Null
+            $output = Join-Path $PreviewPayloads $architecture
+            Invoke-External -FilePath 'cargo' -Arguments (@(
+                'rustc', '--locked', '--offline', '--manifest-path', (Join-Path $RepoRoot 'backend\Cargo.toml'),
+                '-p', 'jyutping-server', '--bin', 'JyutpingServer', '--features', 'installed',
+                '--target', $package.Target
+            ) + $cargoProfile)
+            Copy-RequiredFile -Source (Join-Path $RepoRoot "backend\target\$($package.Target)\$cargoMode\JyutpingServer.exe") -Destination (Join-Path $output 'JyutpingServer.exe')
+            Invoke-External -FilePath 'dotnet' -Arguments @(
+                'publish', (Join-Path $RepoRoot 'JyutpingSettings\JyutpingSettings.csproj'), '-c', $Configuration, '-r', "win-$architecture",
+                "-p:AppVersion=$AppVersion", '-o', (Join-Path $output 'Settings')
+            )
+        }
+    }
+    finally {
+        $env:JYUTPING_APP_VERSION = $previousVersion
+    }
 }
 
 if (-not $SkipBuild) {
@@ -139,6 +190,11 @@ $payloads = @{
     Database = Join-Path $RepoRoot "Jyutping\Resources\ime.sqlite3"
     X64Updater = Join-Path $RepoRoot "JyutpingUpdater\bin\x64\$Configuration\JyutpingUpdater.exe"
     Arm64Updater = Join-Path $RepoRoot "JyutpingUpdater\bin\ARM64\$Configuration\JyutpingUpdater.exe"
+}
+if ($BackendPreview) {
+    $payloads.X64Dll = Join-Path $PreviewPayloads 'IME\x64\Jyutping.dll'
+    $payloads.X86Dll = Join-Path $PreviewPayloads 'IME\Win32\Jyutping.dll'
+    $payloads.Arm64Dll = Join-Path $PreviewPayloads 'IME\ARM64EC\Jyutping.dll'
 }
 
 $versionInfoVersion = Convert-ToFileVersion -Version $AppVersion
@@ -156,9 +212,20 @@ Assert-BinaryArchitecture -Path $payloads.X64Updater -Architecture x64
 Assert-BinaryArchitecture -Path $payloads.Arm64Updater -Architecture ARM64
 
 if (Test-Path -LiteralPath $StageRoot) {
-    Get-ChildItem -LiteralPath $StageRoot -Force |
-        Where-Object { $_.Name -ne ".gitkeep" } |
-        Remove-Item -Recurse -Force
+    $resolvedStage = (Resolve-Path -LiteralPath $StageRoot).Path
+    if (!$resolvedStage.StartsWith($PSScriptRoot + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Stage path is outside packaging: $resolvedStage"
+    }
+    foreach ($name in @('x64', 'ARM64')) {
+        $directory = Join-Path $resolvedStage $name
+        if (Test-Path -LiteralPath $directory) {
+            $entry = Get-Item -LiteralPath $directory -Force
+            if ($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                throw "Refusing to clear redirected staging directory: $directory"
+            }
+            Remove-Item -LiteralPath $directory -Recurse -Force
+        }
+    }
 } else {
     New-Item -ItemType Directory -Path $StageRoot -Force | Out-Null
 }
@@ -200,25 +267,56 @@ $stagedBinaries = @(
     (Join-Path $x64StageRoot "Updater\JyutpingUpdater.exe"),
     (Join-Path $arm64StageRoot "Updater\JyutpingUpdater.exe")
 )
+if ($BackendPreview) {
+    foreach ($package in @(
+        @{ Stage = $x64StageRoot; Architecture = 'x64' },
+        @{ Stage = $arm64StageRoot; Architecture = 'arm64' }
+    )) {
+        $source = Join-Path $PreviewPayloads $package.Architecture
+        $server = Join-Path $source 'JyutpingServer.exe'
+        $settings = Join-Path $source 'Settings'
+        foreach ($resource in @('JyutpingSettings.pri', 'App.xbf')) {
+            Assert-FileExists -Path (Join-Path $settings $resource)
+        }
+        foreach ($binary in @($server, (Join-Path $settings 'JyutpingSettings.exe'))) {
+            Assert-FileExists -Path $binary
+            Assert-ProductVersion -Path $binary -Version $AppVersion
+            Assert-BinaryArchitecture -Path $binary -Architecture $package.Architecture
+        }
+        $bridge = Join-Path $settings 'JyutpingSettingsRpc.dll'
+        Assert-FileExists -Path $bridge
+        Assert-BinaryArchitecture -Path $bridge -Architecture $package.Architecture
+        $stagedServer = Join-Path $package.Stage 'JyutpingServer.exe'
+        Copy-RequiredFile -Source $server -Destination $stagedServer
+        Copy-Item -LiteralPath $settings -Destination $package.Stage -Recurse
+        $runtime = New-Item -ItemType Directory -Path (Join-Path $package.Stage 'CRT') -Force
+        Copy-PreviewRuntime $package.Architecture $runtime.FullName
+        if ($package.Architecture -eq 'x64') {
+            $x86Runtime = New-Item -ItemType Directory -Path (Join-Path $package.Stage 'CRT-x86') -Force
+            Copy-PreviewRuntime 'x86' $x86Runtime.FullName
+        }
+        $stagedBinaries += @($stagedServer, (Join-Path $package.Stage 'Settings\JyutpingSettings.exe'), (Join-Path $package.Stage 'Settings\JyutpingSettingsRpc.dll'))
+    }
+}
 Invoke-SignTool -Paths $stagedBinaries
 
 $iscc = Resolve-InnoSetupCompiler
 
-Invoke-External -FilePath $iscc -Arguments @(
+Invoke-External -FilePath $iscc -Arguments ($previewDefine + @(
     "/DAppVersion=$AppVersion",
     "/DVersionInfoVersion=$versionInfoVersion",
     "/DStageRoot=$x64StageRoot",
     "/DOutputDir=$OutputDirectory",
     (Join-Path $PSScriptRoot "Jyutping-x64.iss")
-)
+))
 
-Invoke-External -FilePath $iscc -Arguments @(
+Invoke-External -FilePath $iscc -Arguments ($previewDefine + @(
     "/DAppVersion=$AppVersion",
     "/DVersionInfoVersion=$versionInfoVersion",
     "/DStageRoot=$arm64StageRoot",
     "/DOutputDir=$OutputDirectory",
     (Join-Path $PSScriptRoot "Jyutping-ARM64.iss")
-)
+))
 
 $installers = @(
     (Join-Path $OutputDirectory "jyutping-v$AppVersion-x64.exe"),

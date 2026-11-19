@@ -1,13 +1,31 @@
 [
     uuid(9cddf5be-87d3-49a2-85ac-b8c711a87693),
-    version(1.0)
+    version(1.1)
 ]
 interface JyutpingRpc
 {
     const unsigned long JyutpingProtocolVersion = 1;
     const unsigned long JyutpingExactSpell = 1;
+    const unsigned long JyutpingEngineProtocolVersion = 2;
+    const unsigned long JyutpingEngineCandidates = 2;
+    const unsigned long JyutpingInputMemory = 4;
+    const unsigned long JyutpingSettings = 8;
+    const unsigned long JyutpingMemoryTransfer = 16;
+    const unsigned long JyutpingSettingCount = 8;
     const unsigned long JyutpingSpellingCapacity = 9;
     const unsigned long JyutpingCandidateCapacity = 256;
+    const unsigned long JyutpingEngineInputCapacity = 12;
+    const unsigned long JyutpingEngineResultCapacity = 16;
+
+    const unsigned long JyutpingNormal = 0;
+    const unsigned long JyutpingPinyin = 1;
+    const unsigned long JyutpingCangjie = 2;
+    const unsigned long JyutpingStroke = 3;
+    const unsigned long JyutpingStructure = 4;
+    const unsigned long JyutpingCantoneseCandidate = 0;
+    const unsigned long JyutpingPlainTextCandidate = 1;
+    const unsigned long JyutpingEmojiCandidate = 2;
+    const unsigned long JyutpingSymbolCandidate = 3;
 
     const unsigned long JyutpingOk = 0;
     const unsigned long JyutpingEmpty = 1;
@@ -15,6 +33,12 @@ interface JyutpingRpc
     const unsigned long JyutpingUnsupportedVersion = 3;
     const unsigned long JyutpingStaleInstance = 4;
     const unsigned long JyutpingStorageFailure = 5;
+    const unsigned long JyutpingCapabilityUnavailable = 6;
+    const unsigned long JyutpingNotModified = 7;
+    const unsigned long JyutpingStaleMemory = 8;
+    const unsigned long JyutpingRemember = 1;
+    const unsigned long JyutpingForget = 2;
+    const unsigned long JyutpingClearMemory = 3;
 
     typedef struct JyutpingHelloRequest
     {
@@ -59,6 +83,90 @@ interface JyutpingRpc
         byte romanization[JyutpingCandidateCapacity];
     } JyutpingSuggestReply;
 
+    typedef struct JyutpingEngineRequest
+    {
+        unsigned long version;
+        JyutpingRequestIdentity identity;
+        unsigned long mode;
+        unsigned long triggerKey;
+        unsigned long characterStandard;
+        unsigned long romanizationForm;
+        unsigned long resultLimit;
+        unsigned long inputCount;
+        byte input[JyutpingEngineInputCapacity];
+    } JyutpingEngineRequest;
+
+    typedef struct JyutpingEngineCandidate
+    {
+        unsigned long kind;
+        unsigned long consumedInput;
+        unsigned long textLength;
+        byte text[JyutpingCandidateCapacity];
+        unsigned long commentLength;
+        byte comment[JyutpingCandidateCapacity];
+        unsigned long markLength;
+        byte mark[JyutpingCandidateCapacity];
+        unsigned long originalTextLength;
+        byte originalText[JyutpingCandidateCapacity];
+        unsigned long romanizationLength;
+        byte romanization[JyutpingCandidateCapacity];
+    } JyutpingEngineCandidate;
+
+    typedef struct JyutpingEngineReply
+    {
+        unsigned long status;
+        JyutpingRequestIdentity identity;
+        unsigned long candidateCount;
+        unsigned long hasMore;
+        unsigned hyper memoryGeneration;
+        JyutpingEngineCandidate candidates[JyutpingEngineResultCapacity];
+    } JyutpingEngineReply;
+
+    typedef struct JyutpingMemoryRequest
+    {
+        unsigned long version;
+        JyutpingRequestIdentity identity;
+        unsigned long operation;
+        unsigned hyper memoryGeneration;
+        unsigned long originalTextLength;
+        byte originalText[JyutpingCandidateCapacity];
+        unsigned long romanizationLength;
+        byte romanization[JyutpingCandidateCapacity];
+    } JyutpingMemoryRequest;
+
+    typedef struct JyutpingMemoryReply
+    {
+        unsigned long status;
+        JyutpingRequestIdentity identity;
+    } JyutpingMemoryReply;
+
+    typedef struct JyutpingSettingsRequest
+    {
+        unsigned long version;
+        JyutpingRequestIdentity identity;
+        unsigned hyper knownRevision;
+    } JyutpingSettingsRequest;
+
+    typedef struct JyutpingSetSettingRequest
+    {
+        unsigned long version;
+        JyutpingRequestIdentity identity;
+        unsigned long field;
+        unsigned long value;
+    } JyutpingSetSettingRequest;
+
+    typedef struct JyutpingSettingsReply
+    {
+        unsigned long status;
+        JyutpingRequestIdentity identity;
+        unsigned hyper settingsRevision;
+        unsigned long values[JyutpingSettingCount];
+    } JyutpingSettingsReply;
+
     void Hello([in] handle_t binding, [in] const JyutpingHelloRequest* request, [out] JyutpingHelloReply* reply);
     void Suggest([in] handle_t binding, [in] const JyutpingSuggestRequest* request, [out] JyutpingSuggestReply* reply);
+    void SuggestCandidates([in] handle_t binding, [in] const JyutpingEngineRequest* request, [out] JyutpingEngineReply* reply);
+    void MutateMemory([in] handle_t binding, [in] const JyutpingMemoryRequest* request, [out] JyutpingMemoryReply* reply);
+    void GetSettings([in] handle_t binding, [in] const JyutpingSettingsRequest* request, [out] JyutpingSettingsReply* reply);
+    void SetSetting([in] handle_t binding, [in] const JyutpingSetSettingRequest* request, [out] JyutpingSettingsReply* reply);
 }

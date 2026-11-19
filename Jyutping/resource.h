@@ -79,6 +79,7 @@
 #define IDS_UPDATER_START_FAILED                  75
 #define IDS_UPDATER_CONFIG_FAILED                 76
 #define IDS_UPDATER_TITLE                         77
+#define IDS_MENU_MORE_SETTINGS                    78
 
 #define IDR_VERSION                               1
 

@@ -365,21 +365,25 @@ HRESULT CJyutping::_ApplyIpcTypingUpdate(TfEditCookie ec, ITfContext* context, I
         return S_FALSE;
     }
 
-    if (_pCompositionProcessorEngine->TakeDeferredIpcSelection())
+    if (const UINT key = _pCompositionProcessorEngine->TakeDeferredIpcSelection())
     {
-        return _CommitIpcTypingSelection(ec, context);
+        return _CommitIpcTypingSelection(ec, context, key);
     }
     return _HandleCompositionInputWorker(_pCompositionProcessorEngine, ec, context);
 }
 
-HRESULT CJyutping::_CommitIpcTypingSelection(TfEditCookie ec, ITfContext* context)
+HRESULT CJyutping::_CommitIpcTypingSelection(TfEditCookie ec, ITfContext* context, UINT key)
 {
     HRESULT hr = _HandleCompositionInputWorker(_pCompositionProcessorEngine, ec, context);
     if (FAILED(hr))
     {
         return hr;
     }
-    return _pCandidateListUIPresenter ? _HandleCandidateConvert(ec, context) : _HandleCompositionFinalizeRaw(ec, context);
+    if (!_pCandidateListUIPresenter)
+    {
+        return _HandleCompositionFinalizeRaw(ec, context);
+    }
+    return key == VK_SPACE ? _HandleCandidateConvert(ec, context) : _HandleCandidateSelectByNumber(ec, context, key);
 }
 #endif
 
@@ -596,11 +600,11 @@ HRESULT CJyutping::_HandleCompositionConvert(TfEditCookie ec, _In_ ITfContext *p
 #ifdef JYUTPING_IPC_TYPING_PROBE
     if (pContext == _pContext && _pCompositionProcessorEngine->IsIpcTypingRevision())
     {
-        if (_pCompositionProcessorEngine->DeferIpcSelection())
+        if (_pCompositionProcessorEngine->DeferIpcSelection(VK_SPACE))
         {
             return S_OK;
         }
-        return _CommitIpcTypingSelection(ec, pContext);
+        return _pCandidateListUIPresenter ? _HandleCandidateConvert(ec, pContext) : _CommitIpcTypingSelection(ec, pContext, VK_SPACE);
     }
 #endif
     HRESULT hr = S_OK;

@@ -1,10 +1,52 @@
+mod candidate;
+mod character_standard;
+mod extra_entries;
+mod memory;
+mod normal;
+mod pinyin;
+mod reverse;
+mod segmenter;
+mod tones;
+mod variant_phrases;
+
+pub use candidate::{Candidate, RomanizationForm, present_candidates};
+pub use character_standard::{CharacterStandard, convert_text};
+pub use memory::{MemoryRow, MemorySerialFields, MemorySource, memory_serial_fields};
+pub use normal::{Engine, Lexicon, LexiconKind, LexiconRow, LexiconSource, SymbolRow};
+pub use reverse::{CangjieVariant, ReverseLookup, ReverseLookupSource, ShapeRow};
+pub use segmenter::{Segmenter, Syllable};
+
 /// Encode a bounded exact spelling using the bundled Windows lexicon's base-100 key.
 pub fn exact_spell_code(input: &[u8]) -> Option<i64> {
         if input.is_empty() || input.len() > 9 || !input.iter().all(u8::is_ascii_lowercase) {
                 return None;
         }
-        // Every supported key fits in 18 decimal digits.
-        Some(input.iter().fold(0, |code, letter| code * 100 + i64::from(letter - b'a' + 20)))
+        Some(combined_code(input.iter().copied()))
+}
+
+fn letter_code(letter: u8) -> i64 {
+        i64::from(letter - b'a' + 20)
+}
+
+fn combined_code(keys: impl IntoIterator<Item = u8>) -> i64 {
+        keys.into_iter().fold(0i64, |code, key| {
+                let key_code = match key {
+                        b'a'..=b'z' => letter_code(key),
+                        b'0'..=b'9' => i64::from(key - b'0' + 10),
+                        b'\'' => 47,
+                        96 => 48,
+                        _ => unreachable!("expected a Windows input key"),
+                };
+                code.wrapping_mul(100).wrapping_add(key_code)
+        })
+}
+
+fn is_syllable_letter(key: u8) -> bool {
+        key.is_ascii_lowercase() && !matches!(key, b'v' | b'x' | b'q')
+}
+
+fn anchor_key(key: u8) -> u8 {
+        if key == b'y' { b'j' } else { key }
 }
 
 #[cfg(test)]

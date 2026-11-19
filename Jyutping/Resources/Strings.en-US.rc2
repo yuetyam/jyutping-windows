@@ -50,6 +50,7 @@ BEGIN
     IDS_OPTIONS_INPUT_MODE_CANTONESE          "Cantonese Mode"
     IDS_OPTIONS_INPUT_MODE_ABC                "ABC Mode"
     IDS_MENU_CHECK_FOR_UPDATES                "Check for updates…"
+    IDS_MENU_MORE_SETTINGS                    "More Settings…"
     IDS_UPDATER_UNAVAILABLE                   "The updater is unavailable. Reinstall Jyutping from https://jyutping.app"
     IDS_UPDATER_START_FAILED                  "Could not open the updater. Try again from a desktop application, or download Jyutping from https://jyutping.app"
     IDS_UPDATER_CONFIG_FAILED                 "The updater could not be configured. Reinstall Jyutping from https://jyutping.app"

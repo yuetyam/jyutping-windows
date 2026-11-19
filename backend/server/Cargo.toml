@@ -3,6 +3,9 @@ name = "jyutping-server"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+installed = []
+
 [[bin]]
 name = "JyutpingServer"
 path = "src/main.rs"

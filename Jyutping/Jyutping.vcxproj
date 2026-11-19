@@ -67,6 +67,7 @@
     <ClInclude Include="OptionsView.h" />
     <ClInclude Include="SettingsMenuModel.h" />
     <ClInclude Include="UpdaterLauncher.h" />
+    <ClInclude Include="InstallPath.h" />
     <ClInclude Include="..\Shared\UpdateConfiguration.h" />
     <ClInclude Include="SettingsMenuWindow.h" />
     <ClInclude Include="PinyinSegmenter.h" />
@@ -277,6 +278,8 @@
   <PropertyGroup>
     <OutDir>$(SolutionDir)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
+    <OutDir Condition="'$(EnableBackendClient)'=='true' And '$(BackendPreviewBuildRoot)'!=''">$(BackendPreviewBuildRoot)\$(Platform)\</OutDir>
+    <IntDir Condition="'$(EnableBackendClient)'=='true' And '$(BackendPreviewBuildRoot)'!=''">$(BackendPreviewBuildRoot)\$(Platform)\obj\</IntDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -319,13 +322,20 @@
       <AdditionalIncludeDirectories>$(IntDir)ProbeRpc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='BackendRpc'">
+  <PropertyGroup>
+    <UseBackendRpc Condition="'$(EnableBackendClient)'=='true' Or ('$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='BackendRpc')">true</UseBackendRpc>
+    <BackendMidlArchitecture Condition="'$(Platform)'=='Win32'">win32</BackendMidlArchitecture>
+    <BackendMidlArchitecture Condition="'$(Platform)'=='x64'">x64</BackendMidlArchitecture>
+    <BackendMidlArchitecture Condition="'$(Platform)'=='ARM64'">arm64</BackendMidlArchitecture>
+    <BackendMidlArchitecture Condition="'$(Platform)'=='ARM64EC'">arm64</BackendMidlArchitecture>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(UseBackendRpc)'=='true'">
     <ClCompile>
-      <PreprocessorDefinitions>JYUTPING_RPC_PROBE;JYUTPING_BACKEND_RPC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>JYUTPING_IPC_PROBE;JYUTPING_RPC_PROBE;JYUTPING_BACKEND_RPC;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(IntDir)BackendRpc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And ('$(IpcProbeTransport)'=='Rpc' Or '$(IpcProbeTransport)'=='BackendRpc') And '$(EnableIpcTypingProbe)'=='true'">
+  <ItemDefinitionGroup Condition="'$(EnableBackendClient)'=='true' Or ('$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And ('$(IpcProbeTransport)'=='Rpc' Or '$(IpcProbeTransport)'=='BackendRpc') And '$(EnableIpcTypingProbe)'=='true')">
     <ClCompile>
       <PreprocessorDefinitions>JYUTPING_IPC_TYPING_PROBE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
@@ -335,9 +345,10 @@
     <ClCompile Include="$(IntDir)ProbeRpc\ProbeRpc_c.c" />
     <ClInclude Include="..\experiments\ipc-probe\appcontainer\RpcProbeClient.h" />
   </ItemGroup>
-  <ItemGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='BackendRpc'">
+  <ItemGroup Condition="'$(UseBackendRpc)'=='true'">
     <ClCompile Include="BackendRpcClient.cpp" />
-    <ClCompile Include="$(IntDir)BackendRpc\JyutpingRpc_c.c" />
+    <ClCompile Include="$(IntDir)BackendRpc\JyutpingRpc_c.c" Condition="'$(Platform)'!='ARM64EC'" />
+    <ClCompile Include="BackendRpcArm64X.c" Condition="'$(Platform)'=='ARM64EC'" />
     <ClInclude Include="BackendRpcClient.h" />
     <ClInclude Include="..\Shared\Protocol\LocalRpcIdentity.h" />
   </ItemGroup>
@@ -538,10 +549,16 @@
     <Exec Command="&quot;$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x86\midl.exe&quot; /nologo /env arm64 /prefix client Client_ /prefix server Server_ /out &quot;$(IntDir)ProbeRpc&quot; &quot;..\experiments\ipc-probe\appcontainer\ProbeRpc.idl&quot;" />
   </Target>
   <Target Name="GenerateBackendRpc" BeforeTargets="ClCompile"
-          Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='BackendRpc'"
+          Condition="'$(UseBackendRpc)'=='true'"
           Inputs="..\Shared\Protocol\JyutpingRpc.idl" Outputs="$(IntDir)BackendRpc\JyutpingRpc.h;$(IntDir)BackendRpc\JyutpingRpc_c.c">
     <MakeDir Directories="$(IntDir)BackendRpc" />
-    <Exec Command="&quot;$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x86\midl.exe&quot; /nologo /robust /env arm64 /prefix client Client_ /prefix server Server_ /out &quot;$(IntDir)BackendRpc&quot; &quot;..\Shared\Protocol\JyutpingRpc.idl&quot;" />
+    <Exec Command="&quot;$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x86\midl.exe&quot; /nologo /robust /env $(BackendMidlArchitecture) /prefix client Client_ /prefix server Server_ /out &quot;$(IntDir)BackendRpc&quot; &quot;..\Shared\Protocol\JyutpingRpc.idl&quot;" />
+  </Target>
+  <Target Name="GenerateBackendRpcArm64Ec" BeforeTargets="ClCompile"
+          Condition="'$(UseBackendRpc)'=='true' And '$(Platform)'=='ARM64EC'"
+          Inputs="..\Shared\Protocol\JyutpingRpc.idl" Outputs="$(IntDir)BackendRpc\Arm64Ec\JyutpingRpc.h;$(IntDir)BackendRpc\Arm64Ec\JyutpingRpc_c.c">
+    <MakeDir Directories="$(IntDir)BackendRpc\Arm64Ec" />
+    <Exec Command="&quot;$(WindowsSdkDir)bin\$(TargetPlatformVersion)\x86\midl.exe&quot; /nologo /robust /env x64 /prefix client Client_ /prefix server Server_ /out &quot;$(IntDir)BackendRpc\Arm64Ec&quot; &quot;..\Shared\Protocol\JyutpingRpc.idl&quot;" />
   </Target>
   <Target Name="VerifyImeDatabase" BeforeTargets="PrepareForBuild">
     <Error Condition="!Exists('$(ProjectDir)Resources\ime.sqlite3')" Text="Missing generated CoreIME database: $(ProjectDir)Resources\ime.sqlite3. Run cargo run --release --manifest-path preparing\Cargo.toml from the repository root." />

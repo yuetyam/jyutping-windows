@@ -255,12 +255,14 @@ BOOL CJyutping::_IsKeyEaten(_In_ ITfContext *pContext, UINT codeIn, _Out_ UINT *
 
 #ifdef JYUTPING_IPC_TYPING_PROBE
     if (isNoModifier && pContext == _pContext && _candidateMode == CANDIDATE_NONE &&
-        pCompositionProcessorEngine->IsIpcTypingRevision() && (*pCodeOut == VK_SPACE || *pCodeOut == '1'))
+        !_pCandidateListUIPresenter && pCompositionProcessorEngine->IsIpcTypingRevision() &&
+        (*pCodeOut == VK_SPACE || pCompositionProcessorEngine->IsIpcNumberSelection(*pCodeOut)))
     {
         if (pKeyState)
         {
-            pKeyState->Category = CATEGORY_COMPOSING;
-            pKeyState->Function = FUNCTION_CONVERT;
+            const bool isSpace = *pCodeOut == VK_SPACE;
+            pKeyState->Category = isSpace ? CATEGORY_COMPOSING : CATEGORY_CANDIDATE;
+            pKeyState->Function = isSpace ? FUNCTION_CONVERT : FUNCTION_SELECT_BY_NUMBER;
         }
         return TRUE;
     }
@@ -639,9 +641,18 @@ STDAPI CJyutping::OnPreservedKey(ITfContext *pContext, REFGUID rguid, BOOL *pIsE
 
 void CJyutping::RefreshCandidateListAfterCharacterVariantChange()
 {
-    if (!_pCandidateListUIPresenter || !_pCompositionProcessorEngine ||
-        _candidateMode == CANDIDATE_PUNCTUATION)
+    if (!_pCompositionProcessorEngine || _candidateMode == CANDIDATE_PUNCTUATION)
     {
+        return;
+    }
+    if (!_pCandidateListUIPresenter)
+    {
+#if defined(JYUTPING_BACKEND_RPC) && defined(JYUTPING_IPC_TYPING_PROBE)
+        if (_IsComposing() && _pContext)
+        {
+            _pCompositionProcessorEngine->PrepareIpcSuggestions();
+        }
+#endif
         return;
     }
 

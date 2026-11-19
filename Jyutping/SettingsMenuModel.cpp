@@ -5,6 +5,7 @@
 #include "Localization.h"
 #include "resource.h"
 #include "JyutpingVersion.h"
+#include "InstallPath.h"
 
 #include <set>
 
@@ -185,6 +186,11 @@ Snapshot BuildSnapshot(_In_ const ILangBarItemButtonSettingsMenuHandler& handler
     snapshot.items.push_back(SubmenuItem(CharacterVariant, LoadMenuString(IDS_MENU_CHARACTER_VARIANT, L"Character Variants"), std::move(variantItems)));
 
     snapshot.items.push_back(SeparatorItem(Separator));
+    const auto installDirectory = InstalledJyutpingDirectory();
+    if (!installDirectory.empty() && GetFileAttributesW((installDirectory + L"\\Settings\\JyutpingSettings.exe").c_str()) != INVALID_FILE_ATTRIBUTES)
+    {
+        snapshot.items.push_back(CommandItem(MoreSettings, LoadMenuString(IDS_MENU_MORE_SETTINGS, L"More Settings...")));
+    }
     snapshot.items.push_back(CommandItem(CheckForUpdates, LoadMenuString(IDS_MENU_CHECK_FOR_UPDATES, L"Check for updates")));
     snapshot.items.push_back(SeparatorItem(VersionSeparator));
     snapshot.items.push_back(CommandItem(Version, LoadMenuString(IDS_MENU_VERSION, L"Version") + L" " + JYUTPING_VERSION_WIDE, FALSE, FALSE));

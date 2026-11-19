@@ -438,13 +438,15 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="UpdaterLauncher.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="InstallPath.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="..\Shared\UpdateConfiguration.h"><Filter>Header Files</Filter></ClInclude>
     <ClCompile Include="UpdaterLauncher.cpp"><Filter>Source Files</Filter></ClCompile>
   </ItemGroup>
-  <ItemGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64' And '$(EnableIpcProbe)'=='true' And '$(IpcProbeTransport)'=='BackendRpc'">
+  <ItemGroup Condition="'$(UseBackendRpc)'=='true'">
     <ClInclude Include="BackendRpcClient.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="..\Shared\Protocol\LocalRpcIdentity.h"><Filter>Header Files</Filter></ClInclude>
     <ClCompile Include="BackendRpcClient.cpp"><Filter>Source Files</Filter></ClCompile>
-    <ClCompile Include="$(IntDir)BackendRpc\JyutpingRpc_c.c"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="$(IntDir)BackendRpc\JyutpingRpc_c.c" Condition="'$(Platform)'!='ARM64EC'"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="BackendRpcArm64X.c" Condition="'$(Platform)'=='ARM64EC'"><Filter>Source Files</Filter></ClCompile>
   </ItemGroup>
 </Project>

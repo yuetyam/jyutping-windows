@@ -45,6 +45,16 @@ RestartApplications=no
 SetupMutex=Jyutping.Install
 
 [Files]
+#ifdef BackendPreview
+Source: "{#StageRoot}\JyutpingServer.exe"; DestDir: "{app}"; Flags: ignoreversion restartreplace
+Source: "{#StageRoot}\Settings\*"; DestDir: "{app}\Settings"; Flags: ignoreversion restartreplace recursesubdirs createallsubdirs
+Source: "{#StageRoot}\CRT\*.dll"; DestDir: "{app}"; Flags: ignoreversion restartreplace
+Source: "{#StageRoot}\CRT\*.dll"; DestDir: "{app}\Settings"; Flags: ignoreversion restartreplace
+Source: "{#StageRoot}\CRT\*.dll"; DestDir: "{app}\Updater"; Flags: ignoreversion restartreplace
+#if PackageArchitecture == "x64"
+Source: "{#StageRoot}\CRT-x86\*.dll"; DestDir: "{autopf32}\Jyutping"; Flags: ignoreversion restartreplace
+#endif
+#endif
 Source: "{#StageRoot}\Updater\JyutpingUpdater.exe"; DestDir: "{app}\Updater"; Flags: ignoreversion restartreplace
 Source: "{#StageRoot}\Updater\WinSparkle.dll"; DestDir: "{app}\Updater"; Flags: ignoreversion restartreplace
 Source: "{#StageRoot}\Updater\COPYING"; DestDir: "{app}\Updater"; Flags: ignoreversion
@@ -53,6 +63,15 @@ Source: "{#StageRoot}\Updater\AUTHORS"; DestDir: "{app}\Updater"; Flags: ignorev
 
 [Registry]
 Root: HKLM64; Subkey: "Software\Jyutping"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"; Flags: uninsdeletevalue uninsdeletekeyifempty
+#ifdef BackendPreview
+Root: HKLM64; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "JyutpingServer"; ValueData: """{app}\JyutpingServer.exe"" --installed"; Flags: uninsdeletevalue
+
+[Icons]
+Name: "{commonprograms}\{cm:SettingsShortcut}"; Filename: "{app}\Settings\JyutpingSettings.exe"
+
+[Run]
+Filename: "{app}\JyutpingServer.exe"; Parameters: "--installed"; Flags: nowait runasoriginaluser
+#endif
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -69,6 +88,9 @@ chinese_simplified.UnregistrationError=无法取消注册粤拼输入法。
 english.FilesInUse=Jyutping is still in use. Close applications using this input method and try again. If needed, switch to another input method and sign out or restart Windows before running the installer again.
 chinese_traditional.FilesInUse=粵拼輸入法仍在使用中。請關閉使用此輸入法的應用程式再試。如有需要，請切換至其他輸入法，登出或重新啓動 Windows，再執行安裝程式。
 chinese_simplified.FilesInUse=粤拼输入法仍在使用中。请关闭使用此输入法的应用程序再试。如有需要，请切换至其他输入法，注销或重新启动 Windows，再运行安装程序。
+english.SettingsShortcut=Jyutping Settings
+chinese_traditional.SettingsShortcut=粵拼設定
+chinese_simplified.SettingsShortcut=粤拼设置
 
 [Code]
 function CanReplaceRuntimeFile(FileName: String): Boolean;
@@ -87,10 +109,41 @@ begin
     end;
 end;
 
+#ifdef BackendPreview
+procedure StopCurrentBackend();
+var
+    ResultCode: Integer;
+    Executable: String;
+begin
+    Executable := ExpandConstant('{app}\JyutpingServer.exe');
+    if FileExists(Executable) then begin
+        Exec(Executable, '--stop', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+        Sleep(350);
+    end;
+end;
+
+function InitializeUninstall(): Boolean;
+begin
+    StopCurrentBackend();
+    Result := CanReplaceRuntimeFile(ExpandConstant('{app}\JyutpingServer.exe')) and
+        CanReplaceRuntimeFile(ExpandConstant('{app}\Settings\JyutpingSettings.exe'));
+    if not Result then
+        MsgBox(CustomMessage('FilesInUse'), mbError, MB_OK);
+end;
+#endif
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
     { Check before unregistering or copying anything. Never force-close IME host applications. }
     Result := '';
+    #ifdef BackendPreview
+    StopCurrentBackend();
+    if not CanReplaceRuntimeFile(ExpandConstant('{app}\JyutpingServer.exe')) or
+       not CanReplaceRuntimeFile(ExpandConstant('{app}\Settings\JyutpingSettings.exe')) then begin
+        Result := CustomMessage('FilesInUse');
+        exit;
+    end;
+    #endif
     if not CanReplaceRuntimeFile(ExpandConstant('{app}\Jyutping.dll')) or
        not CanReplaceRuntimeFile(ExpandConstant('{app}\ime.sqlite3')) or
        not CanReplaceRuntimeFile(ExpandConstant('{app}\Updater\JyutpingUpdater.exe')) or

@@ -1,11 +1,11 @@
 #include "Private.h"
+#include "InstallPath.h"
 #include "UpdaterLauncher.h"
 #include "Localization.h"
 #include "resource.h"
 #include "../Shared/UpdateConfiguration.h"
 
 #include <string>
-#include <vector>
 
 namespace UpdaterLauncher {
 
@@ -28,22 +28,8 @@ HRESULT CheckForUpdates(BOOL isSecureMode)
         return E_ACCESSDENIED;
     }
 
-    DWORD pathBytes = 0;
-    constexpr DWORD registryFlags = RRF_RT_REG_SZ | RRF_SUBKEY_WOW6464KEY;
-    LSTATUS status = RegGetValueW(HKEY_LOCAL_MACHINE, UpdateConfiguration::InstallRegistryKey, UpdateConfiguration::InstallPathValue, registryFlags, nullptr, nullptr, &pathBytes);
-    std::vector<WCHAR> buffer(pathBytes / sizeof(WCHAR) + 1);
-    if (status == ERROR_SUCCESS && pathBytes > sizeof(WCHAR))
-    {
-        status = RegGetValueW(HKEY_LOCAL_MACHINE, UpdateConfiguration::InstallRegistryKey, UpdateConfiguration::InstallPathValue, registryFlags, nullptr, buffer.data(), &pathBytes);
-    }
-    else
-    {
-        status = ERROR_PATH_NOT_FOUND;
-    }
-
-    std::wstring installPath = status == ERROR_SUCCESS ? buffer.data() : L"";
-    // Only the installer-owned absolute native path is authoritative, including in x86 hosts.
-    if (installPath.length() < 3 || installPath[1] != L':' || installPath[2] != L'\\')
+    const std::wstring installPath = InstalledJyutpingDirectory();
+    if (installPath.empty())
     {
         return ReportError(IDS_UPDATER_UNAVAILABLE, L"The updater is unavailable. Reinstall Jyutping from https://jyutping.app", ERROR_PATH_NOT_FOUND);
     }
@@ -63,6 +49,32 @@ HRESULT CheckForUpdates(BOOL isSecureMode)
     {
         DWORD error = GetLastError();
         return ReportError(IDS_UPDATER_START_FAILED, L"Could not open the updater. Try again from a desktop application, or download Jyutping from https://jyutping.app", error);
+    }
+    AllowSetForegroundWindow(process.dwProcessId);
+    CloseHandle(process.hThread);
+    CloseHandle(process.hProcess);
+    return S_OK;
+}
+
+HRESULT OpenSettings(BOOL isSecureMode)
+{
+    if (isSecureMode)
+    {
+        return E_ACCESSDENIED;
+    }
+    const std::wstring directory = InstalledJyutpingDirectory();
+    if (directory.empty())
+    {
+        return HRESULT_FROM_WIN32(ERROR_PATH_NOT_FOUND);
+    }
+    const std::wstring settingsDirectory = directory + L"\\Settings";
+    const std::wstring executable = settingsDirectory + L"\\JyutpingSettings.exe";
+    STARTUPINFOW startup{};
+    startup.cb = sizeof(startup);
+    PROCESS_INFORMATION process{};
+    if (!CreateProcessW(executable.c_str(), nullptr, nullptr, nullptr, FALSE, 0, nullptr, settingsDirectory.c_str(), &startup, &process))
+    {
+        return HRESULT_FROM_WIN32(GetLastError());
     }
     AllowSetForegroundWindow(process.dwProcessId);
     CloseHandle(process.hThread);

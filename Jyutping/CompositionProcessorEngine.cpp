@@ -4,7 +4,7 @@
 
 #ifdef JYUTPING_IPC_TYPING_PROBE
 #include "CharacterStandard.h"
-#include "../experiments/ipc-probe/appcontainer/RpcProbeClient.h"
+#include "BackendRpcClient.h"
 #include <utility>
 #endif
 #include "TfInputProcessorProfile.h"
@@ -352,6 +352,9 @@ BOOL CCompositionProcessorEngine::SetupLanguageProfile(LANGID langid, REFGUID gu
     {
 #ifdef JYUTPING_IPC_TYPING_PROBE
         _ipcProbe.SetResultCallback(OnIpcSuggestion, this);
+#ifdef JYUTPING_BACKEND_RPC
+        _ipcProbe.SetSettingsCallback(OnBackendSettings);
+#endif
 #endif
         _ipcProbe.Initialize();
     }
@@ -428,6 +431,13 @@ void CCompositionProcessorEngine::ChangeSetting(SettingKind kind, DWORD value)
         return;
     }
 
+#if defined(JYUTPING_BACKEND_RPC) && defined(JYUTPING_IPC_TYPING_PROBE)
+    if (kind != SettingKind::InputMethodMode && _ipcProbe.QueueSetting(static_cast<UINT>(kind), value))
+    {
+        ApplySharedSettings(settings);
+        return;
+    }
+#endif
     // Apply locally first, so that this client stays responsive even if the global compartment is unavailable.
     ApplySharedSettings(settings);
     _settingsStore.SaveSetting(kind, value);
@@ -460,7 +470,12 @@ void CCompositionProcessorEngine::OnGlobalSettingChanged(SettingKind kind)
 
     // Any process that can persist keeps the registry in step, so that a change made in a packaged or AppContainer
     // app still survives a sign-out.
-    _settingsStore.SaveSetting(kind, sharedValue);
+#if defined(JYUTPING_BACKEND_RPC) && defined(JYUTPING_IPC_TYPING_PROBE)
+    if (kind == SettingKind::InputMethodMode || !_ipcProbe.QueueSetting(static_cast<UINT>(kind), sharedValue))
+#endif
+    {
+        _settingsStore.SaveSetting(kind, sharedValue);
+    }
     ApplySharedSettings(settings);
 
     if (_pTextService != nullptr && _pTextService->_GetThreadMgr() != nullptr)
@@ -731,10 +746,18 @@ void CCompositionProcessorEngine::AppendSelectedCandidateForMemory(UINT candidat
     std::optional<Ime::Lexicon> lexicon = CandidateAt(candidateIndex);
     if (!lexicon || lexicon->IsNotCantonese())
     {
-        _selectedMemorySequence.clear();
+        ClearSelectedCandidateMemory();
         return;
     }
 
+#if defined(JYUTPING_BACKEND_RPC) && defined(JYUTPING_IPC_TYPING_PROBE)
+    if (_isIpcTypingRevision && !_selectedSequenceUsesBackend)
+    {
+        _selectedMemoryGeneration = _ipcProbe.MemoryGeneration();
+        _selectedMemoryInstance = _ipcProbe.MemoryInstance();
+    }
+    _selectedSequenceUsesBackend |= _isIpcTypingRevision;
+#endif
     _selectedMemorySequence.push_back(*lexicon);
 }
 
@@ -743,7 +766,7 @@ void CCompositionProcessorEngine::CommitSelectedCandidateForMemory(UINT candidat
     std::optional<Ime::Lexicon> lexicon = CandidateAt(candidateIndex);
     if (!lexicon || lexicon->IsNotCantonese())
     {
-        _selectedMemorySequence.clear();
+        ClearSelectedCandidateMemory();
         return;
     }
 
@@ -751,9 +774,23 @@ void CCompositionProcessorEngine::CommitSelectedCandidateForMemory(UINT candidat
     std::optional<Ime::Lexicon> joined = Ime::JoinLexicons(_selectedMemorySequence);
     if (joined)
     {
-        _inputEngine.Remember(*joined);
+#if defined(JYUTPING_BACKEND_RPC) && defined(JYUTPING_IPC_TYPING_PROBE)
+        if (_isIpcTypingRevision || _selectedSequenceUsesBackend)
+        {
+            const bool sameGeneration = !_selectedSequenceUsesBackend ||
+                (_selectedMemoryGeneration == _ipcProbe.MemoryGeneration() && _selectedMemoryInstance == _ipcProbe.MemoryInstance());
+            if (sameGeneration && !_ipcProbe.QueueMemoryWrite(BackendMemoryOperation::Remember, joined->text, joined->romanization))
+            {
+                Global::Log(L"Jyutping IPC probe: could not queue learning");
+            }
+        }
+        else
+#endif
+        {
+            _inputEngine.Remember(*joined);
+        }
     }
-    _selectedMemorySequence.clear();
+    ClearSelectedCandidateMemory();
 }
 
 BOOL CCompositionProcessorEngine::ForgetCandidateFromMemory(UINT candidateIndex)
@@ -764,6 +801,17 @@ BOOL CCompositionProcessorEngine::ForgetCandidateFromMemory(UINT candidateIndex)
         return FALSE;
     }
 
+#if defined(JYUTPING_BACKEND_RPC) && defined(JYUTPING_IPC_TYPING_PROBE)
+    if (_isIpcTypingRevision)
+    {
+        if (!_ipcProbe.QueueMemoryWrite(BackendMemoryOperation::Forget, lexicon->text, lexicon->romanization))
+        {
+            return FALSE;
+        }
+        InvalidateIpcProbe();
+        return TRUE;
+    }
+#endif
     BOOL result = _inputEngine.Forget(*lexicon) ? TRUE : FALSE;
     _cachedInputText.clear();
     _cachedReverseLookupMethod = Ime::ReverseLookupMethod::None;
@@ -774,6 +822,9 @@ BOOL CCompositionProcessorEngine::ForgetCandidateFromMemory(UINT candidateIndex)
 void CCompositionProcessorEngine::ClearSelectedCandidateMemory()
 {
     _selectedMemorySequence.clear();
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    _selectedSequenceUsesBackend = false;
+#endif
 }
 
 //+---------------------------------------------------------------------------
@@ -1441,7 +1492,7 @@ void CCompositionProcessorEngine::InvalidateIpcProbe(bool replaceComposition)
 #ifdef JYUTPING_IPC_TYPING_PROBE
     _isIpcTypingRevision = false;
     _awaitingIpcSuggestion = false;
-    _deferredIpcSelection = false;
+    _deferredIpcSelection = 0;
     _ipcSuggestions.clear();
 #endif
 }
@@ -1450,20 +1501,40 @@ void CCompositionProcessorEngine::InvalidateIpcProbe(bool replaceComposition)
 #ifdef JYUTPING_IPC_TYPING_PROBE
 void CCompositionProcessorEngine::PrepareIpcSuggestions()
 {
-    if (_isIpcTypingRevision || !_ipcProbe.HasListener() || IsReverseLookupBuffer() || !IsNoOpCharacterStandard(CurrentCharacterStandard()))
+    if (_isIpcTypingRevision || !_ipcProbe.HasListener())
     {
         return;
     }
 
     std::wstring input = CurrentInputText();
-    if (input.empty() || input.size() > 9 || input.find_first_not_of(L"abcdefghijklmnopqrstuvwxyz") != std::wstring::npos)
+    BackendLookupMode mode = BackendLookupMode::Normal;
+    wchar_t trigger = 0;
+#ifdef JYUTPING_BACKEND_RPC
+    switch (CurrentReverseLookupMethod())
+    {
+    case Ime::ReverseLookupMethod::Pinyin: mode = BackendLookupMode::Pinyin; break;
+    case Ime::ReverseLookupMethod::Cangjie: mode = BackendLookupMode::Cangjie; break;
+    case Ime::ReverseLookupMethod::Stroke: mode = BackendLookupMode::Stroke; break;
+    case Ime::ReverseLookupMethod::Structure: mode = BackendLookupMode::Structure; break;
+    case Ime::ReverseLookupMethod::None: break;
+    }
+    if (mode != BackendLookupMode::Normal)
+    {
+        trigger = CurrentInputKeys().front().character;
+        input.erase(0, 1);
+    }
+    if (input.empty() || input.size() > BackendRpcClient::MaxInputEvents || input.find_first_not_of(L"abcdefghijklmnopqrstuvwxyz0123456789'") != std::wstring::npos)
+#else
+    if (IsReverseLookupBuffer() || !IsNoOpCharacterStandard(CurrentCharacterStandard()) || input.empty() || input.size() > 9 ||
+        input.find_first_not_of(L"abcdefghijklmnopqrstuvwxyz") != std::wstring::npos)
+#endif
     {
         return;
     }
 
     _isIpcTypingRevision = true;
     _awaitingIpcSuggestion = true;
-    _ipcProbe.Query(std::move(input));
+    _ipcProbe.Query(std::move(input), static_cast<uint32_t>(CurrentCharacterStandard()), mode, trigger);
 }
 
 bool CCompositionProcessorEngine::IsCurrentIpcSuggestion(uint64_t revision) const
@@ -1471,18 +1542,31 @@ bool CCompositionProcessorEngine::IsCurrentIpcSuggestion(uint64_t revision) cons
     return _isIpcTypingRevision && !_awaitingIpcSuggestion && _ipcProbe.Revision() == revision;
 }
 
-bool CCompositionProcessorEngine::DeferIpcSelection()
+bool CCompositionProcessorEngine::IsIpcNumberSelection(UINT key)
 {
-    _deferredIpcSelection = _awaitingIpcSuggestion && _ipcProbe.ArmSelectionTimeout();
-    return _deferredIpcSelection;
+    return _candidateListIndexRange.IsRange(key) && !IsNonAlphabeticInputKey(key);
 }
 
-bool CCompositionProcessorEngine::TakeDeferredIpcSelection()
+bool CCompositionProcessorEngine::DeferIpcSelection(UINT key)
 {
-    return std::exchange(_deferredIpcSelection, false);
+    if (_deferredIpcSelection)
+    {
+        return true;
+    }
+    if (_awaitingIpcSuggestion && _ipcProbe.ArmSelectionTimeout())
+    {
+        _deferredIpcSelection = key;
+        return true;
+    }
+    return false;
 }
 
-void CCompositionProcessorEngine::OnIpcSuggestion(void* context, uint64_t revision, const RpcProbeCandidate& candidate)
+UINT CCompositionProcessorEngine::TakeDeferredIpcSelection()
+{
+    return std::exchange(_deferredIpcSelection, 0);
+}
+
+void CCompositionProcessorEngine::OnIpcSuggestion(void* context, uint64_t revision, BackendEngineReply reply)
 {
     auto* engine = static_cast<CCompositionProcessorEngine*>(context);
     if (!engine->_awaitingIpcSuggestion)
@@ -1491,21 +1575,62 @@ void CCompositionProcessorEngine::OnIpcSuggestion(void* context, uint64_t revisi
     }
 
     engine->_awaitingIpcSuggestion = false;
-    if (!candidate.text.empty())
+    try
     {
-        try
+        const std::wstring input = engine->CurrentInputText();
+        const size_t start = engine->IsReverseLookupBuffer() && !input.empty() ? 1 : 0;
+        engine->_ipcSuggestions.reserve(reply.candidates.size());
+        for (auto& item : reply.candidates)
         {
-            // Preserve the raw preview while this probe exercises candidate delivery and selection.
-            engine->_ipcSuggestions.emplace_back(
-                Ime::Lexicon::Cantonese(candidate.text, candidate.romanization, engine->CurrentInputText()), Ime::RomanizationForm::Full);
+            Ime::Candidate candidate;
+            candidate.text = std::move(item.text);
+            if (!item.comment.empty())
+            {
+                candidate.comment = std::move(item.comment);
+            }
+            candidate.lexicon = Ime::Lexicon(static_cast<Ime::LexiconType>(item.kind), std::move(item.originalText),
+                std::move(item.romanization), input.substr(start, item.consumedInput), std::move(item.mark));
+            engine->_ipcSuggestions.push_back(std::move(candidate));
         }
-        catch (const std::bad_alloc&)
-        {
-            Global::Log(L"Jyutping IPC probe: candidate allocation failed");
-        }
+    }
+    catch (const std::bad_alloc&)
+    {
+        engine->_ipcSuggestions.clear();
+        Global::Log(L"Jyutping IPC probe: candidate allocation failed");
     }
     engine->_pTextService->_QueueIpcTypingUpdate(revision);
 }
+
+#ifdef JYUTPING_BACKEND_RPC
+void CCompositionProcessorEngine::OnBackendSettings(void* context, const BackendSettingsSnapshot& snapshot)
+{
+    static_assert(SettingKindCount == std::tuple_size_v<decltype(BackendSettingsSnapshot::values)>);
+    auto* engine = static_cast<CCompositionProcessorEngine*>(context);
+    const ImeSettings previous = engine->_settings;
+    ImeSettings settings = previous;
+    // The input mode compartment holds the live state of this logon session.
+    for (UINT index = 1; index < SettingKindCount; ++index)
+    {
+        if (!SetSettingValue(settings, static_cast<SettingKind>(index), snapshot.values[index]))
+        {
+            return;
+        }
+    }
+    if (!AreSettingsEqual(previous, settings))
+    {
+        engine->ApplySharedSettings(settings);
+        if (engine->_pTextService && engine->_pTextService->_GetThreadMgr())
+        {
+            engine->ApplyCompartmentsFromSettings(engine->_pTextService->_GetThreadMgr());
+        }
+    }
+    for (UINT index = 1; index < SettingKindCount; ++index)
+    {
+        const auto kind = static_cast<SettingKind>(index);
+        engine->_globalSettings.Publish(kind, SettingValue(settings, kind));
+    }
+}
+#endif
 #endif
 
 const std::vector<Ime::Candidate>& CCompositionProcessorEngine::GetInputSuggestions()
@@ -1560,6 +1685,12 @@ const std::vector<Ime::Candidate>& CCompositionProcessorEngine::GetInputSuggesti
                 _cachedSuggestions.insert(_cachedSuggestions.end(), lookupSuggestions.begin(), lookupSuggestions.end());
             }
             _cachedSuggestions = DistinctCandidates(_cachedSuggestions);
+#ifdef JYUTPING_BACKEND_RPC
+            if (_ipcProbe.IsEnabled() && !_ipcProbe.HasListener())
+            {
+                _ipcProbe.Measure(IpcProbe::Clock::duration::zero());
+            }
+#endif
         }
     }
     return _cachedSuggestions;
@@ -1567,16 +1698,22 @@ const std::vector<Ime::Candidate>& CCompositionProcessorEngine::GetInputSuggesti
 
 std::optional<Ime::Lexicon> CCompositionProcessorEngine::CandidateAt(UINT candidateIndex) const
 {
-#ifdef JYUTPING_IPC_TYPING_PROBE
-    if (_isIpcTypingRevision)
-    {
-        return std::nullopt;
-    }
-#endif
     if (IsReverseLookupBuffer())
     {
         return std::nullopt;
     }
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    if (_isIpcTypingRevision)
+    {
+#ifdef JYUTPING_BACKEND_RPC
+        if (_ipcProbe.HasInputMemory() && candidateIndex < _ipcSuggestions.size())
+        {
+            return _ipcSuggestions[candidateIndex].lexicon;
+        }
+#endif
+        return std::nullopt;
+    }
+#endif
 
     size_t index = static_cast<size_t>(candidateIndex);
     if (index >= _cachedSuggestions.size())

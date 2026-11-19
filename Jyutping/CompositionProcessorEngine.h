@@ -57,8 +57,9 @@ public:
     void PrepareIpcSuggestions();
     bool IsIpcTypingRevision() const { return _isIpcTypingRevision; }
     bool IsCurrentIpcSuggestion(uint64_t revision) const;
-    bool DeferIpcSelection();
-    bool TakeDeferredIpcSelection();
+    bool IsIpcNumberSelection(UINT key);
+    bool DeferIpcSelection(UINT key);
+    UINT TakeDeferredIpcSelection();
 #endif
 
     void GetReadingStrings(_Inout_ CJyutpingArray<CStringRange> *pReadingStrings);
@@ -254,9 +255,17 @@ private:
 #ifdef JYUTPING_IPC_TYPING_PROBE
     bool _isIpcTypingRevision = false;
     bool _awaitingIpcSuggestion = false;
-    bool _deferredIpcSelection = false;
+    UINT _deferredIpcSelection = 0;
     std::vector<Ime::Candidate> _ipcSuggestions;
-    static void OnIpcSuggestion(void* context, uint64_t revision, const RpcProbeCandidate& candidate);
+    static void OnIpcSuggestion(void* context, uint64_t revision, BackendEngineReply reply);
+#ifdef JYUTPING_BACKEND_RPC
+    static void OnBackendSettings(void* context, const BackendSettingsSnapshot& snapshot);
+#endif
+    bool _selectedSequenceUsesBackend = false;
+#ifdef JYUTPING_BACKEND_RPC
+    uint64_t _selectedMemoryGeneration = 0;
+    std::array<unsigned char, 16> _selectedMemoryInstance{};
+#endif
 #endif
     BOOL _isInputEngineReady;
     std::wstring _cachedInputText;

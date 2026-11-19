@@ -7,6 +7,8 @@ on:
       - '.gitattributes'
       - 'Jyutping/**'
       - 'JyutpingUpdater/**'
+      - 'JyutpingSettings/**'
+      - 'backend/**'
       - 'Shared/**'
       - 'third_party/WinSparkle/**'
       - 'Version.targets'
@@ -22,6 +24,8 @@ on:
       - '.gitattributes'
       - 'Jyutping/**'
       - 'JyutpingUpdater/**'
+      - 'JyutpingSettings/**'
+      - 'backend/**'
       - 'Shared/**'
       - 'third_party/WinSparkle/**'
       - 'Version.targets'
@@ -97,6 +101,49 @@ jobs:
         path: ${{ runner.temp }}\ime.sqlite3
         if-no-files-found: error
         retention-days: 1
+
+  test_backend:
+    name: Backend and settings
+    needs: [ run_preparing ]
+    runs-on: windows-2025-vs2026
+    steps:
+    - uses: actions/checkout@v7
+    - uses: actions/download-artifact@v8
+      with:
+        name: core-ime-database
+        path: Jyutping/Resources
+    - uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: '10.0.x'
+    - name: Test Rust engine, RPC, and build WinUI
+      shell: pwsh
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $PSNativeCommandUseErrorActionPreference = $true
+        $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+        $installation = & $vswhere -latest -version '[18.0,19.0)' -property installationPath
+        Import-Module (Join-Path $installation 'Common7/Tools/Microsoft.VisualStudio.DevShell.dll')
+        Enter-VsDevShell -VsInstallPath $installation -DevCmdArguments '-arch=x64 -host_arch=x64' -SkipAutomaticLocation
+        cargo test --locked --offline --manifest-path backend/Cargo.toml --workspace
+        ./backend/tests/Test-WindowsEngineParity.ps1
+        cargo build --locked --offline --manifest-path backend/Cargo.toml
+        New-Item -ItemType Directory -Force backend/target/smoke-x64 | Out-Null
+        Push-Location backend/target/smoke-x64
+        try {
+            midl /nologo /robust /env x64 /prefix client Client_ /prefix server Server_ ../../../Shared/Protocol/JyutpingRpc.idl
+            cl /nologo /W4 /MT /std:c++20 /EHsc /I. /FeRpcSmoke.exe ../../tests/RpcSmoke.cpp ../../../Jyutping/BackendRpcClient.cpp JyutpingRpc_c.c
+        } finally {
+            Pop-Location
+        }
+        ./backend/tests/Test-Rpc.ps1 -ServerPath backend/target/debug/JyutpingServer.exe -ClientPath backend/target/smoke-x64/RpcSmoke.exe
+        $settingsPublish = Join-Path $env:RUNNER_TEMP 'JyutpingSettings'
+        dotnet publish JyutpingSettings/JyutpingSettings.csproj -r win-x64 -c Release -o $settingsPublish
+        foreach ($resource in @('JyutpingSettings.pri', 'App.xbf')) {
+            if (!(Test-Path -LiteralPath (Join-Path $settingsPublish $resource) -PathType Leaf)) {
+                throw "Published Settings is missing $resource"
+            }
+        }
+        msbuild Jyutping.sln -m -p:Configuration=Debug -p:Platform=ARM64EC -p:EnableBackendClient=true -p:PreferredToolArchitecture=x64 -v:minimal
 
   build:
     name: ${{ matrix.configuration }} ${{ matrix.platform }}

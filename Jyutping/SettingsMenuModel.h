@@ -58,6 +58,7 @@ constexpr UINT Separator = CharacterVariantSimplified + 1;
 constexpr UINT CheckForUpdates = Separator + 1;
 constexpr UINT VersionSeparator = CheckForUpdates + 1;
 constexpr UINT Version = VersionSeparator + 1;
+constexpr UINT MoreSettings = Version + 1;
 
 Snapshot BuildSnapshot(_In_ const ILangBarItemButtonSettingsMenuHandler& handler);
 HRESULT PopulateTfMenu(_In_ ITfMenu* menu, _In_ const Snapshot& snapshot);

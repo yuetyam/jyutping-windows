@@ -294,6 +294,16 @@ HRESULT CJyutping::_HandleCandidateSelectByNumber(TfEditCookie ec, _In_ ITfConte
         }
     }
 
+#ifdef JYUTPING_IPC_TYPING_PROBE
+    if (!_pCandidateListUIPresenter && pContext == _pContext && _pCompositionProcessorEngine->IsIpcTypingRevision())
+    {
+        if (_pCompositionProcessorEngine->DeferIpcSelection(uCode))
+        {
+            return S_OK;
+        }
+        return _HandleCompositionFinalizeRaw(ec, pContext);
+    }
+#endif
     return S_FALSE;
 }
 
