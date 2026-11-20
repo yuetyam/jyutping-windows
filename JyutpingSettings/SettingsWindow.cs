@@ -55,7 +55,6 @@ internal sealed class SettingsWindow : Window
         Content = _navigation;
 
         AddPage("General", Symbol.Setting);
-        AddPage("Appearance", Symbol.Preview);
         AddPage("Reverse Lookup", Symbol.Find);
         AddPage("Tones", Symbol.Audio);
         AddPage("Fonts", Symbol.Font);
@@ -122,16 +121,10 @@ internal sealed class SettingsWindow : Window
         switch (page)
         {
             case "General":
-                AddSetting(0, "Default input mode", 1, ["Cantonese", "ABC"]);
                 AddSetting(1, "Character width", 1, ["Half width", "Full width"]);
                 AddSetting(2, "Punctuation", 1, ["Cantonese", "English"]);
                 AddSetting(3, "Character variant", 1, ["Traditional", "Hong Kong", "Taiwan", "Simplified"]);
                 AddNumberSetting(4, "Candidates per page", 1, 10);
-                break;
-            case "Appearance":
-                AddSetting(3, "Character variant", 1, ["Traditional", "Hong Kong", "Taiwan", "Simplified"]);
-                AddNumberSetting(4, "Candidates per page", 1, 10);
-                AddPreview();
                 break;
             case "Reverse Lookup":
                 AddText("Type the prefix followed by the lookup code.");
@@ -173,25 +166,6 @@ internal sealed class SettingsWindow : Window
                 var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
                 AddText("Jyutping").Text = $"Jyutping {version}";
                 _content.Children.Add(new HyperlinkButton { Content = Texts.Get("Jyutping website"), NavigateUri = new Uri("https://jyutping.app") });
-                var update = new Button { Content = Texts.Get("Check for updates") };
-                string updater = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "Updater", "JyutpingUpdater.exe"));
-                if (!File.Exists(updater))
-                {
-                    updater = Path.Combine(AppContext.BaseDirectory, "Updater", "JyutpingUpdater.exe");
-                }
-                update.IsEnabled = File.Exists(updater);
-                update.Click += (_, _) =>
-                {
-                    try
-                    {
-                        Process.Start(new ProcessStartInfo(updater, "--check-for-updates") { UseShellExecute = false });
-                    }
-                    catch (System.ComponentModel.Win32Exception)
-                    {
-                        ShowOperationStatus(InfoBarSeverity.Error, "The updater could not start.");
-                    }
-                };
-                _content.Children.Add(update);
                 break;
         }
         ApplySettings();
