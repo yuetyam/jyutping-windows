@@ -5,6 +5,7 @@ use std::ptr;
 use std::slice;
 use std::str;
 
+const SQLITE_BUSY: c_int = 5;
 const SQLITE_ROW: c_int = 100;
 const SQLITE_DONE: c_int = 101;
 
@@ -172,7 +173,7 @@ impl Statement<'_> {
                         match unsafe { sqlite3_step(self.handle) } {
                                 SQLITE_ROW => read_row(self)?,
                                 SQLITE_DONE => return Ok(()),
-                                status => return Err(io::Error::other(format!("SQLite lookup failed ({status})"))),
+                                status => return Err(sqlite_error(status, "step statement")),
                         }
                 }
         }
@@ -202,5 +203,10 @@ impl Drop for Statement<'_> {
 }
 
 fn check(status: c_int, operation: &str) -> io::Result<()> {
-        if status == 0 { Ok(()) } else { Err(io::Error::other(format!("SQLite {operation} failed ({status})"))) }
+        if status == 0 { Ok(()) } else { Err(sqlite_error(status, operation)) }
+}
+
+fn sqlite_error(status: c_int, operation: &str) -> io::Error {
+        let kind = if status == SQLITE_BUSY { io::ErrorKind::WouldBlock } else { io::ErrorKind::Other };
+        io::Error::new(kind, format!("SQLite {operation} failed ({status})"))
 }

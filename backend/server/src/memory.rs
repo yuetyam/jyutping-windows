@@ -2,7 +2,7 @@ use std::fs::OpenOptions;
 use std::io;
 use std::os::windows::fs::OpenOptionsExt;
 use std::path::Path;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use jyutping_core::{Engine, Lexicon, LexiconKind, MemoryRow, MemorySource, memory_serial_fields};
 
@@ -10,6 +10,8 @@ use crate::sqlite::{Binding, Connection, OpenMode, Statement};
 
 const SCHEMA_VERSION: i64 = 2608;
 const WRITE_TIMEOUT_MS: i32 = 250;
+const OPEN_RETRY_WINDOW: Duration = Duration::from_secs(2);
+const OPEN_RETRY_DELAY: Duration = Duration::from_millis(25);
 const SHARE_READ_WRITE_DELETE: u32 = 7;
 
 const SCHEMA: &[&std::ffi::CStr] = &[
@@ -38,6 +40,17 @@ pub(crate) struct MemoryQuery<'a> {
 impl InputMemory {
         /// Open the specified Windows memory database, migrating the existing schema in-place.
         pub fn open(path: &Path) -> io::Result<Self> {
+                let deadline = Instant::now() + OPEN_RETRY_WINDOW;
+                loop {
+                        match Self::initialize(path) {
+                                // Some SQLite lock conflicts return SQLITE_BUSY without invoking the busy handler.
+                                Err(error) if error.kind() == io::ErrorKind::WouldBlock && Instant::now() < deadline => std::thread::sleep(OPEN_RETRY_DELAY),
+                                result => return result,
+                        }
+                }
+        }
+
+        fn initialize(path: &Path) -> io::Result<Self> {
                 let connection = Connection::open(path, OpenMode::Create)?;
                 connection.set_busy_timeout(WRITE_TIMEOUT_MS)?;
                 let dictionary = connection.prepare(c"SELECT 1 FROM sqlite_master WHERE name = 'lexicon_core'")?.read_rows(|_| Ok(()))?;
@@ -310,6 +323,27 @@ mod tests {
                 assert_eq!(version, [0]);
                 let table = legacy.prepare(c"SELECT 1 FROM sqlite_master WHERE name = 'memory2608'").unwrap().read_rows(|_| Ok(())).unwrap();
                 assert!(table.is_empty());
+        }
+
+        #[test]
+        fn open_waits_for_a_competing_connection() {
+                let fixture = Fixture::new("memory-open-busy");
+                let path = fixture.path();
+                let competing = Connection::open(&path, OpenMode::Create).unwrap();
+                competing.execute(c"BEGIN EXCLUSIVE").unwrap();
+
+                let ready = Barrier::new(2);
+                thread::scope(|workers| {
+                        workers.spawn(|| {
+                                ready.wait();
+                                let memory = InputMemory::open(&path).unwrap();
+                                assert_eq!(memory.generation().unwrap(), 1);
+                        });
+                        ready.wait();
+                        // Hold the lock past the connection's SQLite busy timeout.
+                        thread::sleep(Duration::from_secs(1));
+                        competing.execute(c"COMMIT").unwrap();
+                });
         }
 
         #[test]
