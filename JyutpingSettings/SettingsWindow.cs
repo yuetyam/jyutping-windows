@@ -44,7 +44,13 @@ internal sealed class SettingsWindow : Window
     internal SettingsWindow()
     {
         Title = Texts.Get("Jyutping Settings");
-        AppWindow.Resize(new SizeInt32(920, 660));
+        // AppWindow.Resize takes physical pixels, while WinUI lays out content in effective pixels.
+        var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
+        double scale = GetDpiForWindow(windowHandle) / 96.0;
+        var workArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest).WorkArea;
+        int width = Math.Min((int)Math.Round(920 * scale), workArea.Width);
+        int height = Math.Min((int)Math.Round(660 * scale), workArea.Height);
+        AppWindow.Resize(new SizeInt32(width, height));
         SystemBackdrop = new MicaBackdrop();
         Content = _navigation;
 
@@ -453,6 +459,9 @@ internal sealed class SettingsWindow : Window
             _rpc.Release();
         }
     }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(nint window);
 
     private static class Native
     {
