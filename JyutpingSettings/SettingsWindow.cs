@@ -44,18 +44,15 @@ internal sealed class SettingsWindow : Window
         var windowHandle = WinRT.Interop.WindowNative.GetWindowHandle(this);
         double scale = GetDpiForWindow(windowHandle) / 96.0;
         var workArea = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Nearest).WorkArea;
-        int width = Math.Min((int)Math.Round(920 * scale), workArea.Width);
-        int height = Math.Min((int)Math.Round(660 * scale), workArea.Height);
+        int width = Math.Min((int)Math.Round(720 * scale), workArea.Width);
+        int height = Math.Min((int)Math.Round(640 * scale), workArea.Height);
         AppWindow.Resize(new SizeInt32(width, height));
         SystemBackdrop = new MicaBackdrop();
         Content = _navigation;
 
         AddPage("General", Symbol.Setting);
-        AddPage("Reverse Lookup", Symbol.Find);
-        AddPage("Tones", Symbol.Audio);
         AddPage("Fonts", Symbol.Font);
         AddPage("Input Memory", Symbol.Library);
-        AddPage("Hotkeys", Symbol.Keyboard);
         AddPage("About", Symbol.Help);
         _navigation.SelectionChanged += (_, args) =>
         {
@@ -121,17 +118,6 @@ internal sealed class SettingsWindow : Window
                 AddSetting(3, "Character variant", 1, ["Traditional", "Hong Kong", "Taiwan", "Simplified"]);
                 AddNumberSetting(4, "Candidates per page", 1, 10);
                 break;
-            case "Reverse Lookup":
-                AddText("Type the prefix followed by the lookup code.");
-                AddText("r   Pinyin");
-                AddText("v   Cangjie");
-                AddText("x   Stroke");
-                AddText("q   Character structure");
-                break;
-            case "Tones":
-                AddText("Use v, x, and q for tones 1, 2, and 3. Double the letter for tones 4, 5, and 6.");
-                AddText("v  1       x  2       q  3\nvv  4     xx  5     qq  6");
-                break;
             case "Fonts":
                 AddNumberSetting(5, "Candidate size", 11, 24);
                 AddNumberSetting(6, "Number size", 11, 24);
@@ -151,25 +137,13 @@ internal sealed class SettingsWindow : Window
                 _content.Children.Add(_clearMemory);
                 _content.Children.Add(_cancelTransfer);
                 break;
-            case "Hotkeys":
-                AddText("Space selects the highlighted candidate.");
-                AddText("Enter commits the typed text.");
-                AddText("Escape cancels the composition.");
-                break;
             case "About":
                 var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-                AddText("Jyutping").Text = $"Jyutping {version}";
+                _content.Children.Add(new TextBlock { Text = $"Jyutping {version}", TextWrapping = TextWrapping.Wrap });
                 _content.Children.Add(new HyperlinkButton { Content = Texts.Get("Jyutping website"), NavigateUri = new Uri("https://jyutping.app") });
                 break;
         }
         ApplySettings();
-    }
-
-    private TextBlock AddText(string text)
-    {
-        var block = new TextBlock { Text = Texts.Get(text), TextWrapping = TextWrapping.Wrap };
-        _content.Children.Add(block);
-        return block;
     }
 
     private void AddNumberSetting(int index, string label, int minimum, int maximum)
