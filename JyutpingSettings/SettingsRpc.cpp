@@ -46,36 +46,3 @@ extern "C" __declspec(dllexport) DWORD JyutpingClearInputMemory()
 {
     return client.MutateMemory(BackendMemoryOperation::Clear, {}, {}, 1, 1, 1, snapshot.instance, 0);
 }
-
-extern "C" __declspec(dllexport) DWORD JyutpingPreviewCandidates(uint32_t standard, wchar_t* text, uint32_t count)
-{
-    try
-    {
-        BackendEngineReply result;
-        const DWORD status = client.SuggestCandidates(L"hoenggong", BackendLookupMode::Normal, standard, 1, 5, 1, 1, 1, result);
-        if (status != ERROR_SUCCESS)
-        {
-            return status;
-        }
-        std::wstring preview;
-        for (const auto& candidate : result.candidates)
-        {
-            if (candidate.kind == 0 && !candidate.comment.empty())
-            {
-                preview.append(candidate.text).push_back(L'\t');
-                preview.append(candidate.comment).push_back(L'\n');
-            }
-        }
-        if (preview.size() >= count)
-        {
-            return ERROR_INSUFFICIENT_BUFFER;
-        }
-        std::copy(preview.begin(), preview.end(), text);
-        text[preview.size()] = L'\0';
-        return ERROR_SUCCESS;
-    }
-    catch (const std::bad_alloc&)
-    {
-        return ERROR_NOT_ENOUGH_MEMORY;
-    }
-}

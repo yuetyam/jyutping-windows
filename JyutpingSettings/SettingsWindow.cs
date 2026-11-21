@@ -2,8 +2,6 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
-using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Automation;
@@ -30,8 +28,6 @@ internal sealed class SettingsWindow : Window
     private readonly Microsoft.UI.Dispatching.DispatcherQueueTimer _refreshTimer;
 
     private uint[]? _settings;
-    private StackPanel? _preview;
-    private string[] _previewLines = [];
     private bool _updating;
     private bool _memoryAvailable;
     private bool _transferAvailable;
@@ -104,7 +100,6 @@ internal sealed class SettingsWindow : Window
     private void ShowPage(string page)
     {
         _controls.Clear();
-        _preview = null;
         _clearMemory = null;
         _importMemory = null;
         _exportMemory = null;
@@ -141,7 +136,6 @@ internal sealed class SettingsWindow : Window
                 AddNumberSetting(5, "Candidate size", 11, 24);
                 AddNumberSetting(6, "Number size", 11, 24);
                 AddNumberSetting(7, "Jyutping size", 11, 24);
-                AddPreview();
                 break;
             case "Input Memory":
                 _clearMemory = new Button { Content = Texts.Get("Clear learned words"), IsEnabled = _memoryAvailable };
@@ -207,21 +201,6 @@ internal sealed class SettingsWindow : Window
         };
     }
 
-    private void AddPreview()
-    {
-        AddText("Candidate preview").FontWeight = Microsoft.UI.Text.FontWeights.SemiBold;
-        _preview = new StackPanel { Spacing = 10 };
-        _content.Children.Add(new Border
-        {
-            Child = _preview,
-            Padding = new Thickness(16),
-            CornerRadius = new CornerRadius(8),
-            BorderThickness = new Thickness(1),
-            BorderBrush = (Brush)Application.Current.Resources["CardStrokeColorDefaultBrush"],
-            Background = (Brush)Application.Current.Resources["CardBackgroundFillColorDefaultBrush"]
-        });
-    }
-
     private void ApplySettings()
     {
         _updating = true;
@@ -238,38 +217,15 @@ internal sealed class SettingsWindow : Window
             _updating = false;
         }
 
-        if (_preview is null)
+        if (_clearMemory is not null)
         {
-            if (_clearMemory is not null)
-            {
-                _clearMemory.IsEnabled = _memoryAvailable && _transfer is null;
-            }
-            if (_importMemory is not null && _exportMemory is not null && _cancelTransfer is not null)
-            {
-                _importMemory.IsEnabled = _transferAvailable && _transfer is null;
-                _exportMemory.IsEnabled = _transferAvailable && _transfer is null;
-                _cancelTransfer.Visibility = _transfer is null ? Visibility.Collapsed : Visibility.Visible;
-            }
-            return;
+            _clearMemory.IsEnabled = _memoryAvailable && _transfer is null;
         }
-        _preview.Children.Clear();
-        if (_settings is null)
+        if (_importMemory is not null && _exportMemory is not null && _cancelTransfer is not null)
         {
-            return;
-        }
-        int indexInPage = 0;
-        foreach (var line in _previewLines.Take((int)_settings[4]))
-        {
-            string[] fields = line.Split('\t', 2);
-            if (fields.Length != 2)
-            {
-                continue;
-            }
-            var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 14 };
-            row.Children.Add(new TextBlock { Text = (++indexInPage).ToString(CultureInfo.CurrentCulture), FontSize = _settings[6], VerticalAlignment = VerticalAlignment.Center });
-            row.Children.Add(new TextBlock { Text = fields[0], FontSize = _settings[5], VerticalAlignment = VerticalAlignment.Center });
-            row.Children.Add(new TextBlock { Text = fields[1], FontSize = _settings[7], VerticalAlignment = VerticalAlignment.Center });
-            _preview.Children.Add(row);
+            _importMemory.IsEnabled = _transferAvailable && _transfer is null;
+            _exportMemory.IsEnabled = _transferAvailable && _transfer is null;
+            _cancelTransfer.Visibility = _transfer is null ? Visibility.Collapsed : Visibility.Visible;
         }
     }
 
@@ -306,20 +262,12 @@ internal sealed class SettingsWindow : Window
     private async Task ReadSettings(uint writeError = 0)
     {
         uint[] values = new uint[8];
-        bool previewRequested = _preview is not null;
         var loaded = await Task.Run(() =>
         {
             uint error = Native.Read(values, (uint)values.Length);
-            var preview = new StringBuilder(2048);
-            if (error == 0 && previewRequested)
-            {
-                uint standard = values[3] switch { 2 => 6, 3 => 7, 4 => 51, _ => 1 };
-                Native.Preview(standard, preview, (uint)preview.Capacity);
-            }
-            return (error, preview.ToString(), memoryAvailable: error == 0 && Native.HasInputMemory(), transferAvailable: error == 0 && Native.HasMemoryTransfer());
+            return (error, memoryAvailable: error == 0 && Native.HasInputMemory(), transferAvailable: error == 0 && Native.HasMemoryTransfer());
         });
         _settings = loaded.error == 0 ? values : null;
-        _previewLines = loaded.Item2.Split('\n', StringSplitOptions.RemoveEmptyEntries);
         _memoryAvailable = loaded.memoryAvailable;
         _transferAvailable = loaded.transferAvailable;
         _connection.Message = loaded.error != 0 ? Texts.Get("Jyutping settings are unavailable. The app will reconnect.") : Texts.Get("The setting could not be saved.");
@@ -444,9 +392,6 @@ internal sealed class SettingsWindow : Window
 
         [DllImport("JyutpingSettingsRpc.dll", EntryPoint = "JyutpingWriteSetting")]
         internal static extern uint Write(uint field, uint value);
-
-        [DllImport("JyutpingSettingsRpc.dll", EntryPoint = "JyutpingPreviewCandidates", CharSet = CharSet.Unicode)]
-        internal static extern uint Preview(uint standard, StringBuilder text, uint count);
 
         [DllImport("JyutpingSettingsRpc.dll", EntryPoint = "JyutpingHasInputMemory")]
         [return: MarshalAs(UnmanagedType.Bool)]

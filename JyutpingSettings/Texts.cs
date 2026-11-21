@@ -34,7 +34,6 @@ internal static class Texts
         ["Candidate size"] = ("候選字大小", "候選字大小"),
         ["Number size"] = ("序號大小", "序號大小"),
         ["Jyutping size"] = ("粵拼大小", "粵拼大小"),
-        ["Candidate preview"] = ("候選項預覽", "候選項預覽"),
         ["Connecting to Jyutping"] = ("正在連接粵拼", "正在連接粵拼"),
         ["Jyutping settings are unavailable. The app will reconnect."] = ("暫時讀唔到粵拼設定。程式會重新連接。", "暫時無法讀取粵拼設定。應用程式將重新連接。"),
         ["The setting could not be saved."] = ("儲存唔到呢項設定。", "無法儲存此設定。"),
