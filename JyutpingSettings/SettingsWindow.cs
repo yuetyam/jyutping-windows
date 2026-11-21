@@ -180,18 +180,18 @@ internal sealed class SettingsWindow : Window
 
     private void AddSetting(int index, string label, int firstValue, string[] choices)
     {
+        string title = Texts.Get(label);
         var control = new ComboBox
         {
-            Header = Texts.Get(label),
             ItemsSource = choices.Select(Texts.Get).ToArray(),
             Tag = firstValue,
-            MinWidth = 200,
+            MinWidth = 120,
+            VerticalAlignment = VerticalAlignment.Center,
             IsEnabled = false
         };
-        AutomationProperties.SetName(control, Texts.Get(label));
+        AutomationProperties.SetName(control, title);
         AutomationProperties.SetAutomationId(control, $"Setting{index}");
         _controls.Add(index, control);
-        _content.Children.Add(control);
         control.SelectionChanged += async (_, _) =>
         {
             if (!_updating && control.SelectedIndex >= 0)
@@ -199,6 +199,17 @@ internal sealed class SettingsWindow : Window
                 await WriteSetting(index, (uint)(firstValue + control.SelectedIndex));
             }
         };
+
+        var titleBlock = new TextBlock { Text = title, TextWrapping = TextWrapping.Wrap, VerticalAlignment = VerticalAlignment.Center };
+        AutomationProperties.SetLabeledBy(control, titleBlock);
+
+        var row = new Grid { ColumnSpacing = 16 };
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        Grid.SetColumn(control, 1);
+        row.Children.Add(titleBlock);
+        row.Children.Add(control);
+        _content.Children.Add(row);
     }
 
     private void ApplySettings()
